@@ -63,6 +63,15 @@ export function scoreToHeatmapColor(
   return palette[scoreToHeatmapBucket(score)];
 }
 
+/**
+ * Polygon stroke colors for Leaflet (Leaflet does not consume CSS vars).
+ * Light: white (matches surface). Dark: faint warm gray (matches dark surface).
+ */
+export const MAP_POLYGON_STROKE = {
+  light: '#FFFFFF',
+  dark: '#3A3A36', // matches --color-gray-200 in dark theme
+} as const;
+
 /* Internal helper. Not exported — keep API small. */
 function clamp(v: number, min: number, max: number): number {
   if (Number.isNaN(v)) return min;

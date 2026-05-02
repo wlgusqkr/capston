@@ -1,0 +1,26 @@
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'node:path';
+
+// Vite config for 슬기로운 자취생활 frontend.
+// - `@/*` alias points to `src/*`
+// - dev server proxies `/api` to Django backend (CORS already open, but
+//   the proxy keeps relative URLs portable)
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src'),
+    },
+  },
+  server: {
+    port: 5173,
+    host: '127.0.0.1',
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+    },
+  },
+});

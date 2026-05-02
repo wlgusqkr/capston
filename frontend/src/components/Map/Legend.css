@@ -1,0 +1,52 @@
+/* Legend — small floating chip in the bottom-left of the map. */
+
+.legend {
+  position: absolute;
+  left: var(--space-4);
+  bottom: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  z-index: 400; /* above Leaflet tiles (200) and below tooltips */
+  font-family: var(--font-family-base);
+}
+
+.legend__label {
+  font-size: var(--font-hint-size);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.legend__bar {
+  display: flex;
+  width: 144px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.legend__step {
+  flex: 1;
+}
+
+.legend__step--low {
+  background: var(--color-data-low);
+}
+
+.legend__step--mid1 {
+  background: var(--color-data-mid1);
+}
+
+.legend__step--mid2 {
+  background: var(--color-data-mid2);
+}
+
+.legend__step--high {
+  background: var(--color-data-high);
+}
