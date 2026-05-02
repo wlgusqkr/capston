@@ -66,6 +66,7 @@ export default function MainMap() {
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [preferenceOpen, setPreferenceOpen] = useState(false);
   const [compareSlugs, setCompareSlugs] = useState<string[]>([]);
+  const [heatmapVisible, setHeatmapVisible] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | null>(null);
 
@@ -198,13 +199,19 @@ export default function MainMap() {
         onOpenPreference={() => setPreferenceOpen(true)}
         compareCount={compareSlugs.length}
         onOpenCompare={handleOpenCompare}
+        heatmapVisible={heatmapVisible}
+        onToggleHeatmap={setHeatmapVisible}
         userName={
           user ? (user.nickname && user.nickname.trim()) || user.username : null
         }
       />
 
       <section className="main-map__map" aria-label="서울 동네 히트맵">
-        <HeatMap dongs={data ?? []} onDongClick={handleDongClick} />
+        <HeatMap
+          dongs={data ?? []}
+          onDongClick={handleDongClick}
+          heatmapVisible={heatmapVisible}
+        />
 
         {isLoading && (
           <div className="main-map__overlay" role="status" aria-live="polite">

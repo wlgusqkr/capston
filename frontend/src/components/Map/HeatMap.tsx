@@ -1,114 +1,115 @@
-// Leaflet heatmap of Seoul 행정동 polygons (SPEC 6.1).
+// 카카오맵 기반 행정동 히트맵 (SPEC 6.1).
 //
-// Real boundary GeoJSON loaded once from /seoul_dongs.geojson and joined with
-// score data by feature.properties.adm_cd === dong.slug. The polygon color
-// follows the composite score; tooltip shows the gu·name + numeric score.
-import { useMemo } from 'react';
-import type { Layer } from 'leaflet';
-import type { Feature, Geometry } from 'geojson';
-import { GeoJSON, MapContainer, TileLayer, ZoomControl } from 'react-leaflet';
+// 425개 행정동 GeoJSON을 카카오맵 Polygon으로 렌더하고 score에 따라 색을 입힌다.
+// 카카오맵은 한국어 지명·지하철·POI가 기본으로 표시되어 SPEC의 "직관적인 도시
+// 데이터 대시보드" 요구를 OSM 보다 잘 충족한다.
+import { useMemo, useRef } from 'react';
+import { Map, Polygon } from 'react-kakao-maps-sdk';
 
 import { useDongGeoJson } from '@/hooks/useDongGeoJson';
-import { MAP_POLYGON_STROKE, scoreToHeatmapColor } from '@/lib/colors';
-import type { DongFeatureProps } from '@/hooks/useDongGeoJson';
+import { scoreToHeatmapColor, MAP_POLYGON_STROKE } from '@/lib/colors';
+import { geoJsonToKakaoPath, useKakao } from '@/lib/kakaoMap';
 import type { DongScore } from '@/types/api';
 
-import 'leaflet/dist/leaflet.css';
 import './HeatMap.css';
 
-const SEOUL_CITY_HALL: [number, number] = [37.5665, 126.978];
-const INITIAL_ZOOM = 11;
-
-const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-const OSM_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const SEOUL_CITY_HALL = { lat: 37.5665, lng: 126.978 };
+const INITIAL_LEVEL = 8; // 카카오맵 zoom level (작을수록 가까움)
 
 export interface HeatMapProps {
   dongs: DongScore[];
   onDongClick?: (dong: DongScore) => void;
+  /** 히트맵 폴리곤 표시 여부. false면 일반 카카오맵만 보임. */
+  heatmapVisible?: boolean;
 }
 
-export default function HeatMap({ dongs, onDongClick }: HeatMapProps) {
+export default function HeatMap({ dongs, onDongClick, heatmapVisible = true }: HeatMapProps) {
+  const { loading: kakaoLoading, error: kakaoError } = useKakao();
   const { data: geojson, isLoading: geoLoading } = useDongGeoJson();
 
-  // slug → DongScore 룩업. 가중치 변경마다 dongs 새 객체이므로 useMemo.
   const dongBySlug = useMemo(() => {
-    const map = new Map<string, DongScore>();
-    for (const d of dongs) map.set(d.slug, d);
-    return map;
+    const m: Record<string, DongScore> = {};
+    for (const d of dongs) m[d.slug] = d;
+    return m;
   }, [dongs]);
 
-  // 각 Feature에 부착할 이벤트/툴팁 핸들러.
-  // GeoJSON은 dongs/key가 바뀌어도 layer를 다시 그리지 않으므로
-  // setStyle을 통해 색상 갱신을 하려면 ref + 외부 useEffect가 필요한데,
-  // 여기서는 key prop으로 강제 리마운트하여 단순화한다 (425개라 부담 적음).
-  const onEachFeature = (feature: Feature<Geometry, DongFeatureProps>, layer: Layer) => {
-    const props = feature.properties;
-    const slug = props.adm_cd;
-    const dong = dongBySlug.get(slug);
-    if (!dong) return;
+  const tooltipRef = useRef<HTMLDivElement>(null);
 
-    layer.bindTooltip(
-      `<div class="map-tooltip"><div class="map-tooltip__name">${dong.gu} · ${dong.name}</div>` +
-        `<div class="map-tooltip__score tabular">종합점수 ${dong.score.toFixed(1)}</div></div>`,
-      { sticky: true, direction: 'top', offset: [0, -4], opacity: 1 },
+  if (kakaoError) {
+    return (
+      <div className="map-root map-root--error">
+        <div className="map-fallback">
+          <div className="map-fallback__title">카카오맵 키가 설정되지 않았습니다</div>
+          <div className="map-fallback__body">
+            <code>frontend/.env</code>의 <code>VITE_KAKAO_JS_KEY</code>에 카카오 디벨로퍼스에서
+            발급받은 JavaScript 키를 넣고 dev 서버를 재시작하세요. <br />
+            플랫폼 → Web → 사이트 도메인에 <code>http://localhost:5173</code> 등록 필요.
+          </div>
+        </div>
+      </div>
     );
+  }
 
-    layer.on({
-      click: () => onDongClick?.(dong),
-      mouseover: (e) =>
-        (e.target as { setStyle: (s: object) => void }).setStyle({ fillOpacity: 0.85, weight: 1.5 }),
-      mouseout: (e) =>
-        (e.target as { setStyle: (s: object) => void }).setStyle({ fillOpacity: 0.6, weight: 0.5 }),
-    });
-  };
-
-  const styleFn = (feature?: Feature<Geometry, DongFeatureProps>) => {
-    if (!feature) {
-      return { color: MAP_POLYGON_STROKE.light, weight: 0.5, fillOpacity: 0.6 };
-    }
-    const slug = feature.properties.adm_cd;
-    const dong = dongBySlug.get(slug);
-    return {
-      color: MAP_POLYGON_STROKE.light,
-      weight: 0.5,
-      fillColor: dong ? scoreToHeatmapColor(dong.score) : '#cccccc',
-      fillOpacity: dong ? 0.6 : 0.15,
-    };
-  };
-
-  // dongs 변경 시 GeoJSON 레이어 강제 리마운트 → 새 색상 적용.
-  // 425개 폴리곤이지만 GeoJSON 단일 레이어라 비용 작음.
-  const geoKey = useMemo(() => {
-    let acc = 0;
-    for (const d of dongs) {
-      // 가중치가 바뀌면 score가 바뀌므로 합으로 디지스트
-      acc = (acc + d.score * 100) | 0;
-    }
-    return `geo-${dongs.length}-${acc}`;
-  }, [dongs]);
+  if (kakaoLoading || geoLoading || !geojson) {
+    return (
+      <div className="map-root">
+        <div className="map-fallback">
+          <div className="map-fallback__title">지도 불러오는 중…</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="map-root">
-      <MapContainer
+      <Map
         center={SEOUL_CITY_HALL}
-        zoom={INITIAL_ZOOM}
-        zoomControl={false}
-        scrollWheelZoom
-        className="map-container"
+        level={INITIAL_LEVEL}
+        style={{ width: '100%', height: '100%' }}
       >
-        <TileLayer attribution={OSM_ATTRIBUTION} url={OSM_TILE_URL} />
-        <ZoomControl position="topright" />
+        {heatmapVisible &&
+          geojson.features.map((feature) => {
+            const props = feature.properties;
+            const slug = props.adm_cd;
+            const dong = dongBySlug[slug];
+            const geom = feature.geometry;
+            if (geom.type !== 'Polygon' && geom.type !== 'MultiPolygon') return null;
 
-        {!geoLoading && geojson && (
-          <GeoJSON
-            key={geoKey}
-            data={geojson}
-            style={styleFn}
-            onEachFeature={onEachFeature}
-          />
-        )}
-      </MapContainer>
+            const paths = geoJsonToKakaoPath(
+              geom.coordinates as number[][][] | number[][][][],
+              geom.type,
+            );
+            const fill = dong ? scoreToHeatmapColor(dong.score) : '#cccccc';
+            const fillOpacity = dong ? 0.55 : 0.1;
+
+            return (
+              <Polygon
+                key={slug}
+                path={paths}
+                strokeWeight={1}
+                strokeColor={MAP_POLYGON_STROKE.light}
+                strokeOpacity={0.9}
+                fillColor={fill}
+                fillOpacity={fillOpacity}
+                onClick={() => dong && onDongClick?.(dong)}
+                onMouseover={() => {
+                  if (!dong || !tooltipRef.current) return;
+                  const tip = tooltipRef.current;
+                  tip.style.display = 'block';
+                  tip.innerHTML = `
+                    <div class="map-tooltip__name">${dong.gu} · ${dong.name}</div>
+                    <div class="map-tooltip__score tabular">종합점수 ${dong.score.toFixed(1)}</div>
+                  `;
+                }}
+                onMouseout={() => {
+                  if (!tooltipRef.current) return;
+                  tooltipRef.current.style.display = 'none';
+                }}
+              />
+            );
+          })}
+      </Map>
+      <div ref={tooltipRef} className="map-tooltip-floating" style={{ display: 'none' }} />
     </div>
   );
 }

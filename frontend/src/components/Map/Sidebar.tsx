@@ -40,6 +40,10 @@ export interface SidebarProps {
   compareCount: number;
   /** Navigate to /compare with the queued slugs. */
   onOpenCompare: () => void;
+  /** Whether the heatmap polygons are visible (toggle for clearer base map). */
+  heatmapVisible: boolean;
+  /** Toggle heatmap visibility. */
+  onToggleHeatmap: (next: boolean) => void;
   /** Display name when logged in (nickname || username). Null = logged out. */
   userName: string | null;
 }
@@ -58,6 +62,8 @@ export default function Sidebar({
   onOpenPreference,
   compareCount,
   onOpenCompare,
+  heatmapVisible,
+  onToggleHeatmap,
   userName,
 }: SidebarProps) {
   const universityCheckId = useId();
@@ -118,6 +124,14 @@ export default function Sidebar({
             );
           })}
         </div>
+        <label className="sidebar__check sidebar__heatmap-toggle">
+          <input
+            type="checkbox"
+            checked={heatmapVisible}
+            onChange={(e) => onToggleHeatmap(e.target.checked)}
+          />
+          <span>히트맵 표시</span>
+        </label>
       </section>
 
       <section className="sidebar__section" aria-label="가중치">
