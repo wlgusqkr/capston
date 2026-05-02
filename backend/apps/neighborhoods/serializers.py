@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+from .detail_dummy import build_dummy_detail
 from .models import Dong
 from .summary import generate_summary
 
@@ -166,3 +167,21 @@ class DongSummarySerializer(serializers.ModelSerializer):
         if score >= 40:
             return "mid"
         return "low"
+
+
+class DongDetailSerializer(serializers.Serializer):
+    """
+    동네 상세 페이지(SPEC 6.3) 응답 시리얼라이저.
+
+    ModelSerializer가 아니다 — 응답 구조가 6개 섹션의 중첩 dict이라 빌더 함수가
+    채운 dict를 그대로 반환하는 것이 명확. 검증/변환은 build_dummy_detail이 보장.
+
+    실 데이터 적재 후에도 같은 응답 형식을 유지하기 위해, 빌더만 교체하면 되도록
+    이 시리얼라이저는 단순한 패스스루 역할만 한다.
+    """
+
+    def to_representation(self, instance: Dong) -> dict:
+        weights = self.context.get(
+            "weights", {"rent": 1 / 3, "amenity": 1 / 3, "transit": 1 / 3}
+        )
+        return build_dummy_detail(instance, weights=weights)

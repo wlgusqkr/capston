@@ -7,7 +7,7 @@ neighborhoods 앱 URL.
 
 from django.urls import path
 
-from .views import DongScoresView, DongSummaryView
+from .views import DongDetailView, DongScoresView, DongSummaryView
 
 app_name = "neighborhoods"
 
@@ -16,4 +16,6 @@ urlpatterns = [
     path("dongs/scores", DongScoresView.as_view(), name="dong-scores"),
     # GET /api/dongs/<slug>/summary
     path("dongs/<slug:slug>/summary", DongSummaryView.as_view(), name="dong-summary"),
+    # GET /api/dongs/<slug>/detail
+    path("dongs/<slug:slug>/detail", DongDetailView.as_view(), name="dong-detail"),
 ]

@@ -17,7 +17,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Dong
-from .serializers import DongScoreSerializer, DongSummarySerializer
+from .serializers import DongDetailSerializer, DongScoreSerializer, DongSummarySerializer
 
 # 기본 가중치 (SPEC 6.1 — 첫 진입 시 33/33/34, 합 100)
 DEFAULT_W_RENT = 33
@@ -129,4 +129,38 @@ class DongSummaryView(APIView):
             raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
 
         data = DongSummarySerializer(dong, context={"weights": weights}).data
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class DongDetailView(APIView):
+    """
+    GET /api/dongs/<slug>/detail?w_rent=&w_amenity=&w_transit=
+
+    동네 상세 페이지(SPEC 6.3)용 전체 데이터. 6개 섹션을 한 번에 반환:
+    Hero / RealEstate / Amenities / Transit / Reviews / SimilarDongs.
+
+    가중치 파라미터는 옵션이며 default 33/33/34. 가중치는 score 필드에만 영향.
+    한 줄 요약과 vs_seoul_avg_pct는 raw 점수 기반이므로 가중치와 별개.
+    """
+
+    def get(self, request: Request, slug: str) -> Response:
+        weights = _parse_and_validate_weights(request)
+
+        try:
+            # 비슷한 동네 계산을 위해 detail_dummy.build_dummy_detail이 다른 동네를
+            # 별도로 조회한다. 여기선 대상 동만 가져온다.
+            dong = Dong.objects.only(
+                "slug",
+                "name",
+                "gu",
+                "centroid",
+                "area_km2",
+                "score_rent",
+                "score_amenity",
+                "score_transit",
+            ).get(slug=slug)
+        except Dong.DoesNotExist as exc:
+            raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
+
+        data = DongDetailSerializer(dong, context={"weights": weights}).data
         return Response(data, status=status.HTTP_200_OK)
