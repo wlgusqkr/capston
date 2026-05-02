@@ -39,14 +39,38 @@ const VWORLD_ATTRIBUTION =
     ? '&copy; <a href="https://www.vworld.kr/">VWorld</a> 국토교통부'
     : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>';
 
+/** 레이어 탭 — 색상의 기준이 되는 점수 축. */
+export type LayerKey = 'composite' | 'rent' | 'amenity' | 'transit';
+
 export interface HeatMapProps {
   dongs: DongScore[];
   onDongClick?: (dong: DongScore) => void;
   /** 히트맵 폴리곤 표시 여부. false면 베이스맵만 보임. */
   heatmapVisible?: boolean;
+  /** 색상 기준이 되는 점수 축. 기본 'composite' (가중합). */
+  activeLayer?: LayerKey;
 }
 
-export default function HeatMap({ dongs, onDongClick, heatmapVisible = true }: HeatMapProps) {
+function pickScore(d: DongScore, layer: LayerKey): number {
+  switch (layer) {
+    case 'rent':
+      return d.score_rent;
+    case 'amenity':
+      return d.score_amenity;
+    case 'transit':
+      return d.score_transit;
+    case 'composite':
+    default:
+      return d.score;
+  }
+}
+
+export default function HeatMap({
+  dongs,
+  onDongClick,
+  heatmapVisible = true,
+  activeLayer = 'composite',
+}: HeatMapProps) {
   const { data: geojson, isLoading: geoLoading } = useDongGeoJson();
 
   const dongBySlug = useMemo(() => {
@@ -55,24 +79,32 @@ export default function HeatMap({ dongs, onDongClick, heatmapVisible = true }: H
     return m;
   }, [dongs]);
 
-  // 가중치 변경마다 색이 갱신되도록 GeoJSON 레이어를 강제 리마운트.
+  // 가중치/레이어 변경마다 색이 갱신되도록 GeoJSON 레이어를 강제 리마운트.
   // 425개라 비용 약간 있지만 슬라이더 빈도 낮아 OK.
   const layerKey = useMemo(() => {
     let acc = 0;
-    for (const d of dongs) acc = (acc + Math.round(d.score * 100)) | 0;
-    return `r${dongs.length}-${acc}-${heatmapVisible ? 1 : 0}`;
-  }, [dongs, heatmapVisible]);
+    for (const d of dongs) acc = (acc + Math.round(pickScore(d, activeLayer) * 100)) | 0;
+    return `${activeLayer}-${dongs.length}-${acc}-${heatmapVisible ? 1 : 0}`;
+  }, [dongs, heatmapVisible, activeLayer]);
 
   const styleFn = (feature?: Feature<Geometry, DongFeatureProps>) => {
     const slug = feature?.properties?.adm_cd ?? '';
     const dong = dongBySlug[slug];
+    const score = dong ? pickScore(dong, activeLayer) : null;
     return {
       color: '#2C2C2A',
       weight: 0.8,
       opacity: 0.6,
-      fillColor: dong ? scoreToHeatmapColor(dong.score) : '#cccccc',
-      fillOpacity: dong ? 0.6 : 0.1,
+      fillColor: score !== null ? scoreToHeatmapColor(score) : '#cccccc',
+      fillOpacity: score !== null ? 0.6 : 0.1,
     };
+  };
+
+  const layerLabel: Record<LayerKey, string> = {
+    composite: '종합점수',
+    rent: '전월세 점수',
+    amenity: '생활시설 점수',
+    transit: '교통 점수',
   };
 
   const onEachFeature = (
@@ -82,10 +114,11 @@ export default function HeatMap({ dongs, onDongClick, heatmapVisible = true }: H
     const slug = feature.properties.adm_cd;
     const dong = dongBySlug[slug];
     if (!dong) return;
+    const shownScore = pickScore(dong, activeLayer);
 
     layer.bindTooltip(
       `<div class="map-tooltip__name">${dong.gu} · ${dong.name}</div>` +
-        `<div class="map-tooltip__score tabular">종합점수 ${dong.score.toFixed(1)}</div>`,
+        `<div class="map-tooltip__score tabular">${layerLabel[activeLayer]} ${shownScore.toFixed(1)}</div>`,
       { sticky: true, direction: 'top', offset: [0, -4], opacity: 1 },
     );
 

@@ -211,6 +211,7 @@ export default function MainMap() {
           dongs={data ?? []}
           onDongClick={handleDongClick}
           heatmapVisible={heatmapVisible}
+          activeLayer={activeLayer}
         />
 
         {isLoading && (
