@@ -1,11 +1,32 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import User
+from .models import Favorite, User
 
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
-    """기본 UserAdmin 그대로 사용. 9단계에서 확장."""
+    """
+    기본 UserAdmin + 마이페이지용 추가 필드 (school / year / nickname).
+    """
 
-    pass
+    fieldsets = UserAdmin.fieldsets + (
+        ("마이페이지", {"fields": ("nickname", "school", "year")}),
+    )
+    list_display = (
+        "username",
+        "nickname",
+        "school",
+        "year",
+        "is_staff",
+        "is_active",
+    )
+
+
+@admin.register(Favorite)
+class FavoriteAdmin(admin.ModelAdmin):
+    list_display = ("user", "dong", "created_at")
+    list_select_related = ("user", "dong")
+    search_fields = ("user__username", "dong__slug", "dong__name")
+    autocomplete_fields = ()
+    raw_id_fields = ("user", "dong")

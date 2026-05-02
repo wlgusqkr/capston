@@ -53,14 +53,14 @@ DJANGO_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.gis",  # GeoDjango
-    "django.contrib.sites",  # allauth requires sites
+    # "django.contrib.sites",  # allauth 비활성화로 함께 주석 처리
 ]
 
 THIRD_PARTY_APPS = [
     "rest_framework",
     "corsheaders",
-    # allauth는 9단계(카카오 로그인) 활성화 시 INSTALLED_APPS에 추가.
-    # 미리 의존성은 설치되어 있어 이후 단계에서 추가 설치 없이 사용 가능.
+    # 9단계 — 사용자 명시로 카카오/allauth는 비활성화.
+    # 표준 Django username/password (세션) 인증만 사용.
     # "allauth",
     # "allauth.account",
     # "allauth.socialaccount",
@@ -75,7 +75,7 @@ LOCAL_APPS = [
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
-SITE_ID = 1
+# SITE_ID = 1  # allauth 비활성화로 함께 주석 처리
 
 # ---------------------------------------------------------------------------
 # Middleware
@@ -89,6 +89,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # "allauth.account.middleware.AccountMiddleware",  # allauth 비활성화
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -218,3 +219,30 @@ LOGGING = {
         "django.db.backends": {"level": "WARNING"},
     },
 }
+
+# ---------------------------------------------------------------------------
+# 인증 — 9단계: 사용자 명시로 카카오/allauth 비활성화.
+# 표준 Django username/password 세션 인증만 사용.
+# ---------------------------------------------------------------------------
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+# allauth 관련 설정은 모두 주석 처리 (필요 시 다시 켤 때 참고용).
+# SITE_ID = 1
+# ACCOUNT_EMAIL_VERIFICATION = "none"
+# ACCOUNT_LOGIN_METHODS = {"username"}
+# ACCOUNT_SIGNUP_FIELDS = ["username*", "password1*"]
+# SOCIALACCOUNT_AUTO_SIGNUP = True
+# SOCIALACCOUNT_EMAIL_VERIFICATION = "none"
+# SOCIALACCOUNT_QUERY_EMAIL = True
+# SOCIALACCOUNT_PROVIDERS = {
+#     "kakao": {
+#         "APP": {
+#             "client_id": env("KAKAO_REST_API_KEY", default=""),
+#             "secret": env("KAKAO_CLIENT_SECRET", default=""),
+#             "key": "",
+#         },
+#     }
+# }
+LOGIN_REDIRECT_URL = "/"
