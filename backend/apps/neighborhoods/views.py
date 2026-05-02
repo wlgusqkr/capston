@@ -6,6 +6,10 @@ Dong 관련 뷰.
   → 행정동 종합 점수 리스트 (메인 지도 히트맵용)
 - GET /api/dongs/<slug>/summary?w_rent=&w_amenity=&w_transit=
   → 동네 패널용 요약 (SPEC 6.2)
+- GET /api/dongs/<slug>/detail?w_rent=&w_amenity=&w_transit=
+  → 동네 상세 페이지 (SPEC 6.3)
+- GET /api/compare?slugs=A,B,C[&w_rent=&w_amenity=&w_transit=]
+  → 동네 비교 (SPEC 6.4, 최대 3개)
 """
 
 from __future__ import annotations
@@ -16,8 +20,17 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .compare_dummy import build_compare_row
 from .models import Dong
-from .serializers import DongDetailSerializer, DongScoreSerializer, DongSummarySerializer
+from .serializers import (
+    DongCompareItemSerializer,
+    DongDetailSerializer,
+    DongScoreSerializer,
+    DongSummarySerializer,
+)
+
+# 비교 가능한 최대 동 수 (SPEC 6.4)
+COMPARE_MAX_SLUGS = 3
 
 # 기본 가중치 (SPEC 6.1 — 첫 진입 시 33/33/34, 합 100)
 DEFAULT_W_RENT = 33
@@ -164,3 +177,68 @@ class DongDetailView(APIView):
 
         data = DongDetailSerializer(dong, context={"weights": weights}).data
         return Response(data, status=status.HTTP_200_OK)
+
+
+class CompareView(APIView):
+    """
+    GET /api/compare?slugs=A,B,C[&w_rent=&w_amenity=&w_transit=]
+
+    동네 비교(SPEC 6.4). 최대 3개 슬러그를 받아 7개 비교 지표를 한 번에 반환한다.
+
+    응답: { weights: {...}, dongs: [DongCompareItem, ...] }
+      - weights: 적용된 가중치 (정수 0~100, 합 100±1) — 프론트가 표시용으로 사용
+      - dongs: 입력 슬러그 순서 그대로 (프론트가 비교표 컬럼 순서 보존하기 위함)
+
+    오류:
+      - slugs 미지정/공백 → 400 ({"slugs": "최소 1개의 슬러그가 필요합니다."})
+      - slugs > 3 → 400 ({"slugs": "최대 3개 동네까지 비교할 수 있습니다."})
+      - 미존재 슬러그 포함 → 404 ({"detail": "찾을 수 없는 동네: slug_x"})
+      - 가중치 검증 실패 → _parse_and_validate_weights가 400 발생
+    """
+
+    def get(self, request: Request) -> Response:
+        weights = _parse_and_validate_weights(request)
+
+        # ---- slugs 파싱 ----
+        raw = request.query_params.get("slugs", "")
+        slugs = [s.strip() for s in raw.split(",") if s.strip()]
+        if not slugs:
+            raise ValidationError({"slugs": "최소 1개의 슬러그가 필요합니다."})
+        if len(slugs) > COMPARE_MAX_SLUGS:
+            raise ValidationError(
+                {"slugs": f"최대 {COMPARE_MAX_SLUGS}개 동네까지 비교할 수 있습니다."}
+            )
+
+        # ---- 한 번의 쿼리로 fetch 후 dict 룩업 ----
+        # 입력 슬러그 순서 그대로 응답하기 위해 dict로 매핑.
+        qs = Dong.objects.filter(slug__in=slugs).only(
+            "slug",
+            "name",
+            "gu",
+            "score_rent",
+            "score_amenity",
+            "score_transit",
+        )
+        by_slug = {d.slug: d for d in qs}
+
+        missing = [s for s in slugs if s not in by_slug]
+        if missing:
+            raise NotFound({"detail": f"찾을 수 없는 동네: {', '.join(missing)}"})
+
+        # 입력 순서 그대로 행 빌드
+        rows = [build_compare_row(by_slug[s], weights) for s in slugs]
+
+        # 응답: 적용 가중치를 정수 % 형태로 함께 반환 (프론트가 표시용으로 사용)
+        applied_weights = {
+            "w_rent": int(round(weights["rent"] * 100)),
+            "w_amenity": int(round(weights["amenity"] * 100)),
+            "w_transit": int(round(weights["transit"] * 100)),
+        }
+
+        return Response(
+            {
+                "weights": applied_weights,
+                "dongs": DongCompareItemSerializer(rows, many=True).data,
+            },
+            status=status.HTTP_200_OK,
+        )

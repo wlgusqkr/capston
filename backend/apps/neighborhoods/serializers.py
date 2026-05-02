@@ -169,6 +169,29 @@ class DongSummarySerializer(serializers.ModelSerializer):
         return "low"
 
 
+class DongCompareItemSerializer(serializers.Serializer):
+    """
+    동네 비교(SPEC 6.4) 응답의 한 동(dong) 항목.
+
+    `compare_dummy.build_compare_row`가 만든 dict를 그대로 직렬화. 검증/형 변환은
+    빌더가 보장하므로 본 시리얼라이저는 필드 정의(스키마)만 책임진다.
+
+    응답 dict는 build_compare_row 출력과 1:1 일치 (snake_case).
+    """
+
+    slug = serializers.CharField()
+    name = serializers.CharField()
+    gu = serializers.CharField()
+    score = serializers.FloatField()
+    rent_avg = serializers.IntegerField()
+    transit_min = serializers.IntegerField()
+    amenity_label = serializers.CharField()  # "충분" | "보통" | "부족"
+    single_household_pct = serializers.FloatField()
+    safety_label = serializers.CharField()  # "높음" | "보통" | "낮음"
+    review_avg_rating = serializers.FloatField()
+    review_count = serializers.IntegerField()
+
+
 class DongDetailSerializer(serializers.Serializer):
     """
     동네 상세 페이지(SPEC 6.3) 응답 시리얼라이저.
