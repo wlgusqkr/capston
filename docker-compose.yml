@@ -1,0 +1,35 @@
+# PostgreSQL + PostGIS만 우선. 백엔드/프론트는 로컬에서 직접 실행.
+# 추후 redis, backend, frontend 추가 가능.
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: slgi-db
+    environment:
+      POSTGRES_USER: slgi
+      POSTGRES_PASSWORD: slgi
+      POSTGRES_DB: slgi
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U slgi -d slgi"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # 5분 캐싱용 (SPEC 14.3). 초기엔 미사용이어도 켜두면 편함.
+  redis:
+    image: redis:7-alpine
+    container_name: slgi-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  postgres-data:
