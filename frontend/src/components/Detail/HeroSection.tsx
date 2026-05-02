@@ -1,15 +1,26 @@
 // HeroSection — top of dong detail page (SPEC 6.3 Section 1).
 //
 // 좌: 구·동 이름 + 종합 점수 + vs 서울 평균 배지 + 한 줄 요약
-// 우: 280px 미니 지도 (카카오맵). 동 중심에 마커, 점수 색상 적용.
-import { CustomOverlayMap, Map, MapMarker } from 'react-kakao-maps-sdk';
+// 우: 280px 미니 지도 (Leaflet + VWorld). 동 중심에 점수 색상 마커.
+
+import { CircleMarker, MapContainer, TileLayer, Tooltip } from 'react-leaflet';
 
 import { Badge, Card, Score } from '@/components/ui';
-import { scoreToHeatmapColor } from '@/lib/colors';
-import { useKakao } from '@/lib/kakaoMap';
+import { MAP_POLYGON_STROKE, scoreToHeatmapColor } from '@/lib/colors';
 import type { DongDetail } from '@/types/api';
 
+import 'leaflet/dist/leaflet.css';
 import './HeroSection.css';
+
+const VWORLD_KEY = import.meta.env.VITE_VWORLD_API_KEY as string | undefined;
+const TILE_URL =
+  VWORLD_KEY && VWORLD_KEY.length > 0
+    ? `https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_KEY}/Base/{z}/{y}/{x}.png`
+    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+const TILE_ATTRIBUTION =
+  VWORLD_KEY && VWORLD_KEY.length > 0
+    ? '&copy; VWorld'
+    : '&copy; OpenStreetMap &copy; CARTO';
 
 interface HeroSectionProps {
   detail: DongDetail;
@@ -27,9 +38,8 @@ function vsBadgeLabel(pct: number): string {
 }
 
 export default function HeroSection({ detail }: HeroSectionProps) {
-  const center = { lat: detail.centroid.lat, lng: detail.centroid.lng };
+  const center: [number, number] = [detail.centroid.lat, detail.centroid.lng];
   const polygonColor = scoreToHeatmapColor(detail.score);
-  const { loading, error } = useKakao();
 
   return (
     <section className="hero" aria-label="동네 개요">
@@ -55,32 +65,34 @@ export default function HeroSection({ detail }: HeroSectionProps) {
 
         <Card className="hero__map-card" padding="none" aria-label="동네 위치 미니 지도">
           <div className="hero__map">
-            {error ? (
-              <div className="hero__map-fallback">카카오맵 키 미설정</div>
-            ) : loading ? (
-              <div className="hero__map-fallback">지도 로드 중…</div>
-            ) : (
-              <Map
+            <MapContainer
+              center={center}
+              zoom={14}
+              scrollWheelZoom={false}
+              zoomControl={false}
+              dragging={false}
+              doubleClickZoom={false}
+              className="hero__map-container"
+              attributionControl={false}
+            >
+              <TileLayer attribution={TILE_ATTRIBUTION} url={TILE_URL} maxZoom={18} />
+              <CircleMarker
                 center={center}
-                level={5}
-                draggable={false}
-                zoomable={false}
-                scrollwheel={false}
-                disableDoubleClick
-                disableDoubleClickZoom
-                style={{ width: '100%', height: '100%' }}
+                radius={10}
+                pathOptions={{
+                  color: MAP_POLYGON_STROKE.light,
+                  weight: 2,
+                  fillColor: polygonColor,
+                  fillOpacity: 1,
+                }}
               >
-                <MapMarker position={center} />
-                <CustomOverlayMap position={center} yAnchor={1.5}>
-                  <div
-                    className="hero__map-pin-label"
-                    style={{ borderTop: `3px solid ${polygonColor}` }}
-                  >
+                <Tooltip direction="top" offset={[0, -6]} permanent>
+                  <span className="hero__map-pin-label">
                     {detail.gu} · {detail.name}
-                  </div>
-                </CustomOverlayMap>
-              </Map>
-            )}
+                  </span>
+                </Tooltip>
+              </CircleMarker>
+            </MapContainer>
           </div>
         </Card>
       </div>

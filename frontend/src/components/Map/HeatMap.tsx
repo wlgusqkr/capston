@@ -1,139 +1,110 @@
-// 카카오맵 기반 행정동 히트맵 (SPEC 6.1).
+// Leaflet 기반 행정동 히트맵 (SPEC 6.1) — VWorld 타일.
 //
-// react-kakao-maps-sdk 의 <Polygon> 컴포넌트로 425개를 declarative하게 그리는
-// 대신, 카카오 공식 vanilla 예제와 같은 패턴(`new kakao.maps.Polygon({...})`)을
-// 따른다. 이유:
-//   1) Polygon 컴포넌트의 path는 `new kakao.maps.LatLng` 인스턴스를 기대하고,
-//      plain {lat,lng} 객체로 보내면 1.2.x 버전에서 폴리곤이 그려지지 않는 케이스
-//      가 있음.
-//   2) 425개 React 컴포넌트보다 imperative 1회 일괄 생성이 마운트 비용이 작음.
-//   3) score 변경 시 setOptions만 호출해 색을 갱신하므로 리렌더 부담 없음.
+// 카카오맵 SDK 통합이 폴리곤 렌더링에서 일관성 문제를 일으켜 다시 Leaflet으로
+// 복원. 타일은 VWorld(국토교통부) — 한국어 지명·도로·지하철이 OSM보다 풍부.
+//
+// /seoul_dongs.geojson 정적 파일에서 425개 행정동 경계를 1회 로드하고
+// feature.properties.adm_cd === dong.slug 로 score 데이터와 조인한다.
+//
+// VWorld 키: frontend/.env 의 VITE_VWORLD_API_KEY.
+//   - 키 없으면 CartoDB Voyager 타일로 폴백 (시각적으로 무난, 그러나 한국어 라벨 약함).
+//   - 키 발급: https://www.vworld.kr/ (회원가입 → 인증키 신청 → localhost 도메인 등록)
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Map } from 'react-kakao-maps-sdk';
+import { useMemo } from 'react';
+import type { Layer } from 'leaflet';
+import type { Feature, Geometry } from 'geojson';
+import { GeoJSON, MapContainer, TileLayer, ZoomControl } from 'react-leaflet';
 
 import { useDongGeoJson } from '@/hooks/useDongGeoJson';
-import type { DongFeatureCollection } from '@/hooks/useDongGeoJson';
+import type { DongFeatureProps } from '@/hooks/useDongGeoJson';
 import { scoreToHeatmapColor } from '@/lib/colors';
-import { useKakao } from '@/lib/kakaoMap';
 import type { DongScore } from '@/types/api';
 
+import 'leaflet/dist/leaflet.css';
 import './HeatMap.css';
 
-const SEOUL_CITY_HALL = { lat: 37.5665, lng: 126.978 };
-const INITIAL_LEVEL = 8;
+const SEOUL_CITY_HALL: [number, number] = [37.5665, 126.978];
+const INITIAL_ZOOM = 11;
+
+const VWORLD_KEY = import.meta.env.VITE_VWORLD_API_KEY as string | undefined;
+
+// VWorld WMTS Base 타일 (한국 지명·지하철·도로 풍부).
+const VWORLD_TILE_URL =
+  VWORLD_KEY && VWORLD_KEY.length > 0
+    ? `https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_KEY}/Base/{z}/{y}/{x}.png`
+    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+
+const VWORLD_ATTRIBUTION =
+  VWORLD_KEY && VWORLD_KEY.length > 0
+    ? '&copy; <a href="https://www.vworld.kr/">VWorld</a> 국토교통부'
+    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>';
 
 export interface HeatMapProps {
   dongs: DongScore[];
   onDongClick?: (dong: DongScore) => void;
-  /** 히트맵 폴리곤 표시 여부. false면 일반 카카오맵만 보임. */
+  /** 히트맵 폴리곤 표시 여부. false면 베이스맵만 보임. */
   heatmapVisible?: boolean;
 }
 
-/** 한 sub-polygon 인스턴스에 dong slug를 같이 보관해 이벤트 핸들러에서 lookup. */
-interface PolygonEntry {
-  slug: string;
-  polygon: kakao.maps.Polygon;
-}
-
 export default function HeatMap({ dongs, onDongClick, heatmapVisible = true }: HeatMapProps) {
-  const { loading: kakaoLoading, error: kakaoError } = useKakao();
   const { data: geojson, isLoading: geoLoading } = useDongGeoJson();
 
-  const [mapInstance, setMapInstance] = useState<kakao.maps.Map | null>(null);
-
-  // slug → DongScore 룩업 (가중치 변경 시 새 객체).
   const dongBySlug = useMemo(() => {
     const m: Record<string, DongScore> = {};
     for (const d of dongs) m[d.slug] = d;
     return m;
   }, [dongs]);
 
-  // 폴리곤 인스턴스를 ref에 저장 — 다음 effect에서 정리하기 위함.
-  const polygonsRef = useRef<PolygonEntry[]>([]);
-  const tooltipRef = useRef<HTMLDivElement>(null);
+  // 가중치 변경마다 색이 갱신되도록 GeoJSON 레이어를 강제 리마운트.
+  // 425개라 비용 약간 있지만 슬라이더 빈도 낮아 OK.
+  const layerKey = useMemo(() => {
+    let acc = 0;
+    for (const d of dongs) acc = (acc + Math.round(d.score * 100)) | 0;
+    return `r${dongs.length}-${acc}-${heatmapVisible ? 1 : 0}`;
+  }, [dongs, heatmapVisible]);
 
-  // 콜백 ref — 의존성에 안 넣고 항상 최신을 호출하기 위함.
-  const onDongClickRef = useRef(onDongClick);
-  useEffect(() => {
-    onDongClickRef.current = onDongClick;
-  }, [onDongClick]);
-
-  const dongBySlugRef = useRef(dongBySlug);
-  useEffect(() => {
-    dongBySlugRef.current = dongBySlug;
-  }, [dongBySlug]);
-
-  // ── 1) GeoJSON + map이 준비되면 폴리곤을 한 번에 생성 ────────────────────
-  useEffect(() => {
-    if (!mapInstance || !geojson) return;
-
-    const created = createPolygons(mapInstance, geojson);
-
-    // 이벤트 핸들러 부착
-    for (const { slug, polygon } of created) {
-      kakao.maps.event.addListener(polygon, 'click', () => {
-        const dong = dongBySlugRef.current[slug];
-        if (dong) onDongClickRef.current?.(dong);
-      });
-      kakao.maps.event.addListener(polygon, 'mouseover', () => {
-        const dong = dongBySlugRef.current[slug];
-        if (!dong || !tooltipRef.current) return;
-        polygon.setOptions({ fillOpacity: 0.85 });
-        const tip = tooltipRef.current;
-        tip.style.display = 'block';
-        tip.innerHTML =
-          `<div class="map-tooltip__name">${dong.gu} · ${dong.name}</div>` +
-          `<div class="map-tooltip__score tabular">종합점수 ${dong.score.toFixed(1)}</div>`;
-      });
-      kakao.maps.event.addListener(polygon, 'mouseout', () => {
-        polygon.setOptions({ fillOpacity: 0.7 });
-        if (tooltipRef.current) tooltipRef.current.style.display = 'none';
-      });
-    }
-
-    polygonsRef.current = created;
-
-    return () => {
-      for (const { polygon } of created) polygon.setMap(null);
-      polygonsRef.current = [];
+  const styleFn = (feature?: Feature<Geometry, DongFeatureProps>) => {
+    const slug = feature?.properties?.adm_cd ?? '';
+    const dong = dongBySlug[slug];
+    return {
+      color: '#2C2C2A',
+      weight: 0.8,
+      opacity: 0.6,
+      fillColor: dong ? scoreToHeatmapColor(dong.score) : '#cccccc',
+      fillOpacity: dong ? 0.6 : 0.1,
     };
-  }, [mapInstance, geojson]);
+  };
 
-  // ── 2) dongs (점수) 변경 시 색상만 setOptions로 갱신 — 리메이크 X ─────────
-  useEffect(() => {
-    for (const { slug, polygon } of polygonsRef.current) {
-      const dong = dongBySlug[slug];
-      polygon.setOptions({
-        fillColor: dong ? scoreToHeatmapColor(dong.score) : '#cccccc',
-        fillOpacity: dong ? 0.7 : 0.1,
-      });
-    }
-  }, [dongBySlug]);
+  const onEachFeature = (
+    feature: Feature<Geometry, DongFeatureProps>,
+    layer: Layer,
+  ): void => {
+    const slug = feature.properties.adm_cd;
+    const dong = dongBySlug[slug];
+    if (!dong) return;
 
-  // ── 3) 토글: 히트맵 끄면 모든 폴리곤 비표시 (인스턴스는 유지) ─────────────
-  useEffect(() => {
-    for (const { polygon } of polygonsRef.current) {
-      polygon.setMap(heatmapVisible ? mapInstance : null);
-    }
-  }, [heatmapVisible, mapInstance]);
-
-  if (kakaoError) {
-    return (
-      <div className="map-root map-root--error">
-        <div className="map-fallback">
-          <div className="map-fallback__title">카카오맵 키가 설정되지 않았습니다</div>
-          <div className="map-fallback__body">
-            <code>frontend/.env</code>의 <code>VITE_KAKAO_JS_KEY</code>에 카카오 디벨로퍼스에서
-            발급받은 JavaScript 키를 넣고 dev 서버를 재시작하세요. <br />
-            플랫폼 → Web → 사이트 도메인에 <code>http://localhost:5173</code> 등록 필요.
-          </div>
-        </div>
-      </div>
+    layer.bindTooltip(
+      `<div class="map-tooltip__name">${dong.gu} · ${dong.name}</div>` +
+        `<div class="map-tooltip__score tabular">종합점수 ${dong.score.toFixed(1)}</div>`,
+      { sticky: true, direction: 'top', offset: [0, -4], opacity: 1 },
     );
-  }
 
-  if (kakaoLoading || geoLoading || !geojson) {
+    layer.on({
+      click: () => onDongClick?.(dong),
+      mouseover: (e) =>
+        (e.target as { setStyle: (s: object) => void }).setStyle({
+          fillOpacity: 0.85,
+          weight: 1.5,
+        }),
+      mouseout: (e) =>
+        (e.target as { setStyle: (s: object) => void }).setStyle({
+          fillOpacity: 0.6,
+          weight: 0.8,
+        }),
+    });
+  };
+
+  if (geoLoading || !geojson) {
     return (
       <div className="map-root">
         <div className="map-fallback">
@@ -145,53 +116,25 @@ export default function HeatMap({ dongs, onDongClick, heatmapVisible = true }: H
 
   return (
     <div className="map-root">
-      <Map
+      <MapContainer
         center={SEOUL_CITY_HALL}
-        level={INITIAL_LEVEL}
-        style={{ width: '100%', height: '100%' }}
-        onCreate={setMapInstance}
-      />
-      <div ref={tooltipRef} className="map-tooltip-floating" style={{ display: 'none' }} />
+        zoom={INITIAL_ZOOM}
+        zoomControl={false}
+        scrollWheelZoom
+        className="map-container"
+      >
+        <TileLayer attribution={VWORLD_ATTRIBUTION} url={VWORLD_TILE_URL} maxZoom={18} />
+        <ZoomControl position="topright" />
+
+        {heatmapVisible && (
+          <GeoJSON
+            key={layerKey}
+            data={geojson}
+            style={styleFn}
+            onEachFeature={onEachFeature}
+          />
+        )}
+      </MapContainer>
     </div>
   );
-}
-
-// ============================================================================
-// 폴리곤 생성 유틸
-// ============================================================================
-
-function createPolygons(
-  map: kakao.maps.Map,
-  geojson: DongFeatureCollection,
-): PolygonEntry[] {
-  const out: PolygonEntry[] = [];
-  for (const feature of geojson.features) {
-    const slug = feature.properties.adm_cd;
-    const geom = feature.geometry;
-    if (geom.type !== 'Polygon' && geom.type !== 'MultiPolygon') continue;
-
-    const subPolygons =
-      geom.type === 'Polygon'
-        ? [geom.coordinates as number[][][]]
-        : (geom.coordinates as number[][][][]);
-
-    for (const subPoly of subPolygons) {
-      // 외곽 ring(`subPoly[0]`) → LatLng 인스턴스 배열. hole은 일단 무시.
-      const outerRing = subPoly[0];
-      if (!outerRing || outerRing.length < 3) continue;
-
-      const path = outerRing.map(([lng, lat]) => new kakao.maps.LatLng(lat, lng));
-      const polygon = new kakao.maps.Polygon({
-        path,
-        strokeWeight: 1.2,
-        strokeColor: '#2C2C2A',
-        strokeOpacity: 0.6,
-        fillColor: '#cccccc',  // 초기값 — 다음 effect에서 score 색으로 갱신
-        fillOpacity: 0.1,
-      });
-      polygon.setMap(map);
-      out.push({ slug, polygon });
-    }
-  }
-  return out;
 }
