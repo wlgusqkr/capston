@@ -155,3 +155,57 @@
   letter-spacing: var(--letter-spacing-ko);
   line-height: var(--font-caption-line);
 }
+
+/* User area inside the sidebar header (logged in: nickname · 마이페이지 / out: 로그인). */
+.sidebar__user {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.sidebar__user-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  font-size: var(--font-caption-size);
+  letter-spacing: var(--letter-spacing-ko);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.sidebar__user-link:hover {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.sidebar__user-link:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.sidebar__user-name {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.sidebar__user-link:hover .sidebar__user-name {
+  color: var(--color-primary);
+}
+
+.sidebar__user-sep {
+  color: var(--color-text-subtle);
+  margin: 0 var(--space-1);
+}
+
+.sidebar__user-action {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.sidebar__user-link--guest {
+  color: var(--color-primary);
+  font-weight: 500;
+}

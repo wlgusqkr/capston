@@ -14,7 +14,7 @@
 // row's raw axis scores so the panel can render its 점수 구성 bars without
 // a duplicate query.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import DongPanel from '@/components/Map/DongPanel';
 import HeatMap from '@/components/Map/HeatMap';
@@ -22,7 +22,11 @@ import Legend from '@/components/Map/Legend';
 import Sidebar from '@/components/Map/Sidebar';
 import ViewToggle from '@/components/Map/ViewToggle';
 import PreferenceModal from '@/components/Onboarding/PreferenceModal';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAddFavorite } from '@/hooks/useFavorites';
 import { useDongScores } from '@/hooks/useDongs';
+import { putMyPreference } from '@/lib/api';
+import { getAuthErrorMessage } from '@/lib/authErrors';
 import { DEFAULT_WEIGHTS } from '@/types/api';
 import type { DongScore, Weights } from '@/types/api';
 
@@ -34,7 +38,27 @@ const MAX_COMPARE = 3;
 
 export default function MainMap() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { user } = useAuth();
+  const addFavoriteMut = useAddFavorite();
+
+  // Initial weights — user's saved prefs once login resolves, default otherwise.
+  // We store in component state (the source of truth for the slider) and
+  // sync from `user.preference` exactly once when it transitions from null
+  // to an authenticated user.
   const [weights, setWeights] = useState<Weights>(DEFAULT_WEIGHTS);
+  const hasSyncedFromUserRef = useRef(false);
+
+  useEffect(() => {
+    if (!user || hasSyncedFromUserRef.current) return;
+    setWeights({
+      rent: user.preference.w_rent,
+      amenity: user.preference.w_amenity,
+      transit: user.preference.w_transit,
+    });
+    hasSyncedFromUserRef.current = true;
+  }, [user]);
+
   const [activeLayer, setActiveLayer] = useState<LayerKey>('composite');
   const [rentCapEnabled, setRentCapEnabled] = useState(false);
   const [rentCap, setRentCap] = useState(50);
@@ -44,6 +68,17 @@ export default function MainMap() {
   const [compareSlugs, setCompareSlugs] = useState<string[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | null>(null);
+
+  // ?onboarding=1 — auto-open the preference modal (entry from MyPage).
+  useEffect(() => {
+    if (searchParams.get('onboarding') === '1') {
+      setPreferenceOpen(true);
+      // Strip the param so refresh / back doesn't reopen.
+      const next = new URLSearchParams(searchParams);
+      next.delete('onboarding');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const { data, isLoading, isError, error } = useDongScores(weights);
 
@@ -117,9 +152,20 @@ export default function MainMap() {
     navigate(`/compare?dongs=${compareSlugs.join(',')}`);
   };
 
-  const handleFavorite = (_slug: string) => {
-    // Auth + favorites arrive in step 9.
-    window.alert('로그인 후 찜하기 (9단계에서 구현)');
+  const handleFavorite = (slug: string) => {
+    if (!user) {
+      flashToast('로그인이 필요합니다 — 로그인 페이지로 이동');
+      // Slight delay so the toast renders before the route swap.
+      window.setTimeout(() => navigate('/login'), 300);
+      return;
+    }
+    const dongName = data?.find((d) => d.slug === slug)?.name ?? slug;
+    addFavoriteMut.mutate(slug, {
+      onSuccess: () => flashToast(`${dongName} 찜 목록에 추가됨`),
+      onError: (err) => {
+        flashToast(getAuthErrorMessage(err, '찜 추가에 실패했어요.'));
+      },
+    });
   };
 
   const handlePreferenceComplete = (next: Weights) => {
@@ -128,6 +174,12 @@ export default function MainMap() {
     // setStyle transitions colors over --transition-slow (300ms).
     setWeights(next);
     setPreferenceOpen(false);
+    // Persist to backend if logged in. Failures are non-fatal (UX-only feature).
+    if (user) {
+      void putMyPreference(next).catch(() => {
+        // Silent — saving prefs is best-effort.
+      });
+    }
   };
 
   return (
@@ -146,6 +198,9 @@ export default function MainMap() {
         onOpenPreference={() => setPreferenceOpen(true)}
         compareCount={compareSlugs.length}
         onOpenCompare={handleOpenCompare}
+        userName={
+          user ? (user.nickname && user.nickname.trim()) || user.username : null
+        }
       />
 
       <section className="main-map__map" aria-label="서울 동네 히트맵">

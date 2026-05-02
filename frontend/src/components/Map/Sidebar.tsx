@@ -5,6 +5,7 @@
 //   4. CTA — "5번 비교로 자동 추천" (alerts in step 4, real flow in step 7)
 //   5. Filters — UI only for step 4
 import { useId } from 'react';
+import { Link } from 'react-router-dom';
 
 import { Button, Input, Slider } from '@/components/ui';
 import { rebalanceWeights } from '@/lib/weights';
@@ -39,6 +40,8 @@ export interface SidebarProps {
   compareCount: number;
   /** Navigate to /compare with the queued slugs. */
   onOpenCompare: () => void;
+  /** Display name when logged in (nickname || username). Null = logged out. */
+  userName: string | null;
 }
 
 export default function Sidebar({
@@ -55,6 +58,7 @@ export default function Sidebar({
   onOpenPreference,
   compareCount,
   onOpenCompare,
+  userName,
 }: SidebarProps) {
   const universityCheckId = useId();
   const rentCapCheckId = useId();
@@ -78,6 +82,19 @@ export default function Sidebar({
           // Real autocomplete arrives in step 5/6 alongside /api/dongs/search.
           disabled
         />
+        <div className="sidebar__user">
+          {userName ? (
+            <Link to="/mypage" className="sidebar__user-link">
+              <span className="sidebar__user-name">{userName}</span>
+              <span className="sidebar__user-sep"> · </span>
+              <span className="sidebar__user-action">마이페이지</span>
+            </Link>
+          ) : (
+            <Link to="/login" className="sidebar__user-link sidebar__user-link--guest">
+              로그인 →
+            </Link>
+          )}
+        </div>
       </header>
 
       <section className="sidebar__section" aria-label="레이어">

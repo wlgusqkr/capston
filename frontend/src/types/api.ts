@@ -264,3 +264,82 @@ export interface CompareResponse {
   /** Same order as the input slugs (max 3). */
   dongs: CompareItem[];
 }
+
+// -------- Auth + Users (SPEC 6.6, 9 — step 9) -----------------------------
+// Source: docs/handoff/20260502-step9a-backend-users.md
+//   세션 쿠키 기반 (axios withCredentials: true).
+//   카카오/소셜 X — 표준 username/password.
+
+/** Stored preference weights as integer percents (sum = 100, ±1).
+ *  Same shape as `Weights` but with backend field names.
+ *  Use `mePreferenceToWeights` / `weightsToMePreference` to convert.
+ */
+export interface MePreference {
+  w_rent: number;
+  w_amenity: number;
+  w_transit: number;
+}
+
+/** Bare user — used in many response shapes. */
+export interface User {
+  id: number;
+  username: string;
+  /** May be the empty string; backend falls back to username on GET /me. */
+  nickname: string;
+  /** May be the empty string. */
+  school: string;
+  /** Null when not provided. */
+  year: number | null;
+}
+
+/** GET /api/users/me — adds the user's saved preference weights. */
+export interface MeResponse extends User {
+  preference: MePreference;
+}
+
+/** POST /api/auth/register body. */
+export interface RegisterPayload {
+  username: string;
+  password: string;
+  school?: string;
+  year?: number | null;
+  nickname?: string;
+}
+
+/** POST /api/auth/login body. */
+export interface LoginPayload {
+  username: string;
+  password: string;
+}
+
+/** PATCH /api/users/me body — all fields optional. */
+export interface MePatchPayload {
+  school?: string;
+  year?: number | null;
+  nickname?: string;
+}
+
+/** Single row of GET /api/users/me/favorites and the POST response. */
+export interface FavoriteItem {
+  slug: string;
+  name: string;
+  gu: string;
+  /** 0~100, applied with the user's saved weights. */
+  score: number;
+  /** ISO 8601 KST. */
+  created_at: string;
+}
+
+/** Shape of 4xx error payloads from the auth/users routes (step9a).
+ *  Field arrays come from DRF serializers; `detail` from custom messages.
+ */
+export interface ApiErrorDetail {
+  detail?: string;
+  username?: string | string[];
+  password?: string | string[];
+  slug?: string | string[];
+  weights?: string | string[];
+  w_rent?: string | string[];
+  w_amenity?: string | string[];
+  w_transit?: string | string[];
+}

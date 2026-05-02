@@ -8,9 +8,16 @@ import type {
   DongDetail,
   DongScore,
   DongSummary,
+  FavoriteItem,
+  LoginPayload,
+  MePatchPayload,
+  MePreference,
+  MeResponse,
   PreferencePairsResponse,
   PreferenceWeightsResponse,
+  RegisterPayload,
   SubmitComparison,
+  User,
   Weights,
 } from '@/types/api';
 
@@ -19,8 +26,12 @@ const baseURL = import.meta.env.VITE_API_BASE_URL ?? '/api';
 export const api: AxiosInstance = axios.create({
   baseURL,
   timeout: 10_000,
+  // Required for Django session cookies. The backend marks all auth routes
+  // CSRF-exempt (see step9a handoff) so no token wrangling is needed.
+  withCredentials: true,
   headers: {
     Accept: 'application/json',
+    'Content-Type': 'application/json',
   },
 });
 
@@ -125,3 +136,94 @@ export async function submitPreferenceComparisons(
   );
   return data;
 }
+
+// -------- Auth + Users (SPEC 6.6, 9 — step 9) ------------------------------
+// All routes rely on the session cookie set by Django. Make sure axios
+// `withCredentials` stays true (set above on the shared instance).
+
+/** POST /api/auth/register — creates the user and auto-logs in. */
+export async function register(payload: RegisterPayload): Promise<MeResponse> {
+  const { data } = await api.post<MeResponse>('/auth/register', payload);
+  return data;
+}
+
+/** POST /api/auth/login — sets the session cookie. */
+export async function login(payload: LoginPayload): Promise<MeResponse> {
+  const { data } = await api.post<MeResponse>('/auth/login', payload);
+  return data;
+}
+
+/** POST /api/auth/logout — idempotent (200 even if not logged in). */
+export async function logout(): Promise<void> {
+  await api.post('/auth/logout');
+}
+
+/** GET /api/users/me — used on app boot to restore session. */
+export async function getMe(): Promise<MeResponse> {
+  const { data } = await api.get<MeResponse>('/users/me');
+  return data;
+}
+
+/** PATCH /api/users/me — partial profile update. */
+export async function patchMe(payload: MePatchPayload): Promise<MeResponse> {
+  const { data } = await api.patch<MeResponse>('/users/me', payload);
+  return data;
+}
+
+/** GET /api/users/me/preference — saved weights (integer percent, sum 100). */
+export async function getMyPreference(): Promise<MePreference> {
+  const { data } = await api.get<MePreference>('/users/me/preference');
+  return data;
+}
+
+/** PUT /api/users/me/preference — overwrite saved weights.
+ *  Backend tolerates ±1 sum drift. Caller normalizes via lib/weights helpers.
+ */
+export async function putMyPreference(
+  weights: Weights
+): Promise<MePreference> {
+  const body: MePreference = {
+    w_rent: weights.rent,
+    w_amenity: weights.amenity,
+    w_transit: weights.transit,
+  };
+  const { data } = await api.put<MePreference>('/users/me/preference', body);
+  return data;
+}
+
+/** GET /api/users/me/favorites — newest first. Score uses saved weights. */
+export async function getFavorites(): Promise<FavoriteItem[]> {
+  const { data } = await api.get<FavoriteItem[]>('/users/me/favorites');
+  return data;
+}
+
+/** POST /api/users/me/favorites — adds a dong by slug. */
+export async function addFavorite(slug: string): Promise<FavoriteItem> {
+  const { data } = await api.post<FavoriteItem>('/users/me/favorites', {
+    slug,
+  });
+  return data;
+}
+
+/** DELETE /api/users/me/favorites/:slug — 204 on success. */
+export async function removeFavorite(slug: string): Promise<void> {
+  await api.delete(`/users/me/favorites/${slug}`);
+}
+
+/** GET /api/users/me/reviews — currently always []. */
+export async function getMyReviews(): Promise<unknown[]> {
+  const { data } = await api.get<unknown[]>('/users/me/reviews');
+  return data;
+}
+
+// Re-exports so callers can `import type { User } from '@/lib/api'` if they
+// prefer barreling through the API module rather than `types/api`.
+export type {
+  FavoriteItem,
+  LoginPayload,
+  MePatchPayload,
+  MePreference,
+  MeResponse,
+  RegisterPayload,
+  User,
+};

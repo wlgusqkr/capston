@@ -13,6 +13,8 @@ Desktop.ini
 *.swo
 *~
 
+docs/*
+
 # --- Environment / Secrets ---
 .env
 .env.local
