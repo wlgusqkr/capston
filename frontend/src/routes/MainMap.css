@@ -42,6 +42,17 @@
   color: var(--color-danger);
 }
 
+.main-map__toast {
+  /* Sits slightly below the loading/error overlay slot so they can coexist
+   * without visual collision. */
+  top: auto;
+  bottom: var(--space-6);
+  border-color: var(--color-primary);
+  color: var(--color-text);
+  background: var(--color-surface);
+  z-index: 600;
+}
+
 .main-map__overlay-detail {
   font-size: var(--font-hint-size);
   color: var(--color-text-muted);

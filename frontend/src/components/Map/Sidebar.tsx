@@ -35,6 +35,10 @@ export interface SidebarProps {
   onNearUniversityToggle: (next: boolean) => void;
   /** Open the preference learning onboarding modal (SPEC 6.5). */
   onOpenPreference: () => void;
+  /** Number of dongs currently queued for compare (0~3). */
+  compareCount: number;
+  /** Navigate to /compare with the queued slugs. */
+  onOpenCompare: () => void;
 }
 
 export default function Sidebar({
@@ -49,6 +53,8 @@ export default function Sidebar({
   nearUniversityOnly,
   onNearUniversityToggle,
   onOpenPreference,
+  compareCount,
+  onOpenCompare,
 }: SidebarProps) {
   const universityCheckId = useId();
   const rentCapCheckId = useId();
@@ -126,6 +132,23 @@ export default function Sidebar({
         </div>
         <Button variant="primary" fullWidth onClick={onOpenPreference}>
           5번 비교로 자동 추천 →
+        </Button>
+      </section>
+
+      <section className="sidebar__section" aria-label="비교 목록">
+        <h2 className="sidebar__section-title">비교 목록</h2>
+        <p className="sidebar__compare-hint">
+          {compareCount === 0
+            ? '동네 패널에서 "비교에 추가"를 누르세요.'
+            : `현재 ${compareCount}/3개 담겼어요.`}
+        </p>
+        <Button
+          variant="secondary"
+          fullWidth
+          onClick={onOpenCompare}
+          disabled={compareCount === 0}
+        >
+          비교 보기 ({compareCount})
         </Button>
       </section>
 

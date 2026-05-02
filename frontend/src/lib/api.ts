@@ -4,6 +4,7 @@ import axios from 'axios';
 import type { AxiosInstance } from 'axios';
 
 import type {
+  CompareResponse,
   DongDetail,
   DongScore,
   DongSummary,
@@ -86,6 +87,26 @@ export async function getPreferencePairs(
 ): Promise<PreferencePairsResponse> {
   const { data } = await api.get<PreferencePairsResponse>('/preference/pairs', {
     params: { count },
+  });
+  return data;
+}
+
+/** GET /api/compare?slugs=A,B,C[&w_rent=&w_amenity=&w_transit=] — compare
+ *  table data (SPEC 6.4). Backend preserves input slug order in the response
+ *  so the caller can map slugs[i] → dongs[i] directly into table columns.
+ *  1~3 slugs allowed; weights default to 33/33/34 if omitted.
+ */
+export async function getCompare(
+  slugs: string[],
+  weights: Weights
+): Promise<CompareResponse> {
+  const { data } = await api.get<CompareResponse>('/compare', {
+    params: {
+      slugs: slugs.join(','),
+      w_rent: weights.rent,
+      w_amenity: weights.amenity,
+      w_transit: weights.transit,
+    },
   });
   return data;
 }

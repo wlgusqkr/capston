@@ -218,3 +218,49 @@ export interface PreferenceWeightsResponse {
   w_amenity: number;
   w_transit: number;
 }
+
+// -------- Compare (SPEC 6.4) ---------------------------------------------
+// Source: docs/handoff/20260502-step8a-backend-compare.md
+
+/** Korean-readable amenity coverage label used in the compare table. */
+export type CompareAmenityLabel = '충분' | '보통' | '부족';
+
+/** Korean-readable safety label used in the compare table. */
+export type CompareSafetyLabel = '높음' | '보통' | '낮음';
+
+/** A single compare-table column (one dong) — GET /api/compare row.
+ *  Backend returns rows in the input slug order (preserved for column order).
+ */
+export interface CompareItem {
+  slug: string;
+  name: string;
+  gu: string;
+  /** Weighted composite 0~100 (two decimals). */
+  score: number;
+  /** Average monthly rent in 만원 (정수). */
+  rent_avg: number;
+  /** Walking minutes to nearest subway station (정수). */
+  transit_min: number;
+  amenity_label: CompareAmenityLabel;
+  /** Single-household ratio 0~100 (one decimal). */
+  single_household_pct: number;
+  safety_label: CompareSafetyLabel;
+  /** Average review rating 1~5 (one decimal). */
+  review_avg_rating: number;
+  /** Review count (정수). */
+  review_count: number;
+}
+
+/** Echoed weights — the values the backend actually applied. */
+export interface CompareWeights {
+  w_rent: number;
+  w_amenity: number;
+  w_transit: number;
+}
+
+/** GET /api/compare?slugs=A,B,C[&w_rent=&w_amenity=&w_transit=] response. */
+export interface CompareResponse {
+  weights: CompareWeights;
+  /** Same order as the input slugs (max 3). */
+  dongs: CompareItem[];
+}

@@ -7,11 +7,13 @@
 //   - weights (rent/amenity/transit) — drives the score query
 //   - activeLayer / filters — UI only for step 4 (no behavior yet)
 //   - selectedSlug — drives the slide-in DongPanel (SPEC 6.2)
+//   - compareSlugs — accumulated dongs queued for /compare (SPEC 6.4),
+//                    capped at 3, deduplicated, in insertion order
 //
 // On polygon click we open the right-side DongPanel and pass the matching
 // row's raw axis scores so the panel can render its 점수 구성 bars without
 // a duplicate query.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import DongPanel from '@/components/Map/DongPanel';
@@ -28,6 +30,8 @@ import './MainMap.css';
 
 type LayerKey = 'composite' | 'rent' | 'amenity' | 'transit';
 
+const MAX_COMPARE = 3;
+
 export default function MainMap() {
   const navigate = useNavigate();
   const [weights, setWeights] = useState<Weights>(DEFAULT_WEIGHTS);
@@ -37,6 +41,9 @@ export default function MainMap() {
   const [nearUniversityOnly, setNearUniversityOnly] = useState(false);
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [preferenceOpen, setPreferenceOpen] = useState(false);
+  const [compareSlugs, setCompareSlugs] = useState<string[]>([]);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<number | null>(null);
 
   const { data, isLoading, isError, error } = useDongScores(weights);
 
@@ -65,9 +72,49 @@ export default function MainMap() {
     navigate(`/dong/${slug}`);
   };
 
-  const handleAddCompare = (_slug: string) => {
-    // Compare flow arrives in step 8.
-    window.alert('비교 목록에 추가됨 (8단계에서 구현)');
+  /** Show a transient inline toast (auto-dismiss in 2.4s). */
+  const flashToast = (message: string) => {
+    setToast(message);
+    if (toastTimer.current != null) {
+      window.clearTimeout(toastTimer.current);
+    }
+    toastTimer.current = window.setTimeout(() => {
+      setToast(null);
+      toastTimer.current = null;
+    }, 2400);
+  };
+
+  // Cleanup toast timer on unmount.
+  useEffect(
+    () => () => {
+      if (toastTimer.current != null) window.clearTimeout(toastTimer.current);
+    },
+    []
+  );
+
+  const handleAddCompare = (slug: string) => {
+    setCompareSlugs((prev) => {
+      if (prev.includes(slug)) {
+        const dongName = data?.find((d) => d.slug === slug)?.name ?? slug;
+        flashToast(`${dongName}은(는) 이미 비교 목록에 있어요.`);
+        return prev;
+      }
+      if (prev.length >= MAX_COMPARE) {
+        flashToast(
+          `비교 목록은 최대 ${MAX_COMPARE}개까지예요. 비교 화면에서 빼고 다시 추가해주세요.`
+        );
+        return prev;
+      }
+      const next = [...prev, slug];
+      const dongName = data?.find((d) => d.slug === slug)?.name ?? slug;
+      flashToast(`${dongName} 추가됨 (${next.length}/${MAX_COMPARE})`);
+      return next;
+    });
+  };
+
+  const handleOpenCompare = () => {
+    if (compareSlugs.length === 0) return;
+    navigate(`/compare?dongs=${compareSlugs.join(',')}`);
   };
 
   const handleFavorite = (_slug: string) => {
@@ -97,6 +144,8 @@ export default function MainMap() {
         nearUniversityOnly={nearUniversityOnly}
         onNearUniversityToggle={setNearUniversityOnly}
         onOpenPreference={() => setPreferenceOpen(true)}
+        compareCount={compareSlugs.length}
+        onOpenCompare={handleOpenCompare}
       />
 
       <section className="main-map__map" aria-label="서울 동네 히트맵">
@@ -113,6 +162,12 @@ export default function MainMap() {
             <span className="main-map__overlay-detail">
               {error instanceof Error ? error.message : '알 수 없는 오류'}
             </span>
+          </div>
+        )}
+
+        {toast && (
+          <div className="main-map__overlay main-map__toast" role="status" aria-live="polite">
+            {toast}
           </div>
         )}
 

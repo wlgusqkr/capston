@@ -1,0 +1,322 @@
+/* Compare — full-screen compare table page (SPEC 6.4).
+ * All colors / spacing / typography from tokens.css. No hardcoded hex.
+ */
+
+.compare {
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* ---- Topbar (shares the DongDetail look) -------------------------------- */
+
+.compare__topbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.compare__topbar-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-3) var(--space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.compare__back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-body-size);
+  color: var(--color-primary);
+  text-decoration: none;
+  height: var(--control-height-sm);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  letter-spacing: var(--letter-spacing-ko);
+  transition: background var(--transition-fast);
+}
+
+.compare__back:hover {
+  background: var(--color-primary-soft);
+}
+
+.compare__back:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.compare__crumb-sep {
+  color: var(--color-text-subtle);
+}
+
+.compare__crumb-current {
+  font-size: var(--font-body-size);
+  color: var(--color-text);
+  font-weight: 500;
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+/* ---- Main + statuses ----------------------------------------------------- */
+
+.compare__main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-6);
+}
+
+.compare__status {
+  padding: var(--space-8) var(--space-6);
+  text-align: center;
+  font-size: var(--font-body-size);
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.compare__status--error {
+  color: var(--color-danger);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.compare__status-detail {
+  font-size: var(--font-caption-size);
+  color: var(--color-text-muted);
+}
+
+.compare__status-actions {
+  margin-top: var(--space-2);
+}
+
+/* ---- Empty state --------------------------------------------------------- */
+
+.compare__empty {
+  max-width: 480px;
+  margin: var(--space-8) auto;
+  padding: var(--space-8) var(--space-6);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.compare__empty-title {
+  font-size: var(--font-h2-size);
+  font-weight: var(--font-h2-weight);
+  line-height: var(--font-h2-line);
+  letter-spacing: var(--letter-spacing-ko);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.compare__empty-text {
+  font-size: var(--font-body-size);
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-ko);
+  line-height: var(--font-body-line);
+  margin: 0;
+}
+
+.compare__empty-text strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+/* ---- Table wrapper ------------------------------------------------------- */
+
+.compare__table-wrap {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.compare__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-family-base);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.compare__col-label {
+  width: 180px;
+}
+
+.compare__col-dong {
+  /* Equal share of the remaining width across up to 3 columns. */
+}
+
+/* ---- Table header (column headers) -------------------------------------- */
+
+.compare__table thead tr {
+  background: var(--color-gray-100);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.compare__th-label,
+.compare__th-dong {
+  padding: var(--space-4) var(--space-5);
+  text-align: left;
+  font-weight: var(--font-h3-weight);
+  font-size: var(--font-caption-size);
+  color: var(--color-text-muted);
+  vertical-align: top;
+}
+
+.compare__th-label-text {
+  display: inline-block;
+  font-size: var(--font-caption-size);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: none;
+}
+
+.compare__col-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.compare__col-titles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.compare__col-gu {
+  font-size: var(--font-caption-size);
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.compare__col-name {
+  font-size: var(--font-h3-size);
+  font-weight: var(--font-h3-weight);
+  line-height: var(--font-h3-line);
+  color: var(--color-text);
+}
+
+.compare__col-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.compare__remove {
+  width: var(--control-height-sm);
+  height: var(--control-height-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 18px; /* glyph size — control box uses --control-height-sm token */
+  line-height: 1;
+  transition: background var(--transition-fast), color var(--transition-fast),
+    border-color var(--transition-fast);
+  margin-left: auto;
+}
+
+.compare__remove:hover {
+  background: var(--color-danger-soft);
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.compare__remove:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ---- Body rows ---------------------------------------------------------- */
+
+.compare__table tbody tr {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.compare__table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.compare__row-label {
+  padding: var(--space-4) var(--space-5);
+  text-align: left;
+  font-size: var(--font-caption-size);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  background: var(--color-surface-inset);
+  letter-spacing: var(--letter-spacing-ko);
+  vertical-align: middle;
+}
+
+.compare__cell {
+  padding: var(--space-4) var(--space-5);
+  font-size: var(--font-body-size);
+  color: var(--color-text);
+  vertical-align: middle;
+}
+
+.compare__cell--best {
+  font-weight: 500;
+  color: var(--color-primary);
+}
+
+.compare__cell-unit {
+  font-size: var(--font-caption-size);
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.compare__cell--best .compare__cell-unit {
+  /* Keep the unit slightly muted even when the row value is highlighted. */
+  color: var(--color-primary);
+  opacity: 0.75;
+}
+
+.compare__rating {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-secondary);
+  font-weight: 600;
+}
+
+.compare__cell--best .compare__rating {
+  color: var(--color-primary);
+}
+
+/* tabular-nums for digit columns */
+.compare__table .tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Footer (add / share) ----------------------------------------------- */
+
+.compare__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.compare__share-notice {
+  font-size: var(--font-caption-size);
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-ko);
+  margin-left: var(--space-2);
+}

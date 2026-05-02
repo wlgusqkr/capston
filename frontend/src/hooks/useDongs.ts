@@ -2,8 +2,14 @@
 import { useQuery } from '@tanstack/react-query';
 import type { UseQueryResult } from '@tanstack/react-query';
 
-import { getDongDetail, getDongScores, getDongSummary } from '@/lib/api';
-import type { DongDetail, DongScore, DongSummary, Weights } from '@/types/api';
+import { getCompare, getDongDetail, getDongScores, getDongSummary } from '@/lib/api';
+import type {
+  CompareResponse,
+  DongDetail,
+  DongScore,
+  DongSummary,
+  Weights,
+} from '@/types/api';
 
 /** Subscribe to /api/dongs/scores for a given weights triple.
  *  Refetches automatically when any weight value changes (queryKey).
@@ -39,6 +45,30 @@ export function useDongSummary(
     ] as const,
     queryFn: () => getDongSummary(slug as string, weights),
     enabled: slug != null,
+    staleTime: 60_000,
+  });
+}
+
+/** Subscribe to /api/compare for the compare page (SPEC 6.4).
+ *  Backend preserves input slug order in the response. The hook is disabled
+ *  when slugs is empty or `enabled` is false (e.g. before URL parsing).
+ */
+export function useCompare(
+  slugs: string[],
+  weights: Weights,
+  enabled: boolean = true
+): UseQueryResult<CompareResponse> {
+  return useQuery({
+    queryKey: [
+      'compare',
+      // Stable key: join here so reordering produces a different key.
+      slugs.join(','),
+      weights.rent,
+      weights.amenity,
+      weights.transit,
+    ] as const,
+    queryFn: () => getCompare(slugs, weights),
+    enabled: enabled && slugs.length > 0,
     staleTime: 60_000,
   });
 }
