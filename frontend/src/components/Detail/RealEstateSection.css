@@ -1,0 +1,137 @@
+/* RealEstateSection — SPEC 6.3 Section 2. */
+
+.real-estate {
+  margin-bottom: var(--space-8);
+}
+
+.real-estate__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.real-estate__title {
+  margin: 0;
+  font-size: var(--font-h2-size);
+  line-height: var(--font-h2-line);
+  font-weight: var(--font-h2-weight);
+  color: var(--color-text);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.real-estate__period {
+  display: inline-flex;
+  gap: var(--space-1);
+  background: var(--color-surface-inset);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-1);
+}
+
+.real-estate__period-btn {
+  appearance: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  height: var(--control-height-sm);
+  padding: 0 var(--space-3);
+  font-family: inherit;
+  font-size: var(--font-caption-size);
+  color: var(--color-text-muted);
+  border-radius: var(--radius-sm);
+  letter-spacing: var(--letter-spacing-ko);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.real-estate__period-btn:hover {
+  color: var(--color-text);
+}
+
+.real-estate__period-btn:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.real-estate__period-btn--active {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+}
+
+.real-estate__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.real-estate__chart-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.real-estate__chart-title {
+  margin: 0;
+  font-size: var(--font-h3-size);
+  line-height: var(--font-h3-line);
+  font-weight: var(--font-h3-weight);
+  color: var(--color-text);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.real-estate__chart {
+  width: 100%;
+  height: 240px;
+}
+
+.real-estate__deals-card {
+  overflow: hidden;
+}
+
+.real-estate__deals-header {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.real-estate__table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.real-estate__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-body-size);
+}
+
+.real-estate__table thead th {
+  background: var(--color-gray-100);
+  color: var(--color-text-muted);
+  font-weight: 500;
+  text-align: left;
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--font-caption-size);
+  letter-spacing: var(--letter-spacing-ko);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.real-estate__table tbody td {
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.real-estate__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.real-estate__table-empty {
+  text-align: center;
+  color: var(--color-text-muted);
+  padding: var(--space-6);
+}

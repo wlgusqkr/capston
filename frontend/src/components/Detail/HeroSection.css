@@ -1,0 +1,77 @@
+/* HeroSection styles. All values via tokens. */
+
+.hero {
+  margin-bottom: var(--space-8);
+}
+
+.hero__grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.hero__left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.hero__gu {
+  margin: 0;
+  font-size: var(--font-caption-size);
+  line-height: var(--font-caption-line);
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.hero__name {
+  margin: 0;
+  font-size: var(--font-h1-size);
+  line-height: var(--font-h1-line);
+  font-weight: var(--font-h1-weight);
+  color: var(--color-text);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.hero__score-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-top: var(--space-2);
+}
+
+.hero__summary {
+  margin: 0;
+  font-size: var(--font-body-size);
+  line-height: var(--font-body-line);
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-ko);
+  max-width: 60ch;
+}
+
+.hero__map-card {
+  width: 280px;
+  height: 280px;
+  overflow: hidden;
+}
+
+.hero__map,
+.hero__map-container {
+  width: 100%;
+  height: 100%;
+}
+
+.hero__map-container {
+  background: var(--color-surface-inset);
+  border-radius: var(--radius-lg);
+}
+
+.hero__map-pin-label {
+  font-size: var(--font-hint-size);
+  font-weight: var(--font-hint-weight);
+  color: var(--color-text);
+  letter-spacing: var(--letter-spacing-ko);
+}

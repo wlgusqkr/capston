@@ -2,8 +2,8 @@
 import { useQuery } from '@tanstack/react-query';
 import type { UseQueryResult } from '@tanstack/react-query';
 
-import { getDongScores, getDongSummary } from '@/lib/api';
-import type { DongScore, DongSummary, Weights } from '@/types/api';
+import { getDongDetail, getDongScores, getDongSummary } from '@/lib/api';
+import type { DongDetail, DongScore, DongSummary, Weights } from '@/types/api';
 
 /** Subscribe to /api/dongs/scores for a given weights triple.
  *  Refetches automatically when any weight value changes (queryKey).
@@ -39,6 +39,30 @@ export function useDongSummary(
     ] as const,
     queryFn: () => getDongSummary(slug as string, weights),
     enabled: slug != null,
+    staleTime: 60_000,
+  });
+}
+
+/** Subscribe to /api/dongs/:slug/detail for the detail page (SPEC 6.3).
+ *  Disabled until a slug is available (route param undefined / empty).
+ *  Refetches on weights changes — backend recomputes weighted score and
+ *  vs_seoul_avg_pct each call.
+ */
+export function useDongDetail(
+  slug: string | null | undefined,
+  weights: Weights
+): UseQueryResult<DongDetail> {
+  return useQuery({
+    queryKey: [
+      'dongs',
+      'detail',
+      slug,
+      weights.rent,
+      weights.amenity,
+      weights.transit,
+    ] as const,
+    queryFn: () => getDongDetail(slug as string, weights),
+    enabled: !!slug,
     staleTime: 60_000,
   });
 }

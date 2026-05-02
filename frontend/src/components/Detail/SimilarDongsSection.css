@@ -1,0 +1,79 @@
+/* SimilarDongsSection — SPEC 6.3 Section 6. */
+
+.similar {
+  margin-bottom: var(--space-8);
+}
+
+.similar__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.similar__title {
+  margin: 0;
+  font-size: var(--font-h2-size);
+  line-height: var(--font-h2-line);
+  font-weight: var(--font-h2-weight);
+  color: var(--color-text);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.similar__hint {
+  margin: 0;
+  font-size: var(--font-caption-size);
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.similar__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+}
+
+.similar__card {
+  appearance: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.similar__card:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+.similar__card:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.similar__gu {
+  font-size: var(--font-caption-size);
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.similar__name {
+  font-size: var(--font-h2-size);
+  line-height: var(--font-h2-line);
+  font-weight: var(--font-h2-weight);
+  color: var(--color-text);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.similar__sim {
+  margin-top: var(--space-2);
+  font-size: var(--font-body-size);
+  color: var(--color-primary);
+  font-weight: 500;
+  letter-spacing: var(--letter-spacing-ko);
+}

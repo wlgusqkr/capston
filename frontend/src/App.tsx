@@ -6,6 +6,7 @@
 //   /onboarding             → preference modal (7단계)
 import { Route, Routes } from 'react-router-dom';
 
+import DongDetail from './routes/DongDetail';
 import MainMap from './routes/MainMap';
 import NotFound from './routes/NotFound';
 
@@ -13,6 +14,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<MainMap />} />
+      <Route path="/dong/:slug" element={<DongDetail />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
