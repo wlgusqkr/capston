@@ -30,6 +30,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.db import IntegrityError, transaction
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import NotFound
@@ -120,6 +121,7 @@ class _AuthRequiredMixin:
 # ---------------------------------------------------------------------------
 
 
+@extend_schema(tags=["auth"], summary="회원가입 (자동 로그인)")
 @method_decorator(csrf_exempt, name="dispatch")
 class RegisterView(APIView):
     """
@@ -179,6 +181,7 @@ class RegisterView(APIView):
 # ---------------------------------------------------------------------------
 
 
+@extend_schema(tags=["auth"], summary="로그인 (세션 쿠키)")
 @method_decorator(csrf_exempt, name="dispatch")
 class LoginView(APIView):
     """
@@ -219,6 +222,7 @@ class LoginView(APIView):
 # ---------------------------------------------------------------------------
 
 
+@extend_schema(tags=["auth"], summary="로그아웃")
 @method_decorator(csrf_exempt, name="dispatch")
 class LogoutView(APIView):
     """
@@ -238,6 +242,7 @@ class LogoutView(APIView):
 # ---------------------------------------------------------------------------
 
 
+@extend_schema(tags=["users"], summary="내 프로필 + 가중치")
 @method_decorator(csrf_exempt, name="dispatch")
 class MeView(_AuthRequiredMixin, APIView):
     """
@@ -269,6 +274,7 @@ class MeView(_AuthRequiredMixin, APIView):
 # ---------------------------------------------------------------------------
 
 
+@extend_schema(tags=["users"], summary="내 가중치 (정수 % 합 100)")
 @method_decorator(csrf_exempt, name="dispatch")
 class PreferenceView(_AuthRequiredMixin, GenericAPIView):
     """
@@ -308,6 +314,7 @@ class PreferenceView(_AuthRequiredMixin, GenericAPIView):
 # ---------------------------------------------------------------------------
 
 
+@extend_schema(tags=["users"], summary="찜한 동네 (목록 + 추가)")
 @method_decorator(csrf_exempt, name="dispatch")
 class FavoritesView(_AuthRequiredMixin, APIView):
     """
@@ -387,6 +394,7 @@ class FavoritesView(_AuthRequiredMixin, APIView):
 # ---------------------------------------------------------------------------
 
 
+@extend_schema(tags=["users"], summary="찜 해제 (DELETE)")
 @method_decorator(csrf_exempt, name="dispatch")
 class FavoriteDetailView(_AuthRequiredMixin, APIView):
     """DELETE /api/users/me/favorites/<slug> — 찜 해제. 204 또는 404."""
@@ -405,6 +413,7 @@ class FavoriteDetailView(_AuthRequiredMixin, APIView):
 # ---------------------------------------------------------------------------
 
 
+@extend_schema(tags=["users"], summary="내 리뷰 (Review 모델 미구현 → 빈 list)")
 @method_decorator(csrf_exempt, name="dispatch")
 class MyReviewsView(_AuthRequiredMixin, APIView):
     """

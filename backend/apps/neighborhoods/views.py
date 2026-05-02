@@ -14,6 +14,8 @@ Dong 관련 뷰.
 
 from __future__ import annotations
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.request import Request
@@ -86,6 +88,41 @@ def _parse_and_validate_weights(request: Request) -> dict[str, float]:
     }
 
 
+# Swagger에 표시할 가중치 파라미터 공용 정의.
+WEIGHT_PARAMS = [
+    OpenApiParameter(
+        name="w_rent",
+        type=OpenApiTypes.INT,
+        location=OpenApiParameter.QUERY,
+        required=False,
+        description="전월세 가중치 0~100 (default 33). w_amenity + w_transit과 합 100±1.",
+    ),
+    OpenApiParameter(
+        name="w_amenity",
+        type=OpenApiTypes.INT,
+        location=OpenApiParameter.QUERY,
+        required=False,
+        description="생활시설 가중치 0~100 (default 33).",
+    ),
+    OpenApiParameter(
+        name="w_transit",
+        type=OpenApiTypes.INT,
+        location=OpenApiParameter.QUERY,
+        required=False,
+        description="교통 가중치 0~100 (default 34).",
+    ),
+]
+
+
+@extend_schema(
+    tags=["dongs"],
+    summary="행정동 종합 점수 리스트 (메인 지도 히트맵용)",
+    description=(
+        "서울 425개 행정동의 가중합 종합 점수와 중심점 좌표, raw 축별 점수 3종을 반환. "
+        "가중치는 0~100 정수 합 100±1. 응답은 score 내림차순 정렬."
+    ),
+    parameters=WEIGHT_PARAMS,
+)
 class DongScoresView(APIView):
     """
     GET /api/dongs/scores?w_rent=33&w_amenity=33&w_transit=34
@@ -117,6 +154,12 @@ class DongScoresView(APIView):
         return Response(serialized, status=status.HTTP_200_OK)
 
 
+@extend_schema(
+    tags=["dongs"],
+    summary="동네 패널 요약 (SPEC 6.2)",
+    description="단일 행정동의 패널용 핵심 지표 5종 + 한 줄 요약.",
+    parameters=WEIGHT_PARAMS,
+)
 class DongSummaryView(APIView):
     """
     GET /api/dongs/<slug>/summary?w_rent=&w_amenity=&w_transit=
@@ -145,6 +188,15 @@ class DongSummaryView(APIView):
         return Response(data, status=status.HTTP_200_OK)
 
 
+@extend_schema(
+    tags=["dongs"],
+    summary="동네 상세 — 6개 섹션 (SPEC 6.3)",
+    description=(
+        "Hero / 부동산 시세 / 편의시설 / 교통 / 자취생 리뷰 / 비슷한 동네를 한 번에 반환. "
+        "현재 모두 더미 데이터 (10단계 data-pipeline 적재 후 교체)."
+    ),
+    parameters=WEIGHT_PARAMS,
+)
 class DongDetailView(APIView):
     """
     GET /api/dongs/<slug>/detail?w_rent=&w_amenity=&w_transit=
@@ -179,6 +231,21 @@ class DongDetailView(APIView):
         return Response(data, status=status.HTTP_200_OK)
 
 
+@extend_schema(
+    tags=["compare"],
+    summary="동네 비교 (SPEC 6.4, 최대 3개)",
+    description="콤마 구분 슬러그 1~3개를 받아 7개 비교 지표를 입력 순서로 반환.",
+    parameters=[
+        OpenApiParameter(
+            name="slugs",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            required=True,
+            description="콤마 구분 슬러그. 예: `1101053,1101054,1101055`",
+        ),
+        *WEIGHT_PARAMS,
+    ],
+)
 class CompareView(APIView):
     """
     GET /api/compare?slugs=A,B,C[&w_rent=&w_amenity=&w_transit=]

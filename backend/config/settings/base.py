@@ -59,6 +59,7 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     "rest_framework",
     "corsheaders",
+    "drf_spectacular",  # OpenAPI 3 schema + Swagger UI / ReDoc
     # 9단계 — 사용자 명시로 카카오/allauth는 비활성화.
     # 표준 Django username/password (세션) 인증만 사용.
     # "allauth",
@@ -171,6 +172,41 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
     ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+# ---------------------------------------------------------------------------
+# OpenAPI / Swagger (drf-spectacular)
+# /api/schema/                — 원본 OpenAPI 3.0 YAML
+# /api/schema/swagger-ui/     — Swagger UI
+# /api/schema/redoc/          — ReDoc
+# ---------------------------------------------------------------------------
+SPECTACULAR_SETTINGS = {
+    "TITLE": "슬기로운 자취생활 API",
+    "DESCRIPTION": (
+        "서울 자취 입문자용 동네 대시보드 백엔드. "
+        "Django + DRF + GeoDjango (PostGIS). "
+        "더미 데이터 모드 — 10단계 data-pipeline 전까지 점수/리뷰/시세는 "
+        "결정적 룰 기반 생성."
+    ),
+    "VERSION": "0.1.0",
+    "SERVE_INCLUDE_SCHEMA": False,  # /api/schema/ 자체는 인증 없이 노출
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "persistAuthorization": True,
+        "displayOperationId": False,
+        "filter": True,
+    },
+    "TAGS": [
+        {"name": "dongs", "description": "행정동 점수·요약·상세 (SPEC 6.1~6.3)"},
+        {"name": "compare", "description": "동네 비교 (SPEC 6.4)"},
+        {"name": "preference", "description": "선호 학습 (5번 비교 → 가중치 추정, SPEC 6.5)"},
+        {"name": "auth", "description": "회원가입 / 로그인 / 로그아웃"},
+        {"name": "users", "description": "마이페이지 — 프로필, 가중치, 찜, 리뷰 (SPEC 6.6)"},
+    ],
+    "CONTACT": {"name": "슬기로운 자취생활 (학부 캡스톤)"},
+    "LICENSE": {"name": "Internal — academic project"},
 }
 
 # ---------------------------------------------------------------------------

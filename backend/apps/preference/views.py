@@ -15,6 +15,8 @@ from __future__ import annotations
 
 from itertools import combinations
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
@@ -159,6 +161,20 @@ def _select_pairs(dongs: list[Dong], count: int) -> list[tuple[Dong, Dong]]:
 # ---------------------------------------------------------------------------
 
 
+@extend_schema(
+    tags=["preference"],
+    summary="선호 학습용 동네 쌍 (SPEC 6.5)",
+    description="정보량 최대화 휴리스틱으로 양극단 쌍 우선 N개 반환.",
+    parameters=[
+        OpenApiParameter(
+            name="count",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description="반환할 쌍 개수 (1~20, default 5).",
+        ),
+    ],
+)
 class PreferencePairsView(APIView):
     """
     GET /api/preference/pairs?count=5
@@ -205,6 +221,14 @@ class PreferencePairsView(APIView):
         return Response({"pairs": pairs}, status=status.HTTP_200_OK)
 
 
+@extend_schema(
+    tags=["preference"],
+    summary="비교 결과 → 가중치 추정 (SPEC 11.4)",
+    description=(
+        "사용자가 N번 비교한 결과 (won/lost 슬러그 쌍 배열)를 받아 "
+        "scipy.optimize SLSQP로 가중치를 추정. 결과는 합 100 정수 %."
+    ),
+)
 class PreferenceSubmitView(APIView):
     """
     POST /api/preference/submit
