@@ -3,7 +3,15 @@
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
 
-import type { DongDetail, DongScore, DongSummary, Weights } from '@/types/api';
+import type {
+  DongDetail,
+  DongScore,
+  DongSummary,
+  PreferencePairsResponse,
+  PreferenceWeightsResponse,
+  SubmitComparison,
+  Weights,
+} from '@/types/api';
 
 const baseURL = import.meta.env.VITE_API_BASE_URL ?? '/api';
 
@@ -66,5 +74,33 @@ export async function getDongDetail(
       w_transit: weights.transit,
     },
   });
+  return data;
+}
+
+/** GET /api/preference/pairs?count=N — fetch pairs for the onboarding modal
+ *  (SPEC 6.5). Backend deterministically picks max-info pairs across rent/
+ *  amenity/transit axes. count must be in 1~20.
+ */
+export async function getPreferencePairs(
+  count: number = 5
+): Promise<PreferencePairsResponse> {
+  const { data } = await api.get<PreferencePairsResponse>('/preference/pairs', {
+    params: { count },
+  });
+  return data;
+}
+
+/** POST /api/preference/submit — Bradley-Terry weight estimation (SPEC 11.4).
+ *
+ *  Returns integer weights summing to 100. Caller can plug straight into the
+ *  main map's Weights state.
+ */
+export async function submitPreferenceComparisons(
+  comparisons: SubmitComparison[]
+): Promise<PreferenceWeightsResponse> {
+  const { data } = await api.post<PreferenceWeightsResponse>(
+    '/preference/submit',
+    { comparisons }
+  );
   return data;
 }

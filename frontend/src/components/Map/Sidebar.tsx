@@ -33,6 +33,8 @@ export interface SidebarProps {
   onRentCapChange: (next: number) => void;
   nearUniversityOnly: boolean;
   onNearUniversityToggle: (next: boolean) => void;
+  /** Open the preference learning onboarding modal (SPEC 6.5). */
+  onOpenPreference: () => void;
 }
 
 export default function Sidebar({
@@ -46,19 +48,13 @@ export default function Sidebar({
   onRentCapChange,
   nearUniversityOnly,
   onNearUniversityToggle,
+  onOpenPreference,
 }: SidebarProps) {
   const universityCheckId = useId();
   const rentCapCheckId = useId();
 
   const handleWeight = (key: WeightKey) => (next: number) => {
     onWeightsChange(rebalanceWeights(weights, key, next));
-  };
-
-  const handleAutoRecommend = () => {
-    // Step 7 will replace this with the preference learning onboarding.
-    // For now we surface intent without persisting anything.
-    // eslint-disable-next-line no-alert
-    alert('선호 학습 온보딩 — 7단계에서 구현됨');
   };
 
   return (
@@ -128,7 +124,7 @@ export default function Sidebar({
             valueText={`${weights.transit}%`}
           />
         </div>
-        <Button variant="primary" fullWidth onClick={handleAutoRecommend}>
+        <Button variant="primary" fullWidth onClick={onOpenPreference}>
           5번 비교로 자동 추천 →
         </Button>
       </section>

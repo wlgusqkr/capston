@@ -19,6 +19,7 @@ import HeatMap from '@/components/Map/HeatMap';
 import Legend from '@/components/Map/Legend';
 import Sidebar from '@/components/Map/Sidebar';
 import ViewToggle from '@/components/Map/ViewToggle';
+import PreferenceModal from '@/components/Onboarding/PreferenceModal';
 import { useDongScores } from '@/hooks/useDongs';
 import { DEFAULT_WEIGHTS } from '@/types/api';
 import type { DongScore, Weights } from '@/types/api';
@@ -35,6 +36,7 @@ export default function MainMap() {
   const [rentCap, setRentCap] = useState(50);
   const [nearUniversityOnly, setNearUniversityOnly] = useState(false);
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
+  const [preferenceOpen, setPreferenceOpen] = useState(false);
 
   const { data, isLoading, isError, error } = useDongScores(weights);
 
@@ -73,6 +75,14 @@ export default function MainMap() {
     window.alert('로그인 후 찜하기 (9단계에서 구현)');
   };
 
+  const handlePreferenceComplete = (next: Weights) => {
+    // Apply learned weights and close the modal. The /scores query refetches
+    // automatically via TanStack Query's queryKey invalidation, and HeatMap's
+    // setStyle transitions colors over --transition-slow (300ms).
+    setWeights(next);
+    setPreferenceOpen(false);
+  };
+
   return (
     <div className="main-map">
       <Sidebar
@@ -86,6 +96,7 @@ export default function MainMap() {
         onRentCapChange={setRentCap}
         nearUniversityOnly={nearUniversityOnly}
         onNearUniversityToggle={setNearUniversityOnly}
+        onOpenPreference={() => setPreferenceOpen(true)}
       />
 
       <section className="main-map__map" aria-label="서울 동네 히트맵">
@@ -118,6 +129,12 @@ export default function MainMap() {
           onFavorite={handleFavorite}
         />
       </section>
+
+      <PreferenceModal
+        open={preferenceOpen}
+        onClose={() => setPreferenceOpen(false)}
+        onComplete={handlePreferenceComplete}
+      />
     </div>
   );
 }

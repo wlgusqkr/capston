@@ -170,3 +170,51 @@ export interface DongDetail {
     similarity_pct: number;
   }>;
 }
+
+// -------- Preference learning (SPEC 6.5, 11.4) ---------------------------
+// Source: docs/handoff/20260502-step7a-backend-preference.md
+
+/** A single comparison card shown in the preference learning modal.
+ *  Backend computes rent_avg / transit_min / amenity_label deterministically.
+ */
+export interface PairCard {
+  slug: string;
+  name: string;
+  gu: string;
+  /** Average monthly rent (만원). */
+  rent_avg: number;
+  /** Walking minutes to nearest subway station. */
+  transit_min: number;
+  /** Korean human-readable amenity coverage. */
+  amenity_label: '충분' | '보통' | '부족';
+  /** Composite score @ 33/33/34, two decimals. */
+  score: number;
+}
+
+/** A pair of dongs the user is asked to choose between. */
+export interface PreferencePair {
+  left: PairCard;
+  right: PairCard;
+}
+
+/** Response of GET /api/preference/pairs?count=N. */
+export interface PreferencePairsResponse {
+  pairs: PreferencePair[];
+}
+
+/** Body element for POST /api/preference/submit. */
+export interface SubmitComparison {
+  /** slug of the chosen (won) dong. */
+  won: string;
+  /** slug of the rejected (lost) dong. */
+  lost: string;
+}
+
+/** Response of POST /api/preference/submit.
+ *  Integers in 0~100 that sum to exactly 100 — drop straight into Weights.
+ */
+export interface PreferenceWeightsResponse {
+  w_rent: number;
+  w_amenity: number;
+  w_transit: number;
+}

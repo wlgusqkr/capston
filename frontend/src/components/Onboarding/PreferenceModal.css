@@ -1,0 +1,359 @@
+/* PreferenceModal — see PreferenceModal.tsx (SPEC 6.5).
+ *
+ * Layout convention:
+ *   - Modal primitive supplies the card chrome + portal + focus trap.
+ *   - We control everything inside .ui-modal__body via .pref-modal.
+ *   - All colors / typography / radii are tokens. No hardcoded hex.
+ */
+
+.pref-modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ---------- top bar (progress text + skip) ---------- */
+
+.pref-modal__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.pref-modal__progress-text {
+  font-size: var(--font-caption-size);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.pref-modal__skip-all {
+  appearance: none;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: var(--font-caption-size);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  letter-spacing: var(--letter-spacing-ko);
+  transition: color var(--transition-fast);
+}
+
+.pref-modal__skip-all:hover {
+  color: var(--color-text);
+}
+
+.pref-modal__skip-all:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ---------- progress bar ---------- */
+
+.pref-modal__progress {
+  width: 100%;
+  height: 6px;
+  background-color: var(--color-gray-100);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.pref-modal__progress-fill {
+  display: block;
+  height: 100%;
+  background-color: var(--color-primary);
+  border-radius: var(--radius-full);
+  transition: width var(--transition-base);
+}
+
+/* ---------- question heading ---------- */
+
+.pref-modal__heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.pref-modal__question {
+  margin: 0;
+  font-size: var(--font-h2-size);
+  font-weight: var(--font-h2-weight);
+  line-height: var(--font-h2-line);
+  color: var(--color-text);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.pref-modal__sub {
+  margin: 0;
+  font-size: var(--font-caption-size);
+  line-height: var(--font-caption-line);
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+/* ---------- pair (two side-by-side cards) ---------- */
+
+.pref-modal__pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.pref-modal__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.pref-modal__card:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-soft);
+}
+
+.pref-modal__card:active {
+  transform: translateY(1px);
+}
+
+.pref-modal__card:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.pref-modal__card-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pref-modal__card-gu {
+  font-size: var(--font-caption-size);
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.pref-modal__card-name {
+  font-size: var(--font-h2-size);
+  font-weight: var(--font-h2-weight);
+  line-height: var(--font-h2-line);
+  color: var(--color-text);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+/* metrics list */
+
+.pref-modal__metrics {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.pref-modal__metric {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.pref-modal__metric dt {
+  font-size: var(--font-caption-size);
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.pref-modal__metric dd {
+  margin: 0;
+  font-size: var(--font-body-size);
+  font-weight: 500;
+  color: var(--color-text);
+  letter-spacing: var(--letter-spacing-ko);
+  display: inline-flex;
+  align-items: center;
+}
+
+/* "이게 더 좋아요" CTA-styled label inside the card button */
+
+.pref-modal__card-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--control-height-md);
+  padding: 0 var(--space-4);
+  margin-top: var(--space-2);
+  background-color: var(--color-primary);
+  color: var(--color-text-on-primary);
+  border-radius: var(--radius-md);
+  font-size: var(--font-body-size);
+  font-weight: 500;
+  letter-spacing: var(--letter-spacing-ko);
+  transition: background-color var(--transition-fast);
+}
+
+.pref-modal__card:hover .pref-modal__card-cta {
+  background-color: var(--color-primary-hover);
+}
+
+/* ---------- bottom bar (둘 다 별로예요) ---------- */
+
+.pref-modal__bottom {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-1);
+}
+
+.pref-modal__skip-pair {
+  appearance: none;
+  background: transparent;
+  border: none;
+  padding: var(--space-2) var(--space-3);
+  font-family: inherit;
+  font-size: var(--font-caption-size);
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-ko);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.pref-modal__skip-pair:hover {
+  color: var(--color-text);
+  background-color: var(--color-gray-100);
+}
+
+.pref-modal__skip-pair:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ---------- status (loading / error) ---------- */
+
+.pref-modal__status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-4);
+  font-size: var(--font-body-size);
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-ko);
+  text-align: center;
+}
+
+.pref-modal__status--error {
+  color: var(--color-danger);
+}
+
+.pref-modal__status-detail {
+  font-size: var(--font-caption-size);
+  color: var(--color-text-muted);
+}
+
+.pref-modal__status-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* ---------- result screen ---------- */
+
+.pref-modal__result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-2) 0;
+}
+
+.pref-modal__result-eyebrow {
+  margin: 0;
+  font-size: var(--font-hint-size);
+  font-weight: var(--font-hint-weight);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-primary);
+}
+
+.pref-modal__result-title {
+  margin: 0;
+  font-size: var(--font-h2-size);
+  font-weight: var(--font-h2-weight);
+  line-height: var(--font-h2-line);
+  color: var(--color-text);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.pref-modal__result-sub {
+  margin: 0;
+  font-size: var(--font-caption-size);
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.pref-modal__weights {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background-color: var(--color-surface-inset);
+  border-radius: var(--radius-lg);
+}
+
+.pref-modal__weight-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 56px;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.pref-modal__weight-label {
+  font-size: var(--font-caption-size);
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.pref-modal__weight-track {
+  height: 8px;
+  background-color: var(--color-gray-200);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.pref-modal__weight-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width var(--transition-slow);
+}
+
+/* Tone matches the data-viz palette so result bars connect visually with
+ * the heatmap on the main map. The mapping is by metric, not by score. */
+.pref-modal__weight-fill--transit {
+  background-color: var(--color-data-low);
+}
+.pref-modal__weight-fill--rent {
+  background-color: var(--color-data-mid1);
+}
+.pref-modal__weight-fill--amenity {
+  background-color: var(--color-data-mid2);
+}
+
+.pref-modal__weight-value {
+  text-align: right;
+  font-size: var(--font-body-size);
+  font-weight: 500;
+  color: var(--color-text);
+  letter-spacing: var(--letter-spacing-ko);
+}
