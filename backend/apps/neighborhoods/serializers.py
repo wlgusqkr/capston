@@ -1,17 +1,46 @@
 """
 Dong 시리얼라이저.
 
-DongScoreSerializer는 SPEC 9의 GET /api/dongs/scores 응답 한 항목 포맷:
-[{slug, name, gu, score, lat, lng}, ...]
+- DongScoreSerializer: SPEC 9 GET /api/dongs/scores 응답 한 항목
+  [{slug, name, gu, score, lat, lng, score_rent, score_amenity, score_transit}, ...]
+  (raw 점수 3종은 SPEC 14.3 클라 재계산용으로 추가)
+
+- DongSummarySerializer: SPEC 6.2 GET /api/dongs/:slug/summary 응답
+  {slug, name, gu, score, summary, rent_avg, nearest_station,
+   amenity_level, single_household_pct, safety_level}
+  rent_avg/nearest_station/amenity_level/single_household_pct/safety_level는
+  현재 더미. 실데이터 연동은 10단계(data-pipeline) 이후.
 """
+
+from __future__ import annotations
 
 from rest_framework import serializers
 
 from .models import Dong
+from .summary import generate_summary
+
+
+# 5개 더미 동에 한해 가까운 역 하드코딩 (10단계 실 데이터 적재 시 교체).
+NEAREST_STATION_FALLBACK: dict[str, dict[str, object]] = {
+    "pildong": {"name": "충무로", "line": "4호선", "walking_min": 8},
+    "hoegidong": {"name": "회기", "line": "1호선", "walking_min": 5},
+    "seogyodong": {"name": "홍대입구", "line": "2호선", "walking_min": 7},
+    "yeoksamdong": {"name": "역삼", "line": "2호선", "walking_min": 4},
+    "jamsildong": {"name": "잠실", "line": "2/8호선", "walking_min": 6},
+}
+
+# 자취생 비율 더미 (slug별 30~60). 10단계에서 통계청 데이터로 교체.
+SINGLE_HOUSEHOLD_PCT_FALLBACK: dict[str, float] = {
+    "pildong": 42.0,
+    "hoegidong": 58.0,
+    "seogyodong": 51.0,
+    "yeoksamdong": 36.0,
+    "jamsildong": 31.0,
+}
 
 
 class DongScoreSerializer(serializers.ModelSerializer):
-    """메인 지도 히트맵용 — 가중합 종합 점수 + 중심점 좌표."""
+    """메인 지도 히트맵용 — 가중합 종합 점수 + 중심점 좌표 + raw 점수 3종."""
 
     score = serializers.SerializerMethodField()
     lat = serializers.SerializerMethodField()
@@ -19,7 +48,18 @@ class DongScoreSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Dong
-        fields = ("slug", "name", "gu", "score", "lat", "lng")
+        fields = (
+            "slug",
+            "name",
+            "gu",
+            "score",
+            "lat",
+            "lng",
+            # SPEC 14.3: 클라이언트 재계산을 위해 raw 점수 3종 노출.
+            "score_rent",
+            "score_amenity",
+            "score_transit",
+        )
 
     def get_score(self, obj: Dong) -> float:
         weights = self.context.get("weights", {"rent": 1 / 3, "amenity": 1 / 3, "transit": 1 / 3})
@@ -38,3 +78,91 @@ class DongScoreSerializer(serializers.ModelSerializer):
 
     def get_lng(self, obj: Dong) -> float:
         return round(obj.centroid.x, 6) if obj.centroid else 0.0
+
+
+class DongSummarySerializer(serializers.ModelSerializer):
+    """
+    동네 패널(SPEC 6.2)용 요약 응답.
+
+    note: rent_avg / nearest_station / amenity_level / single_household_pct /
+    safety_level은 현재 점수 기반 휴리스틱 또는 slug 매핑으로 더미 값 산출. 10단계
+    실데이터 적재 후 raw 데이터 기반으로 교체 예정.
+    """
+
+    score = serializers.SerializerMethodField()
+    summary = serializers.SerializerMethodField()
+    rent_avg = serializers.SerializerMethodField()
+    nearest_station = serializers.SerializerMethodField()
+    amenity_level = serializers.SerializerMethodField()
+    single_household_pct = serializers.SerializerMethodField()
+    safety_level = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Dong
+        fields = (
+            "slug",
+            "name",
+            "gu",
+            "score",
+            "summary",
+            "rent_avg",
+            "nearest_station",
+            "amenity_level",
+            "single_household_pct",
+            "safety_level",
+        )
+
+    # ---- 점수 (가중합) ----
+    def get_score(self, obj: Dong) -> float:
+        weights = self.context.get("weights", {"rent": 1 / 3, "amenity": 1 / 3, "transit": 1 / 3})
+        return round(
+            obj.composite_score(
+                w_rent=weights["rent"],
+                w_amenity=weights["amenity"],
+                w_transit=weights["transit"],
+            ),
+            2,
+        )
+
+    # ---- 한 줄 요약 (SPEC 11.3 룰베이스) ----
+    def get_summary(self, obj: Dong) -> str:
+        return generate_summary(
+            score_rent=obj.score_rent,
+            score_amenity=obj.score_amenity,
+            score_transit=obj.score_transit,
+        )
+
+    # ---- 더미: 평균 월세 (만원). score_rent가 높을수록 저렴 ----
+    # 룰: 120 - score_rent (점수 100 → 20만원, 점수 50 → 70만원, 점수 0 → 120만원)
+    def get_rent_avg(self, obj: Dong) -> int:
+        return max(0, int(120 - obj.score_rent))
+
+    # ---- 더미: 가까운 지하철 역 ----
+    def get_nearest_station(self, obj: Dong) -> dict[str, object]:
+        return NEAREST_STATION_FALLBACK.get(
+            obj.slug,
+            {"name": "정보 없음", "line": "-", "walking_min": 0},
+        )
+
+    # ---- amenity_level: score_amenity 구간 ----
+    def get_amenity_level(self, obj: Dong) -> str:
+        score = obj.score_amenity
+        if score >= 70:
+            return "sufficient"
+        if score >= 40:
+            return "normal"
+        return "lacking"
+
+    # ---- 더미: 자취생 비율 ----
+    def get_single_household_pct(self, obj: Dong) -> float:
+        return SINGLE_HOUSEHOLD_PCT_FALLBACK.get(obj.slug, 40.0)
+
+    # ---- 더미: 안전 지수 (현재 transit 점수 기반 임시 매핑) ----
+    # 실데이터(범죄율, CCTV 등)는 5/24 이후 정밀화.
+    def get_safety_level(self, obj: Dong) -> str:
+        score = obj.score_transit
+        if score >= 70:
+            return "high"
+        if score >= 40:
+            return "mid"
+        return "low"
