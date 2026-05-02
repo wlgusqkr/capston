@@ -6,11 +6,15 @@
 // State owned here:
 //   - weights (rent/amenity/transit) — drives the score query
 //   - activeLayer / filters — UI only for step 4 (no behavior yet)
+//   - selectedSlug — drives the slide-in DongPanel (SPEC 6.2)
 //
-// Click on a polygon currently logs to console; the slide-in DongPanel
-// arrives in step 5.
-import { useState } from 'react';
+// On polygon click we open the right-side DongPanel and pass the matching
+// row's raw axis scores so the panel can render its 점수 구성 bars without
+// a duplicate query.
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
+import DongPanel from '@/components/Map/DongPanel';
 import HeatMap from '@/components/Map/HeatMap';
 import Legend from '@/components/Map/Legend';
 import Sidebar from '@/components/Map/Sidebar';
@@ -24,18 +28,49 @@ import './MainMap.css';
 type LayerKey = 'composite' | 'rent' | 'amenity' | 'transit';
 
 export default function MainMap() {
+  const navigate = useNavigate();
   const [weights, setWeights] = useState<Weights>(DEFAULT_WEIGHTS);
   const [activeLayer, setActiveLayer] = useState<LayerKey>('composite');
   const [rentCapEnabled, setRentCapEnabled] = useState(false);
   const [rentCap, setRentCap] = useState(50);
   const [nearUniversityOnly, setNearUniversityOnly] = useState(false);
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
 
   const { data, isLoading, isError, error } = useDongScores(weights);
 
+  /** Raw per-axis scores for the currently selected dong, looked up on the
+   *  /scores list we already have. Avoids a second network call.
+   */
+  const selectedRawScores = useMemo(() => {
+    if (!selectedSlug || !data) return null;
+    const row = data.find((d) => d.slug === selectedSlug);
+    if (!row) return null;
+    return {
+      rent: row.score_rent,
+      amenity: row.score_amenity,
+      transit: row.score_transit,
+    };
+  }, [data, selectedSlug]);
+
   const handleDongClick = (dong: DongScore) => {
-    // Step 5 will replace this with the slide-in DongPanel.
-    // eslint-disable-next-line no-console
-    console.log('[main-map] dong clicked', { slug: dong.slug, name: dong.name, score: dong.score });
+    setSelectedSlug(dong.slug);
+  };
+
+  const handleClosePanel = () => setSelectedSlug(null);
+
+  const handleOpenDetail = (slug: string) => {
+    // Detail route arrives in step 6. For now navigate; NotFound will catch it.
+    navigate(`/dong/${slug}`);
+  };
+
+  const handleAddCompare = (_slug: string) => {
+    // Compare flow arrives in step 8.
+    window.alert('비교 목록에 추가됨 (8단계에서 구현)');
+  };
+
+  const handleFavorite = (_slug: string) => {
+    // Auth + favorites arrive in step 9.
+    window.alert('로그인 후 찜하기 (9단계에서 구현)');
   };
 
   return (
@@ -72,6 +107,16 @@ export default function MainMap() {
 
         <Legend />
         <ViewToggle />
+
+        <DongPanel
+          slug={selectedSlug}
+          weights={weights}
+          rawScores={selectedRawScores}
+          onClose={handleClosePanel}
+          onOpenDetail={handleOpenDetail}
+          onAddCompare={handleAddCompare}
+          onFavorite={handleFavorite}
+        />
       </section>
     </div>
   );
