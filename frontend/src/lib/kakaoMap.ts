@@ -19,27 +19,37 @@ export function useKakao(): { loading: boolean; error: unknown } {
   return { loading, error: KAKAO_JS_KEY ? error : new Error('VITE_KAKAO_JS_KEY 미설정') };
 }
 
+type LatLng = { lat: number; lng: number };
+
 /**
- * GeoJSON 좌표 ([lng, lat][][]) → 카카오맵 Polygon path ([{lat, lng}][]) 변환.
- * MultiPolygon은 첫 번째 외곽 ring만 사용 (행정동은 거의 단일 폴리곤).
+ * GeoJSON Polygon/MultiPolygon → 카카오맵 Polygon path 배열들.
+ *
+ * 반환 타입은 sub-polygon 단위 분리:
+ *   [
+ *     [outer_ring, hole1, hole2, ...],   // sub-polygon 1
+ *     [outer_ring, hole1, ...],          // sub-polygon 2
+ *     ...
+ *   ]
+ *
+ * 호출부는 sub-polygon 개수만큼 `<Polygon>`을 그려야 한다.
+ * (단일 `<Polygon>`에 모든 sub-polygon ring을 평탄화해 넣으면 카카오 SDK가
+ *  outer + hole 의미로 잘못 해석한다.)
+ *
+ * 좌표 변환: GeoJSON [lng, lat] → 카카오 {lat, lng}.
  */
-export function geoJsonToKakaoPath(
+export function geoJsonToKakaoPolygons(
   coordinates: number[][][] | number[][][][],
   geomType: 'Polygon' | 'MultiPolygon',
-): { lat: number; lng: number }[][] {
+): LatLng[][][] {
+  const toLatLng = ([lng, lat]: number[]): LatLng => ({ lat, lng });
+
   if (geomType === 'Polygon') {
-    // Polygon: [ring0, ring1, ...] — ring0 = outer
+    // Polygon: [outer_ring, hole1, ...] — 단일 sub-polygon
     const rings = coordinates as number[][][];
-    return rings.map((ring) => ring.map(([lng, lat]) => ({ lat, lng })));
+    return [rings.map((ring) => ring.map(toLatLng))];
   }
-  // MultiPolygon: [[ring0, ring1...], [ring0...]]
+
+  // MultiPolygon: [[outer, hole1, ...], [outer, ...], ...]
   const polys = coordinates as number[][][][];
-  // 모든 외곽 ring을 path 배열로 변환 (구멍이 있는 폴리곤은 ring1+가 hole)
-  const paths: { lat: number; lng: number }[][] = [];
-  for (const poly of polys) {
-    for (const ring of poly) {
-      paths.push(ring.map(([lng, lat]) => ({ lat, lng })));
-    }
-  }
-  return paths;
+  return polys.map((poly) => poly.map((ring) => ring.map(toLatLng)));
 }

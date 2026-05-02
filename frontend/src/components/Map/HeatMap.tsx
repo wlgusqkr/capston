@@ -8,7 +8,7 @@ import { Map, Polygon } from 'react-kakao-maps-sdk';
 
 import { useDongGeoJson } from '@/hooks/useDongGeoJson';
 import { scoreToHeatmapColor, MAP_POLYGON_STROKE } from '@/lib/colors';
-import { geoJsonToKakaoPath, useKakao } from '@/lib/kakaoMap';
+import { geoJsonToKakaoPolygons, useKakao } from '@/lib/kakaoMap';
 import type { DongScore } from '@/types/api';
 
 import './HeatMap.css';
@@ -68,24 +68,24 @@ export default function HeatMap({ dongs, onDongClick, heatmapVisible = true }: H
         style={{ width: '100%', height: '100%' }}
       >
         {heatmapVisible &&
-          geojson.features.map((feature) => {
+          geojson.features.flatMap((feature) => {
             const props = feature.properties;
             const slug = props.adm_cd;
             const dong = dongBySlug[slug];
             const geom = feature.geometry;
-            if (geom.type !== 'Polygon' && geom.type !== 'MultiPolygon') return null;
+            if (geom.type !== 'Polygon' && geom.type !== 'MultiPolygon') return [];
 
-            const paths = geoJsonToKakaoPath(
+            const subPolygons = geoJsonToKakaoPolygons(
               geom.coordinates as number[][][] | number[][][][],
               geom.type,
             );
             const fill = dong ? scoreToHeatmapColor(dong.score) : '#cccccc';
             const fillOpacity = dong ? 0.55 : 0.1;
 
-            return (
+            return subPolygons.map((rings, idx) => (
               <Polygon
-                key={slug}
-                path={paths}
+                key={`${slug}-${idx}`}
+                path={rings}
                 strokeWeight={1}
                 strokeColor={MAP_POLYGON_STROKE.light}
                 strokeOpacity={0.9}
@@ -106,7 +106,7 @@ export default function HeatMap({ dongs, onDongClick, heatmapVisible = true }: H
                   tooltipRef.current.style.display = 'none';
                 }}
               />
-            );
+            ));
           })}
       </Map>
       <div ref={tooltipRef} className="map-tooltip-floating" style={{ display: 'none' }} />
