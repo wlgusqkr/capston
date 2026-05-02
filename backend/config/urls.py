@@ -11,6 +11,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     # API
     path("api/", include("apps.neighborhoods.urls")),
+    path("api/", include("apps.preference.urls")),
     # allauth는 9단계(카카오 소셜 로그인) 활성화 시 다음 라인 사용:
     # path("api/auth/", include("allauth.urls")),
 ]
