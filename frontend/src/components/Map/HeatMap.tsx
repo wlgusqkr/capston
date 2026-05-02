@@ -7,7 +7,7 @@ import { useMemo, useRef } from 'react';
 import { Map, Polygon } from 'react-kakao-maps-sdk';
 
 import { useDongGeoJson } from '@/hooks/useDongGeoJson';
-import { scoreToHeatmapColor, MAP_POLYGON_STROKE } from '@/lib/colors';
+import { scoreToHeatmapColor } from '@/lib/colors';
 import { geoJsonToKakaoPolygons, useKakao } from '@/lib/kakaoMap';
 import type { DongScore } from '@/types/api';
 
@@ -80,17 +80,16 @@ export default function HeatMap({ dongs, onDongClick, heatmapVisible = true }: H
               geom.type,
             );
             const fill = dong ? scoreToHeatmapColor(dong.score) : '#cccccc';
-            const fillOpacity = dong ? 0.55 : 0.1;
 
             return subPolygons.map((rings, idx) => (
               <Polygon
                 key={`${slug}-${idx}`}
                 path={rings}
-                strokeWeight={1}
-                strokeColor={MAP_POLYGON_STROKE.light}
-                strokeOpacity={0.9}
+                strokeWeight={1.5}
+                strokeColor="#2C2C2A"
+                strokeOpacity={0.7}
                 fillColor={fill}
-                fillOpacity={fillOpacity}
+                fillOpacity={dong ? 0.7 : 0.1}
                 onClick={() => dong && onDongClick?.(dong)}
                 onMouseover={() => {
                   if (!dong || !tooltipRef.current) return;
