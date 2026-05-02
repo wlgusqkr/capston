@@ -1,0 +1,182 @@
+/**
+ * Global styles — 슬기로운 자취생활
+ *
+ * Order of imports in main.tsx:
+ *   import './styles/tokens.css';   // CSS variables first
+ *   import './styles/globals.css';  // resets & base styles
+ *
+ * This file:
+ *   - Pretendard font import
+ *   - sane reset (margin/padding 0, box-sizing border-box)
+ *   - body defaults using tokens
+ *   - .tabular utility for numeric displays
+ *   - link reset
+ */
+
+/* ============================================================================
+ * FONT — Pretendard (variable build, dynamic subset)
+ * ========================================================================= */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css');
+
+/* ============================================================================
+ * RESET — minimal, opinionated
+ * ========================================================================= */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+figure,
+blockquote,
+dl,
+dd {
+  margin: 0;
+}
+
+ul[role='list'],
+ol[role='list'],
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+img,
+picture,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* ============================================================================
+ * BODY — defaults pulled from tokens
+ * ========================================================================= */
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-family-base);
+  font-size: var(--font-body-size);
+  line-height: var(--font-body-line);
+  font-weight: var(--font-body-weight);
+  letter-spacing: var(--letter-spacing-ko);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  min-height: 100%;
+  isolation: isolate;
+}
+
+/* ============================================================================
+ * LINKS — reset to inherit, primary on hover
+ * ========================================================================= */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-primary);
+}
+
+a:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ============================================================================
+ * UTILITIES
+ * ========================================================================= */
+
+/* Use on any numeric display so digits align. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Visually hide while keeping accessible to screen readers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ============================================================================
+ * SELECTION
+ * ========================================================================= */
+::selection {
+  background-color: var(--color-primary-soft);
+  color: var(--color-text);
+}
+
+/* ============================================================================
+ * SCROLLBAR — keep subtle, theme-aware
+ * ========================================================================= */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gray-200) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--color-gray-200);
+  border-radius: var(--radius-full);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gray-400);
+}

@@ -1,0 +1,92 @@
+/* Select primitive — see Select.tsx for usage. */
+
+.ui-select {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.ui-select__label {
+  font-size: var(--font-caption-size);
+  font-weight: 500;
+  color: var(--color-text);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.ui-select__field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: var(--control-height-md);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.ui-select__field:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+.ui-select__control {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-family-base);
+  font-size: var(--font-body-size);
+  color: var(--color-text);
+  letter-spacing: var(--letter-spacing-ko);
+  height: 100%;
+  padding: 0 var(--space-3);
+  padding-right: var(--space-8); /* room for chevron */
+  min-width: 0;
+  cursor: pointer;
+}
+
+.ui-select__chevron {
+  position: absolute;
+  right: var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+/* ---------- States ---------- */
+.ui-select--error .ui-select__field {
+  border-color: var(--color-danger);
+}
+
+.ui-select--error .ui-select__field:focus-within {
+  box-shadow: 0 0 0 3px var(--color-danger-soft);
+}
+
+.ui-select--disabled .ui-select__field {
+  background-color: var(--color-surface-inset);
+  opacity: 0.6;
+}
+
+.ui-select--disabled .ui-select__control {
+  cursor: not-allowed;
+}
+
+.ui-select__hint {
+  font-size: var(--font-hint-size);
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.ui-select__error {
+  font-size: var(--font-hint-size);
+  color: var(--color-danger);
+  letter-spacing: var(--letter-spacing-ko);
+}

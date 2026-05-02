@@ -1,0 +1,63 @@
+/* Score primitive — see Score.tsx for usage. */
+
+.ui-score {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  letter-spacing: var(--letter-spacing-ko);
+  line-height: 1.1;
+}
+
+/* ---------- Sizes ---------- */
+.ui-score--md .ui-score__value {
+  font-size: var(--font-h1-size);
+  font-weight: 700;
+}
+
+.ui-score--lg .ui-score__value {
+  font-size: var(--font-display-size);
+  font-weight: var(--font-display-weight);
+  line-height: var(--font-display-line);
+}
+
+.ui-score__value {
+  font-feature-settings: 'tnum' 1;
+}
+
+.ui-score__unit {
+  font-size: var(--font-caption-size);
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+/* ---------- Tonal color ---------- */
+.ui-score--success .ui-score__value {
+  color: var(--color-success);
+}
+
+.ui-score--warning .ui-score__value {
+  color: var(--color-warning);
+}
+
+.ui-score--danger .ui-score__value {
+  color: var(--color-danger);
+}
+
+/* ---------- Delta ---------- */
+.ui-score__delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--font-caption-size);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  margin-left: var(--space-1);
+}
+
+.ui-score__delta--up {
+  color: var(--color-success);
+}
+
+.ui-score__delta--down {
+  color: var(--color-danger);
+}

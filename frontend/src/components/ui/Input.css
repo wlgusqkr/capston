@@ -1,0 +1,90 @@
+/* Input primitive — see Input.tsx for usage. */
+
+.ui-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.ui-input__label {
+  font-size: var(--font-caption-size);
+  font-weight: 500;
+  color: var(--color-text);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.ui-input__field {
+  display: flex;
+  align-items: center;
+  height: var(--control-height-md);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-3);
+  gap: var(--space-2);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.ui-input__field:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+.ui-input__control {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-family-base);
+  font-size: var(--font-body-size);
+  color: var(--color-text);
+  letter-spacing: var(--letter-spacing-ko);
+  min-width: 0;
+  height: 100%;
+}
+
+.ui-input__control::placeholder {
+  color: var(--color-text-subtle);
+}
+
+.ui-input__slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+/* ---------- States ---------- */
+.ui-input--error .ui-input__field {
+  border-color: var(--color-danger);
+}
+
+.ui-input--error .ui-input__field:focus-within {
+  box-shadow: 0 0 0 3px var(--color-danger-soft);
+}
+
+.ui-input--disabled .ui-input__field {
+  background-color: var(--color-surface-inset);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ui-input--disabled .ui-input__control {
+  cursor: not-allowed;
+}
+
+.ui-input__hint {
+  font-size: var(--font-hint-size);
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.ui-input__error {
+  font-size: var(--font-hint-size);
+  color: var(--color-danger);
+  letter-spacing: var(--letter-spacing-ko);
+}

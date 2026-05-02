@@ -1,0 +1,27 @@
+/* Card primitive — see Card.tsx for usage. */
+
+.ui-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  /* No shadow — flat per SPEC 4.4 */
+}
+
+.ui-card--default {
+  background-color: var(--color-surface);
+}
+
+.ui-card--inset {
+  background-color: var(--color-surface-inset);
+}
+
+.ui-card--pad-none {
+  padding: 0;
+}
+
+.ui-card--pad-md {
+  padding: var(--space-4);
+}
+
+.ui-card--pad-lg {
+  padding: var(--space-5);
+}
