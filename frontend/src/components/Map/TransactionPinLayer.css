@@ -1,0 +1,138 @@
+/* TransactionPinLayer — always-visible price chip markers.
+ *
+ * Style pattern: 호갱노노 / 직방 — the price chip itself IS the marker. The old
+ * CircleMarker dot + hover Tooltip combination is replaced. Each chip carries
+ * the rounded-square Near-Black surface + a 6px ▼ pointer that anchors the
+ * chip's bottom-center to the exact lat/lng of the jibun.
+ *
+ * All values come from `tokens.css` — no hardcoded colors, fonts, or radii
+ * outside of the small numeric padding/font-size pairs the design brief
+ * pinned by zoom variant. The pointer uses CSS borders to draw a triangle
+ * (no extra DOM, no SVG).
+ *
+ * Variants by zoom level:
+ *   - compact  (zoom 13~14): "82" only        → padding 4px 6px, font 11px
+ *   - standard (zoom 15~16): "82만원"         → padding 5px 8px, font 12px
+ *   - expanded (zoom 17+)  : "82만원" + "3건" → padding 6px 10px, main 12px + sub 9px
+ *
+ * States:
+ *   - default: Near-Black fill, white text, 1px white@40% stroke, subtle shadow
+ *   - hover  : transform scale 1.04 + slightly stronger shadow
+ *   - selected: Coral fill, scale 1.08, raised z-index, NEVER dimmed
+ *   - dimmed (panel open): opacity 0.4 (selected stays at 1)
+ */
+
+.tx-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  position: relative;
+  cursor: pointer;
+  /* CSS-only transitions per house rules (no animation libraries). */
+  transition: opacity 120ms ease-out;
+}
+
+.tx-chip__price {
+  background: var(--color-near-black);
+  color: var(--color-canvas-white);
+  font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  /* Subtle separation from the map underlay; well under the 8% lift cap
+   * carved out for floating map UI in DESIGN_SYSTEM.md "Elevation & Depth". */
+  box-shadow: 0 1px 3px rgba(23, 23, 28, 0.18);
+  white-space: nowrap;
+  line-height: 1.1;
+  transition: transform 120ms ease-out, background 120ms ease-out,
+    box-shadow 120ms ease-out;
+}
+
+/* Sub-line shown only in the expanded variant (zoom 17+). Tucked under the
+ * main price chip so the pointer still emerges from the bottom of the stack.
+ * Slightly translucent black so the two surfaces read as one chip. */
+.tx-chip__sub {
+  background: rgba(23, 23, 28, 0.85);
+  color: var(--color-canvas-white);
+  font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 9px;
+  line-height: 1.1;
+  padding: 1px 6px;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  margin-top: -1px;
+  white-space: nowrap;
+}
+
+/* Pointer ▼ — pure CSS triangle, no extra DOM. Color matches the price
+ * surface so the chip reads as a tooltip-style anchor onto the jibun. */
+.tx-chip__pointer {
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 6px 5px 0 5px;
+  border-color: var(--color-near-black) transparent transparent transparent;
+  margin-top: -1px;
+}
+
+/* ---------------- Variants by zoom level ----------------------------- */
+
+.tx-chip--compact .tx-chip__price {
+  padding: 4px 6px;
+  font-size: 11px;
+}
+
+.tx-chip--standard .tx-chip__price {
+  padding: 5px 8px;
+  font-size: 12px;
+}
+
+.tx-chip--expanded .tx-chip__price {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+/* ---------------- States --------------------------------------------- */
+
+.tx-chip:hover .tx-chip__price {
+  transform: scale(1.04);
+  box-shadow: 0 2px 6px rgba(23, 23, 28, 0.25);
+}
+
+.tx-chip--selected .tx-chip__price {
+  background: var(--color-coral);
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: scale(1.08);
+}
+
+.tx-chip--selected .tx-chip__sub {
+  background: var(--color-coral);
+  /* Slight darken so the sub still reads as a separate band even when both
+   * surfaces share the warm fill. */
+  filter: brightness(0.92);
+}
+
+.tx-chip--selected .tx-chip__pointer {
+  border-top-color: var(--color-coral);
+}
+
+.tx-chip--dimmed {
+  opacity: 0.4;
+}
+
+/* Selected chip always stays fully opaque even when the parent has flagged
+ * the layer as dimmed (panel-open state). */
+.tx-chip--selected.tx-chip--dimmed {
+  opacity: 1;
+}
+
+/* Leaflet's default divIcon styles add a white background + grey border on
+ * `.leaflet-div-icon`. We need a transparent transport so only our chip
+ * paints. The class is added directly on the icon root from divIcon({className}). */
+.tx-chip-icon {
+  background: transparent !important;
+  border: 0 !important;
+  /* Allow the chip to overflow the iconSize box on hover/selected scale. */
+  overflow: visible !important;
+}
