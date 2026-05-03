@@ -23,6 +23,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.neighborhoods.compare_dummy import compute_rent_converted_avgs
 from apps.neighborhoods.detail_dummy import NEAREST_STATIONS_FALLBACK
 from apps.neighborhoods.models import Dong
 
@@ -62,11 +63,22 @@ def _transit_min(slug: str) -> int:
     return 10
 
 
-def _build_card(dong: Dong, weights: dict[str, float]) -> dict:
+def _build_card(
+    dong: Dong,
+    weights: dict[str, float],
+    rent_converted: int | None = None,
+) -> dict:
     """
     SPEC 6.5 모달의 동 카드 한 장.
-    rent_avg는 DongSummarySerializer 룰 재사용 (120 - score_rent),
-    amenity_label은 한국어, transit_min은 NEAREST_STATIONS_FALLBACK 1위.
+
+    필드:
+      - rent_avg: 더미 (120 - score_rent). 호환성 위해 보존.
+      - rent_converted: 환산월세(만원, 정수) 평균 또는 None.
+        view 가 compute_rent_converted_avgs 로 사전 계산해 전달.
+        보증금이 큰 동(반전세 다수)이 raw 월세만 보면 부당하게 싸 보이는
+        문제를 해결. 5번 비교에서 사용자가 보는 "월세" 표기는 이 값 사용.
+      - amenity_label: 한국어.
+      - transit_min: NEAREST_STATIONS_FALLBACK 1위.
     """
     rent_avg = max(0, int(120 - dong.score_rent))
     transit_min = _transit_min(dong.slug)
@@ -84,6 +96,7 @@ def _build_card(dong: Dong, weights: dict[str, float]) -> dict:
         "name": dong.name,
         "gu": dong.gu,
         "rent_avg": rent_avg,
+        "rent_converted": rent_converted,
         "transit_min": transit_min,
         "amenity_label": AMENITY_LABEL_KO[level],
         "score": score,
@@ -210,13 +223,28 @@ class PreferencePairsView(APIView):
                 {"detail": "비교할 동이 부족합니다 (최소 2개 필요)."}
             )
 
-        pair_indices = _select_pairs(dongs, count)
+        pair_dongs = _select_pairs(dongs, count)
+
+        # 환산월세 평균을 한 번에 사전 계산 (N+1 회피).
+        # 같은 구의 RentDeal 만 fetch 하므로 비용 제한적. compute_rent_converted_avgs
+        # 가 같은 fallback 정책 (≥3건 직접 / 같은 구 / 서울 중위) 적용.
+        unique_dongs = list({d.slug: d for pair in pair_dongs for d in pair}.values())
+        rent_converted_map = compute_rent_converted_avgs(unique_dongs)
+
         pairs = [
             {
-                "left": _build_card(left, DEFAULT_WEIGHTS),
-                "right": _build_card(right, DEFAULT_WEIGHTS),
+                "left": _build_card(
+                    left,
+                    DEFAULT_WEIGHTS,
+                    rent_converted=rent_converted_map.get(left.slug),
+                ),
+                "right": _build_card(
+                    right,
+                    DEFAULT_WEIGHTS,
+                    rent_converted=rent_converted_map.get(right.slug),
+                ),
             }
-            for left, right in pair_indices
+            for left, right in pair_dongs
         ]
         return Response({"pairs": pairs}, status=status.HTTP_200_OK)
 
@@ -313,7 +341,11 @@ class PreferenceSubmitView(APIView):
                 }
             )
 
-        # (won_features, lost_features) 튜플 리스트
+        # (won_features, lost_features) 튜플 리스트.
+        # rent feature 는 dong.score_rent 사용 — score_rent 는 compute_scores 가
+        # 환산월세(보증금×0.005 + 월세, apps.realestate.utils.convert_to_monthly)
+        # 분포의 백분위로 산출하므로 이미 환산 기반이다. 따라서 학습 로직은
+        # raw 월세가 아닌 환산월세 차이를 비교한다 (rent metric 환산 통일).
         comparisons: list[
             tuple[tuple[float, float, float], tuple[float, float, float]]
         ] = []
