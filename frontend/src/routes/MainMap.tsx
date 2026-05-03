@@ -345,6 +345,13 @@ export default function MainMap() {
             selectedJibun={selectedJibun}
             onPinClick={handlePinClick}
             onMapStateChange={setMapState}
+            // Suppress hover tooltips when ANY right-side panel is open so the
+            // preview doesn't compete visually with the panel content.
+            suppressTooltips={
+              selectedJibun != null ||
+              selectedSlug != null ||
+              kernelPoint != null
+            }
           />
           <KernelScoreLayer
             point={kernelPoint}

@@ -181,8 +181,12 @@ export interface PairCard {
   slug: string;
   name: string;
   gu: string;
-  /** Average monthly rent (만원). */
+  /** Average monthly rent (만원, score 기반 derived dummy). */
   rent_avg: number;
+  /** 평균 환산월세 (만원, 정수). 월세 + 보증금 × 0.005, RentDeal 실거래 기반.
+   *  null 또는 undefined → 데이터 부족(거래 적재 안 된 동) 또는 백엔드가 아직
+   *  필드를 노출하지 않은 경우. UI는 두 케이스 모두 동일하게 폴백 표기 처리. */
+  rent_converted?: number | null;
   /** Walking minutes to nearest subway station. */
   transit_min: number;
   /** Korean human-readable amenity coverage. */

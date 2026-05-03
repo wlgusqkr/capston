@@ -80,8 +80,15 @@ function ComparisonCard({ card, side, onPick }: ComparisonCardProps) {
 
       <dl className="pref-modal__metrics">
         <div className="pref-modal__metric">
-          <dt>평균 월세</dt>
-          <dd className="tabular">{card.rent_avg}만원</dd>
+          <dt>
+            평균 환산 월세
+            <span className="pref-modal__metric-hint mono-label">보증금 환산</span>
+          </dt>
+          <dd className="tabular">
+            {card.rent_converted != null
+              ? `${card.rent_converted}만원`
+              : `${card.rent_avg}만원`}
+          </dd>
         </div>
         <div className="pref-modal__metric">
           <dt>통학 시간</dt>

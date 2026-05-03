@@ -177,6 +177,20 @@
   font-size: var(--font-caption-size);
   color: var(--color-text-muted);
   letter-spacing: var(--letter-spacing-ko);
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+/* "보증금 환산" hint — small mono technical marker beside the metric label.
+ * Communicates that the figure is a derived (보증금→월세 환산) value, not raw 월세. */
+.pref-modal__metric-hint {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-mono-label-size);
+  font-weight: var(--font-mono-label-weight);
+  letter-spacing: var(--font-mono-label-tracking);
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
 }
 
 .pref-modal__metric dd {

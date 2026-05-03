@@ -81,6 +81,35 @@
   padding: var(--space-2) var(--space-3);
 }
 
+/* Transaction pin hover tooltip — preview card showing jibun + average
+ * 환산 월세. Two-line layout: where (small Pretendard) + price (mono tabular).
+ * Tighter padding than the default tooltip so it reads as a quick peek, not a
+ * panel. */
+.tx-pin-tooltip {
+  padding: var(--space-1) var(--space-2) !important;
+  pointer-events: none;
+}
+
+.tx-pin-tooltip__where {
+  font-size: var(--font-caption-base-size);
+  font-weight: 500;
+  line-height: var(--font-caption-base-line);
+  letter-spacing: var(--letter-spacing-ko);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.tx-pin-tooltip__price {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-mono-label-size);
+  font-weight: 500;
+  line-height: var(--font-mono-label-line);
+  letter-spacing: var(--font-mono-label-tracking);
+  color: var(--color-text-subtle);
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
 .leaflet-tooltip-top::before,
 .leaflet-tooltip-bottom::before,
 .leaflet-tooltip-left::before,

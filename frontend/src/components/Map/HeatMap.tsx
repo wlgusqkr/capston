@@ -169,11 +169,14 @@ export default function HeatMap({
       <MapContainer
         center={SEOUL_CITY_HALL}
         zoom={INITIAL_ZOOM}
+        maxZoom={19}
         zoomControl={false}
         scrollWheelZoom
         className="map-container"
       >
-        <TileLayer attribution={VWORLD_ATTRIBUTION} url={VWORLD_TILE_URL} maxZoom={18} />
+        {/* maxZoom 19까지 허용 — VWorld Base 타일이 z=19까지 응답 (서울 전역 OK).
+         *  타일 누락 시 Leaflet이 자동으로 z=18 타일을 stretch — 빈 영역 X. */}
+        <TileLayer attribution={VWORLD_ATTRIBUTION} url={VWORLD_TILE_URL} maxZoom={19} />
         <ZoomControl position="topright" />
 
         {heatmapVisible && (
