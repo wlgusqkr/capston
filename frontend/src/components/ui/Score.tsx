@@ -1,20 +1,26 @@
 /**
- * Score — display a 0~100 score as a big number with optional unit and delta.
+ * Score — display a 0~100 score (or any KPI number) as a large number with
+ * optional unit and delta.
  *
- * Color rules (SPEC 4.4 점수 표시):
- *   - 0  ~ 40   danger (red)
- *   - 40 ~ 70   warning (orange)
- *   - 70 ~ 100  success (teal)
+ * Per DESIGN_SYSTEM.md, the number itself reads in Ink (high-contrast on
+ * Soft Stone score card). We retain optional `tone` overrides for cases where
+ * a status color is explicitly desired, but the default is the calm
+ * monochrome the new system wants.
+ *
+ * Auto-tone (only applied when `tone` is omitted):
+ *   - 0  ~ 40   danger
+ *   - 40 ~ 70   warning (coral)
+ *   - 70 ~ 100  success (deep green)
  *
  * Sizes:
- *   - md  number 28px (default — fits in panel summary)
- *   - lg  number 36px (display token, hero / detail page)
+ *   - md  number 28px — fits in panel summary
+ *   - lg  number 48px — score card hero KPI ("55만원")
  *
  * Examples:
  *   <Score value={78} unit="/ 100" />
  *   <Score value={62} delta={+4} />
  *   <Score value={45} unit="점" size="lg" />
- *   <Score value={92} delta={-2} ariaLabel="필동 종합점수 92점" />
+ *   <Score value={92} delta={-2} tone="neutral" />
  */
 
 import type { HTMLAttributes } from 'react';
@@ -30,13 +36,16 @@ export interface ScoreProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childr
   /** Optional delta value. Positive shows up arrow, negative shows down arrow. */
   delta?: number;
   size?: ScoreSize;
-  /** Override the auto-detected color category. */
-  tone?: 'danger' | 'warning' | 'success';
+  /** Override the auto-detected color category. `neutral` keeps the
+   *  monochrome Ink color preferred by the new design system. */
+  tone?: 'danger' | 'warning' | 'success' | 'neutral';
   /** aria-label for screen readers (recommended for non-obvious context). */
   ariaLabel?: string;
 }
 
-function tonalCategoryFromValue(value: number): 'danger' | 'warning' | 'success' {
+function tonalCategoryFromValue(
+  value: number
+): 'danger' | 'warning' | 'success' | 'neutral' {
   if (value < 40) return 'danger';
   if (value < 70) return 'warning';
   return 'success';

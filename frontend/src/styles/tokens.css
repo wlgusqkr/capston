@@ -1,268 +1,371 @@
 /**
  * Design tokens — 슬기로운 자취생활
- * Source of truth: docs/SPEC.md section 4
+ * Source of truth: docs/DESIGN_SYSTEM.md (Cohere-inspired research/analytical aesthetic)
  *
  * Usage:
  *   import './styles/tokens.css';
  *   import './styles/globals.css';
  *
- * Theme switching:
- *   - Default = light
- *   - <html data-theme="dark"> forces dark
- *   - prefers-color-scheme: dark is the fallback when [data-theme] is unset
+ * Theme:
+ *   Light only. No dark mode. (Removed during 2026-05-03 system pivot.)
  *
- * Rule: components use only token variables. Never hardcode hex/px in primitives.
+ * Naming policy:
+ *   - Existing semantic names from the previous system are kept as aliases
+ *     so we don't break consumers (Button, Card, Slider, …). Hex values
+ *     have been remapped to the new palette.
+ *   - New raw color tokens (`--color-near-black`, `--color-deep-forest`, …)
+ *     are introduced for explicit use in feature surfaces.
+ *
+ * Rule: components consume ONLY token variables. Never hardcode hex/px in
+ * primitives.
  */
 
 :root {
   /* =========================================================================
-   * COLOR — Brand
+   * COLOR — Raw palette (Cohere-inspired)
+   * Use these explicitly when the surface is *intentionally* dark, coral,
+   * etc. For typical UI roles, prefer the semantic aliases below.
    * ====================================================================== */
-  --color-primary: #0F6E56;          /* 짙은 청록 — 브랜드, 메인 버튼, 액센트 */
-  --color-primary-hover: #0C5C48;    /* primary hover/active */
-  --color-primary-soft: #E2EFEA;     /* primary 배경 톤 (배지, 알림) */
 
-  --color-secondary: #BA7517;        /* 따뜻한 오렌지 — 보조 강조 */
-  --color-secondary-hover: #A16513;  /* secondary hover/active */
-  --color-secondary-soft: #F6EADB;   /* secondary 배경 톤 */
+  /* Primary surfaces */
+  --color-canvas-white: #ffffff;
+  --color-near-black:   #17171c;   /* 1차 CTA, 다크 지도 컨트롤, footer */
+  --color-pure-black:   #000000;   /* announcement bar, 최고 대비 */
+  --color-deep-forest:  #003c33;   /* 지도 hero band, "find your neighborhood" */
+  --color-dark-navy:    #071829;   /* 브리핑 hero panel, 거래 분석 */
+
+  /* Warm neutrals */
+  --color-soft-stone:   #eeece7;   /* score card, 동네 요약 */
+  --color-pale-green:   #edfce9;   /* "what we measure" capability 섹션 */
+  --color-pale-blue:    #f1f5ff;   /* POI 인트로, 온보딩 힌트 */
+
+  /* Editorial accents — never as CTA fill */
+  --color-coral:        #ff7759;   /* 동네 카테고리 칩, warm marker */
+  --color-soft-coral:   #ffad9b;   /* pale 칩 보더 */
+  --color-action-blue:  #1863dc;   /* 에디토리얼 링크 */
+
+  /* Text & rules */
+  --color-ink:          #212121;   /* 본문 */
+  --color-slate:        #75758a;   /* 3차 텍스트, 표 구분 */
+  --color-muted-slate:  #93939f;   /* 메타데이터, 카운트 */
+  --color-hairline:     #d9d9dd;   /* 기본 디바이더, row rule */
+  --color-border-light: #e5e7eb;   /* 폼 보더 */
+
+  /* Semantic accents */
+  --color-focus-blue:        #4c6ee6;  /* 키보드 포커스 링 */
+  --color-form-focus-violet: #9b60aa;  /* 인풋 focus border */
+  --color-error-red:         #b30000;  /* 검증 에러, 데이터 없음 */
 
   /* =========================================================================
-   * COLOR — Neutral (gray scale, 텍스트·보더·배경)
+   * COLOR — Semantic aliases (consumed by components)
+   *
+   * Mapping notes (legacy → new):
+   *   --color-primary       teal #0F6E56  →  Near-Black #17171c
+   *   --color-secondary     orange #BA7517 →  Coral #ff7759 (chip-only, no CTA)
+   *   --color-bg/surface    white          →  Canvas White (unchanged)
+   *   --color-surface-inset gray-50        →  Soft Stone (warmer)
+   *   --color-text          gray-900       →  Ink
+   *   --color-text-muted    gray-600       →  Slate
+   *   --color-text-subtle   gray-400       →  Muted Slate
+   *   --color-border        rgba black 8%  →  Border Light #e5e7eb
+   *   --color-border-strong gray-200       →  Hairline #d9d9dd
+   *   --color-focus-ring    teal 35%       →  Focus Blue 40%
+   *   --color-backdrop      warm black 45% →  Near-Black 55%
    * ====================================================================== */
-  --color-gray-50: #F9F9F8;          /* 가장 옅은 배경 */
-  --color-gray-100: #F1EFE8;         /* 카드 인셋 배경, 테이블 헤더 */
-  --color-gray-200: #D3D1C7;         /* 보더, 디바이더 */
-  --color-gray-400: #888780;         /* 보조 텍스트, 비활성 */
-  --color-gray-600: #5F5E5A;         /* 본문 보조, 라벨 */
-  --color-gray-900: #2C2C2A;         /* 본문, 헤딩 */
+  --color-bg:               var(--color-canvas-white);
+  --color-surface:          var(--color-canvas-white);
+  --color-surface-inset:    var(--color-soft-stone);
+
+  --color-primary:          var(--color-near-black);
+  --color-primary-hover:    var(--color-pure-black);
+  --color-primary-soft:     var(--color-soft-stone);
+
+  --color-secondary:        var(--color-coral);
+  --color-secondary-hover:  #ff5a3a;     /* slightly darker coral, chip-only */
+  --color-secondary-soft:   #fff1ec;     /* very pale coral wash */
+
+  --color-text:             var(--color-ink);
+  --color-text-muted:       var(--color-slate);
+  --color-text-subtle:      var(--color-muted-slate);
+  --color-text-on-primary:  var(--color-canvas-white);
+
+  --color-border:           var(--color-border-light);
+  --color-border-strong:    var(--color-hairline);
+
+  --color-focus-ring:       rgba(76, 110, 230, 0.40);   /* Focus Blue 40% */
+  --color-backdrop:         rgba(23, 23, 28, 0.55);     /* Near-Black 55% */
 
   /* =========================================================================
-   * COLOR — Semantic surface (의미 매핑, 컴포넌트가 참조)
+   * COLOR — Legacy gray scale (kept as aliases for back-compat)
+   * Several feature CSS files still reference --color-gray-*. Map them to
+   * the closest new system value rather than removing the names.
    * ====================================================================== */
-  --color-bg: #FFFFFF;                          /* 페이지 배경 */
-  --color-surface: #FFFFFF;                     /* 카드 배경 (default) */
-  --color-surface-inset: var(--color-gray-50);  /* 카드 배경 (inset variant) */
-  --color-border: rgba(0, 0, 0, 0.08);          /* 카드/구분 보더 */
-  --color-border-strong: var(--color-gray-200); /* 입력 컨트롤 보더 */
-  --color-text: var(--color-gray-900);          /* 본문 */
-  --color-text-muted: var(--color-gray-600);    /* 보조 텍스트 */
-  --color-text-subtle: var(--color-gray-400);   /* 힌트, placeholder */
-  --color-text-on-primary: #FFFFFF;             /* primary 위 글자 */
+  --color-gray-50:  var(--color-soft-stone);    /* warm panel inset */
+  --color-gray-100: #f1efe8;                    /* legacy chip/header bg */
+  --color-gray-200: var(--color-hairline);      /* control border */
+  --color-gray-400: var(--color-muted-slate);   /* placeholder/subtle */
+  --color-gray-600: var(--color-slate);         /* muted body */
+  --color-gray-900: var(--color-ink);           /* body */
 
   /* =========================================================================
-   * COLOR — Data viz (히트맵 4단계)
-   * 의미 매핑은 지표마다 다름 (낮을수록 좋은 지표 vs 높을수록 좋은 지표).
-   * 이 토큰은 4구간 색만 제공. 매핑 방향은 호출부에서 결정.
+   * COLOR — Status (semantic; tone re-tuned to new system)
+   * Success: dark green derived from Deep Forest family.
+   * Warning: Coral (system has no separate amber; coral fills warning role).
+   * Danger:  Error Red.
+   * Info:    Action Blue.
    * ====================================================================== */
-  --color-data-low: #378ADD;     /* 파랑 — 0~25 구간 */
-  --color-data-mid1: #1D9E75;    /* 청록 — 25~50 구간 */
-  --color-data-mid2: #EF9F27;    /* 오렌지 — 50~75 구간 */
-  --color-data-high: #E24B4A;    /* 빨강 — 75~100 구간 */
+  --color-success:        #1f7a5e;
+  --color-success-soft:   var(--color-pale-green);
+  --color-warning:        var(--color-coral);
+  --color-warning-soft:   #fff1ec;
+  --color-danger:         var(--color-error-red);
+  --color-danger-soft:    #fbe5e5;
+  --color-info:           var(--color-action-blue);
+  --color-info-soft:      var(--color-pale-blue);
+  --color-neutral:        var(--color-slate);
+  --color-neutral-soft:   var(--color-soft-stone);
 
   /* =========================================================================
-   * COLOR — Status (성공/경고/위험/정보)
-   * 데이터 컬러와 hex 동일하지만 의미가 다르므로 별도 토큰.
+   * COLOR — Heatmap (5-stop, Pale Green Wash → Deep Forest)
+   * Computed by perceptually-uniform interpolation between the two anchors.
+   * Opacity 0.7 is applied at the polygon layer, NOT here.
+   *
+   * NOTE: These tokens replace the old 4-color (blue/teal/orange/red) palette.
+   * The old --color-data-low / mid1 / mid2 / high names are kept as aliases
+   * for transitional compatibility (mapped to the closest 5-stop step).
    * ====================================================================== */
-  --color-success: #1D9E75;
-  --color-success-soft: #E1F1EA;
-  --color-warning: #EF9F27;
-  --color-warning-soft: #FCEBD0;
-  --color-danger: #E24B4A;
-  --color-danger-soft: #FADAD9;
-  --color-info: #378ADD;
-  --color-info-soft: #DBEAF8;
-  --color-neutral: var(--color-gray-600);
-  --color-neutral-soft: var(--color-gray-100);
+  --heatmap-1: #edfce9;   /* 0–20  : Pale Green Wash */
+  --heatmap-2: #b9dfb6;   /* 20–40 */
+  --heatmap-3: #6fa985;   /* 40–60 */
+  --heatmap-4: #2c7559;   /* 60–80 */
+  --heatmap-5: #003c33;   /* 80–100: Deep Forest */
+
+  /* Legacy 4-stop aliases — DO NOT use in new code. Map to 5-stop. */
+  --color-data-low:  var(--heatmap-2);   /* "low value" cell */
+  --color-data-mid1: var(--heatmap-3);
+  --color-data-mid2: var(--heatmap-4);
+  --color-data-high: var(--heatmap-5);   /* "high value" cell */
 
   /* =========================================================================
-   * FOCUS RING
+   * COLOR — Subway lines (지도 위에서만, UI chrome 금지)
+   * Source: 서울교통공사 official line colors.
    * ====================================================================== */
-  --color-focus-ring: rgba(15, 110, 86, 0.35);  /* primary 35% */
+  --subway-line-1: #0052A4;
+  --subway-line-2: #00A84D;
+  --subway-line-3: #EF7C1C;
+  --subway-line-4: #00A5DE;
+  --subway-line-5: #996CAC;
+  --subway-line-6: #CD7C2F;
+  --subway-line-7: #747F00;
+  --subway-line-8: #E6186C;
+  --subway-line-9: #BDB092;
 
   /* =========================================================================
-   * BACKDROP (Modal)
-   * ====================================================================== */
-  --color-backdrop: rgba(20, 20, 18, 0.45);
-
-  /* =========================================================================
-   * TYPOGRAPHY
+   * TYPOGRAPHY — Font stacks
    * ====================================================================== */
   --font-family-base:
     'Pretendard', 'Pretendard Variable', -apple-system, BlinkMacSystemFont,
-    'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    'Apple SD Gothic Neo', 'Inter', 'Noto Sans KR', sans-serif;
 
-  /* size / line-height / weight */
-  --font-h1-size: 28px;
-  --font-h1-line: 1.2;
-  --font-h1-weight: 600;
+  --font-family-display:
+    'Pretendard', 'Pretendard Variable', 'Space Grotesk', 'Inter',
+    'ui-sans-serif', system-ui, sans-serif;
 
-  --font-h2-size: 22px;
-  --font-h2-line: 1.2;
-  --font-h2-weight: 600;
-
-  --font-h3-size: 18px;
-  --font-h3-line: 1.3;
-  --font-h3-weight: 600;
-
-  --font-display-size: 36px;   /* 핵심 지표 숫자 */
-  --font-display-line: 1.1;
-  --font-display-weight: 700;
-
-  --font-body-size: 15px;
-  --font-body-line: 1.5;
-  --font-body-weight: 400;
-
-  --font-caption-size: 13px;
-  --font-caption-line: 1.5;
-  --font-caption-weight: 400;
-
-  --font-hint-size: 11px;
-  --font-hint-line: 1.4;
-  --font-hint-weight: 500;
-
-  --letter-spacing-ko: -0.01em;  /* 한글 본문 권장값 */
+  --font-family-mono:
+    'JetBrains Mono', 'D2Coding', 'Consolas', 'Menlo', 'Courier New', monospace;
 
   /* =========================================================================
-   * SPACING (4의 배수)
+   * TYPOGRAPHY — New 12-step scale (per DESIGN_SYSTEM.md)
+   * size / line / weight / tracking
+   * Pretendard 400 is the default. 500 only on buttons & active filter chips.
    * ====================================================================== */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
+
+  /* Hero Display — landing only */
+  --font-hero-display-size: 80px;
+  --font-hero-display-line: 1.00;
+  --font-hero-display-weight: 400;
+  --font-hero-display-tracking: -1.6px;
+
+  /* Page Display — 브리핑 페이지 상단, 탐색 모드 진입 */
+  --font-page-display-size: 60px;
+  --font-page-display-line: 1.00;
+  --font-page-display-weight: 400;
+  --font-page-display-tracking: -1.2px;
+
+  /* Section Display — 주요 섹션 헤딩 (e.g., "평균 전월세") */
+  --font-section-display-size: 48px;
+  --font-section-display-line: 1.05;
+  --font-section-display-weight: 400;
+  --font-section-display-tracking: -0.96px;
+
+  /* Section Heading — CTA 블록, 비교 섹션 */
+  --font-section-heading-size: 36px;
+  --font-section-heading-line: 1.15;
+  --font-section-heading-weight: 400;
+  --font-section-heading-tracking: -0.36px;
+
+  /* Card Heading — score card, 동네 요약 타이틀 */
+  --font-card-heading-size: 28px;
+  --font-card-heading-line: 1.20;
+  --font-card-heading-weight: 400;
+  --font-card-heading-tracking: -0.28px;
+
+  /* Feature Heading — POI 카테고리 헤더, 표 섹션 타이틀 */
+  --font-feature-heading-size: 22px;
+  --font-feature-heading-line: 1.30;
+  --font-feature-heading-weight: 400;
+  --font-feature-heading-tracking: 0;
+
+  /* Body Large — 리드 단락, 브리핑 요약 */
+  --font-body-large-size: 18px;
+  --font-body-large-line: 1.50;
+  --font-body-large-weight: 400;
+  --font-body-large-tracking: 0;
+
+  /* Body — 기본 본문, 표 셀 */
+  --font-body-base-size: 16px;
+  --font-body-base-line: 1.60;
+  --font-body-base-weight: 400;
+  --font-body-base-tracking: 0;
+
+  /* Button — CTA 라벨 (one of two places weight 500 is allowed) */
+  --font-button-size: 14px;
+  --font-button-line: 1.40;
+  --font-button-weight: 500;
+  --font-button-tracking: 0;
+
+  /* Caption — 메타, "거래 5건", 날짜 */
+  --font-caption-base-size: 14px;
+  --font-caption-base-line: 1.40;
+  --font-caption-base-weight: 400;
+  --font-caption-base-tracking: 0;
+
+  /* Mono Label — 시스템 마커 ("WALK 5MIN", "PERCENTILE 87") */
+  --font-mono-label-size: 13px;
+  --font-mono-label-line: 1.40;
+  --font-mono-label-weight: 400;
+  --font-mono-label-tracking: 0.26px;
+
+  /* Micro — footer, nav micro copy */
+  --font-micro-size: 12px;
+  --font-micro-line: 1.40;
+  --font-micro-weight: 400;
+  --font-micro-tracking: 0;
+
+  /* Data Display — score card 핵심 KPI 숫자 (e.g., "55만원") */
+  --font-data-display-size: 48px;
+  --font-data-display-line: 1.00;
+  --font-data-display-weight: 400;
+  --font-data-display-tracking: -0.48px;
+
+  /* =========================================================================
+   * TYPOGRAPHY — Legacy aliases (kept so existing components don't break)
+   * Mapping is intentional and documented:
+   *   h1      → Card Heading 28px (was 28px/600 → now 28px/400)
+   *   h2      → Feature Heading 22px (was 22px/600 → 22px/400)
+   *   h3      → 18px Body Large weight (was 18px/600 → 18px/400)
+   *   display → Section Heading 36px (was 36px/700 → 36px/400)
+   *   body    → 16px (was 15px → 16px)
+   *   caption → 14px (was 13px → 14px)
+   *   hint    → 12px (was 11px → 12px)
+   * ====================================================================== */
+  --font-h1-size: var(--font-card-heading-size);
+  --font-h1-line: var(--font-card-heading-line);
+  --font-h1-weight: var(--font-card-heading-weight);
+
+  --font-h2-size: var(--font-feature-heading-size);
+  --font-h2-line: var(--font-feature-heading-line);
+  --font-h2-weight: var(--font-feature-heading-weight);
+
+  --font-h3-size: 18px;
+  --font-h3-line: 1.40;
+  --font-h3-weight: 400;
+
+  --font-display-size: var(--font-section-heading-size);
+  --font-display-line: var(--font-section-heading-line);
+  --font-display-weight: var(--font-section-heading-weight);
+
+  --font-body-size: var(--font-body-base-size);
+  --font-body-line: var(--font-body-base-line);
+  --font-body-weight: var(--font-body-base-weight);
+
+  --font-caption-size: var(--font-caption-base-size);
+  --font-caption-line: var(--font-caption-base-line);
+  --font-caption-weight: var(--font-caption-base-weight);
+
+  --font-hint-size: var(--font-micro-size);
+  --font-hint-line: var(--font-micro-line);
+  --font-hint-weight: var(--font-micro-weight);
+
+  /* =========================================================================
+   * TYPOGRAPHY — Korean letter spacing
+   * Design system rule: 본문 한국어는 0 또는 살짝 양수. 24px 미만에서 negative 금지.
+   * Heading-level negative tracking lives in --font-*-tracking tokens above.
+   * ====================================================================== */
+  --letter-spacing-ko: 0;
+  --letter-spacing-ko-relaxed: 0.005em;
+
+  /* =========================================================================
+   * SPACING (8px base; 4px reserved for tight insets)
+   * 4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 56 / 64 / 80 / 120
+   * ====================================================================== */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-14: 56px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-30: 120px;
 
   /* =========================================================================
    * RADIUS
+   * Mapping rule (back-compat priority):
+   *   --radius-sm legacy was 6px → kept (8px) close to legacy intent
+   *   --radius-md legacy was 8px → KEPT at 8px (do NOT change to 16px to avoid
+   *       breaking Button/Input layouts). New 16px lives at --radius-card.
+   *   --radius-lg legacy was 12px → kept at 12px to avoid card layout drift;
+   *       the new system 22px lives at --radius-hero.
    * ====================================================================== */
-  --radius-sm: 6px;     /* 배지 */
-  --radius-md: 8px;     /* 버튼, 인풋 */
-  --radius-lg: 12px;    /* 카드, 모달 */
-  --radius-full: 9999px;
+  --radius-xs:   4px;     /* legend, 표 셀, 작은 썸네일 */
+  --radius-sm:   8px;     /* 표준 카드, 버튼, 인풋 (also covers legacy radius-sm/md) */
+  --radius-md:   8px;     /* legacy alias — same as sm in new system */
+  --radius-lg:   12px;    /* legacy card radius (preserved) */
+  --radius-card: 16px;    /* DESIGN_SYSTEM "md" — 브리핑 데이터 블록, 동네 요약 */
+  --radius-hero: 22px;    /* hero 사진 카드, 대형 미디어 */
+  --radius-xl:   30px;    /* 필터 pill, 카테고리 토글 outline */
+  --radius-pill: 32px;    /* 1차 CTA, 큰 필터 칩 (filled) */
+  --radius-full: 9999px;  /* 라운드 상태 도트 */
 
   /* =========================================================================
-   * COMPONENT HEIGHTS (세로 정렬 일관성)
+   * COMPONENT HEIGHTS
+   * Standard control heights kept at 32 / 40 / 48. CTA gets a 44px touch
+   * target (mobile guidance from DESIGN_SYSTEM.md "Touch Targets").
    * ====================================================================== */
-  --control-height-sm: 32px;
-  --control-height-md: 40px;
-  --control-height-lg: 48px;
-  --badge-height: 22px;
+  --control-height-sm:  32px;
+  --control-height-md:  40px;
+  --control-height-cta: 44px;
+  --control-height-lg:  48px;
+  --badge-height:       22px;
 
   /* =========================================================================
    * TRANSITION / Z-INDEX
    * ====================================================================== */
   --transition-fast: 120ms ease-out;
   --transition-base: 200ms ease-out;
-  --transition-slow: 300ms ease-out;     /* 히트맵 색상 트랜지션 */
+  --transition-slow: 300ms ease-out;
 
   --z-modal-backdrop: 1000;
-  --z-modal: 1010;
-  --z-tooltip: 1100;
-}
+  --z-modal:          1010;
+  --z-tooltip:        1100;
 
-/* ============================================================================
- * DARK THEME — explicit override
- * ========================================================================= */
-:root[data-theme='dark'] {
-  /* Brand stays roughly the same hue but slightly lifted for dark surfaces */
-  --color-primary: #1D8E70;          /* 다크에서 더 잘 보이도록 살짝 밝게 */
-  --color-primary-hover: #25A481;
-  --color-primary-soft: rgba(29, 142, 112, 0.18);
-
-  --color-secondary: #D08A2C;
-  --color-secondary-hover: #E69D3D;
-  --color-secondary-soft: rgba(208, 138, 44, 0.18);
-
-  /* Neutral — 톤 반전. 다크에서도 약간 따뜻한 회색 유지 */
-  --color-gray-50: #1B1B1A;
-  --color-gray-100: #232321;
-  --color-gray-200: #3A3A36;
-  --color-gray-400: #8C8B83;
-  --color-gray-600: #B8B6AC;
-  --color-gray-900: #ECEBE3;
-
-  /* Semantic surface */
-  --color-bg: #141413;
-  --color-surface: #1F1F1D;
-  --color-surface-inset: #1B1B1A;
-  --color-border: rgba(255, 255, 255, 0.10);
-  --color-border-strong: var(--color-gray-200);
-  --color-text: var(--color-gray-900);          /* 라이트 텍스트 (반전) */
-  --color-text-muted: var(--color-gray-600);
-  --color-text-subtle: var(--color-gray-400);
-  --color-text-on-primary: #FFFFFF;
-
-  /* Data viz — 다크에서도 동일 hue 유지 (인지 일관성) */
-  --color-data-low: #5AA3E8;
-  --color-data-mid1: #2DB084;
-  --color-data-mid2: #F2AE43;
-  --color-data-high: #EC6160;
-
-  /* Status */
-  --color-success: #2DB084;
-  --color-success-soft: rgba(45, 176, 132, 0.18);
-  --color-warning: #F2AE43;
-  --color-warning-soft: rgba(242, 174, 67, 0.18);
-  --color-danger: #EC6160;
-  --color-danger-soft: rgba(236, 97, 96, 0.20);
-  --color-info: #5AA3E8;
-  --color-info-soft: rgba(90, 163, 232, 0.18);
-  --color-neutral: var(--color-gray-600);
-  --color-neutral-soft: var(--color-gray-100);
-
-  --color-focus-ring: rgba(45, 176, 132, 0.45);
-  --color-backdrop: rgba(0, 0, 0, 0.65);
-}
-
-/* ============================================================================
- * DARK THEME — system preference fallback
- * Applies only when [data-theme] is NOT set on <html>.
- * ========================================================================= */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
-    --color-primary: #1D8E70;
-    --color-primary-hover: #25A481;
-    --color-primary-soft: rgba(29, 142, 112, 0.18);
-
-    --color-secondary: #D08A2C;
-    --color-secondary-hover: #E69D3D;
-    --color-secondary-soft: rgba(208, 138, 44, 0.18);
-
-    --color-gray-50: #1B1B1A;
-    --color-gray-100: #232321;
-    --color-gray-200: #3A3A36;
-    --color-gray-400: #8C8B83;
-    --color-gray-600: #B8B6AC;
-    --color-gray-900: #ECEBE3;
-
-    --color-bg: #141413;
-    --color-surface: #1F1F1D;
-    --color-surface-inset: #1B1B1A;
-    --color-border: rgba(255, 255, 255, 0.10);
-    --color-border-strong: var(--color-gray-200);
-    --color-text: var(--color-gray-900);
-    --color-text-muted: var(--color-gray-600);
-    --color-text-subtle: var(--color-gray-400);
-    --color-text-on-primary: #FFFFFF;
-
-    --color-data-low: #5AA3E8;
-    --color-data-mid1: #2DB084;
-    --color-data-mid2: #F2AE43;
-    --color-data-high: #EC6160;
-
-    --color-success: #2DB084;
-    --color-success-soft: rgba(45, 176, 132, 0.18);
-    --color-warning: #F2AE43;
-    --color-warning-soft: rgba(242, 174, 67, 0.18);
-    --color-danger: #EC6160;
-    --color-danger-soft: rgba(236, 97, 96, 0.20);
-    --color-info: #5AA3E8;
-    --color-info-soft: rgba(90, 163, 232, 0.18);
-    --color-neutral: var(--color-gray-600);
-    --color-neutral-soft: var(--color-gray-100);
-
-    --color-focus-ring: rgba(45, 176, 132, 0.45);
-    --color-backdrop: rgba(0, 0, 0, 0.65);
-  }
+  /* =========================================================================
+   * SHADOW — used very sparingly (floating map UI only, ≤8% black, no halo)
+   * ====================================================================== */
+  --shadow-floating: 0 1px 2px rgba(23, 23, 28, 0.04),
+                     0 4px 12px rgba(23, 23, 28, 0.06);
 }

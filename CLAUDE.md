@@ -6,6 +6,7 @@
 
 - `docs/SPEC.md` — 전체 명세서 (가장 중요)
 - `docs/wireframes/` — 화면별 와이어프레임 이미지
+- `docs/DESIGN_SYSTEM.md` — 디자인 시스템 단일 진실 (Cohere-inspired, white canvas + near-black CTA + Deep Forest 히트맵). UI 작업 전에 반드시 참고.
 
 명세서를 먼저 읽지 않고 코드를 작성하지 않습니다. 새 세션이 시작되거나 컨텍스트를 잃었다면 명세서 재확인부터.
 

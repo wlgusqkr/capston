@@ -1,27 +1,42 @@
-/* Button primitive — see Button.tsx for usage. */
+/* Button primitive — see Button.tsx for usage.
+ *
+ * Visual system:
+ *   primary   = Near-Black pill (radius-pill, 32px) — 1차 CTA
+ *   secondary = text-only with permanent underline — link-like inline action
+ *   outline   = transparent + 1px near-black border (radius-xl, 30px) — filter toggle
+ *   filled    = outline's active state (near-black fill + white text)
+ *   ghost     = legacy alias of `secondary` (no border, no fill)
+ *
+ * Per DESIGN_SYSTEM.md:
+ *   - Pretendard 14px / weight 500 (the only place we use 500 besides active filter chips)
+ *   - 12 × 24 padding for primary, with min-height var(--control-height-cta) for mobile hit target
+ *   - Hover primary → Pure Black
+ */
 
 .ui-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  border-radius: var(--radius-md);
   font-family: var(--font-family-base);
-  font-weight: 500;
-  letter-spacing: var(--letter-spacing-ko);
+  font-size: var(--font-button-size);
+  line-height: var(--font-button-line);
+  font-weight: var(--font-button-weight);
+  letter-spacing: var(--font-button-tracking);
   white-space: nowrap;
   cursor: pointer;
+  user-select: none;
+  border: 1px solid transparent;
+  background: transparent;
   transition:
     background-color var(--transition-fast),
     border-color var(--transition-fast),
     color var(--transition-fast),
     opacity var(--transition-fast);
-  user-select: none;
-  border: 1px solid transparent;
 }
 
 .ui-button:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
+  outline: 2px solid var(--color-focus-blue);
   outline-offset: 2px;
 }
 
@@ -34,19 +49,16 @@
 .ui-button--sm {
   height: var(--control-height-sm);
   padding: 0 var(--space-3);
-  font-size: var(--font-caption-size);
 }
 
 .ui-button--md {
   height: var(--control-height-md);
-  padding: 0 var(--space-4);
-  font-size: var(--font-body-size);
+  padding: 0 var(--space-5);
 }
 
 .ui-button--lg {
   height: var(--control-height-lg);
-  padding: 0 var(--space-5);
-  font-size: var(--font-body-size);
+  padding: 0 var(--space-6);
 }
 
 .ui-button--full {
@@ -54,32 +66,85 @@
 }
 
 /* ---------- Variants ---------- */
+
+/* primary — Near-Black pill, white text, 1차 CTA */
 .ui-button--primary {
-  background-color: var(--color-primary);
-  color: var(--color-text-on-primary);
+  background-color: var(--color-near-black);
+  color: var(--color-canvas-white);
+  border-color: var(--color-near-black);
+  border-radius: var(--radius-pill);
+  /* Mobile hit target: ensure 44px min height regardless of size choice */
+  min-height: var(--control-height-cta);
+  padding-left: var(--space-6);   /* 24px */
+  padding-right: var(--space-6);
 }
 
 .ui-button--primary:hover:not(:disabled) {
-  background-color: var(--color-primary-hover);
+  background-color: var(--color-pure-black);
+  border-color: var(--color-pure-black);
 }
 
+/* If caller insists on small primary, allow it to compress below 44px on
+   non-touch contexts. We respect the size class but still keep visual pill. */
+.ui-button--primary.ui-button--sm {
+  min-height: var(--control-height-sm);
+  padding: 0 var(--space-4);
+}
+
+/* secondary — text-only + permanent underline. Inherits height from size class. */
 .ui-button--secondary {
-  background-color: transparent;
-  color: var(--color-primary);
-  border-color: var(--color-primary);
+  background: transparent;
+  color: var(--color-ink);
+  border-color: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  border-radius: var(--radius-xs);
+  padding-left: 0;
+  padding-right: 0;
+  height: auto;
 }
 
 .ui-button--secondary:hover:not(:disabled) {
-  background-color: var(--color-primary-soft);
+  color: var(--color-action-blue);
 }
 
+/* outline — pill, 1px near-black border, transparent fill. Filter toggle. */
+.ui-button--outline {
+  background: transparent;
+  color: var(--color-ink);
+  border-color: var(--color-near-black);
+  border-radius: var(--radius-xl);
+}
+
+.ui-button--outline:hover:not(:disabled) {
+  background-color: var(--color-soft-stone);
+}
+
+/* filled — outline's active state. Near-Black fill + white text. */
+.ui-button--filled {
+  background-color: var(--color-near-black);
+  color: var(--color-canvas-white);
+  border-color: var(--color-near-black);
+  border-radius: var(--radius-xl);
+}
+
+.ui-button--filled:hover:not(:disabled) {
+  background-color: var(--color-pure-black);
+  border-color: var(--color-pure-black);
+}
+
+/* ghost — legacy alias of secondary (no underline). New code: use secondary. */
 .ui-button--ghost {
-  background-color: transparent;
-  color: var(--color-primary);
+  background: transparent;
+  color: var(--color-ink);
+  border-color: transparent;
+  border-radius: var(--radius-sm);
 }
 
 .ui-button--ghost:hover:not(:disabled) {
-  background-color: var(--color-primary-soft);
+  background-color: var(--color-soft-stone);
+  color: var(--color-near-black);
 }
 
 /* ---------- Icon slot ---------- */

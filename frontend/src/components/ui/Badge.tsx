@@ -1,27 +1,39 @@
 /**
- * Badge — small label for state / category.
+ * Badge — small label for state / category / mono technical marker.
  *
  * Variants:
- *   - success  청록 — 충분/양호
- *   - warning  오렌지 — 보통
- *   - danger   빨강 — 부족/위험
- *   - info     파랑 — 정보
- *   - neutral  회색 — 기본 카테고리 라벨
+ *   - success   dark green / pale green wash — 충분/양호
+ *   - warning   coral wash — 보통
+ *   - danger    error red wash — 부족/위험
+ *   - neutral   stone wash, slate text — 기본 카테고리 라벨, mono label
+ *   - info      action blue / pale blue wash — 정보
+ *   - category  coral pill — 동네 카테고리 칩 (`대학가형`, `1인가구 밀집형`)
+ *               Coral fill, white text. Active editorial chip.
+ *   - mono      transparent + 1px hairline + uppercase mono. System markers
+ *               like `WALK 5MIN`, `LINE 3`, `PERCENTILE 87`.
  *
  * Sizes:
- *   - sm  font 11px (default — fits within 22px chip)
- *   - md  font 13px
+ *   - sm  12-13px font, 22px height (default)
+ *   - md  14px font, taller
  *
  * Examples:
  *   <Badge variant="success">충분</Badge>
- *   <Badge variant="warning" size="md">보통</Badge>
+ *   <Badge variant="category">대학가형</Badge>
+ *   <Badge variant="mono">WALK 5MIN</Badge>
  *   <Badge variant="neutral">편의점 12개</Badge>
  */
 
 import type { HTMLAttributes, ReactNode } from 'react';
 import './Badge.css';
 
-export type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+export type BadgeVariant =
+  | 'success'
+  | 'warning'
+  | 'danger'
+  | 'info'
+  | 'neutral'
+  | 'category'
+  | 'mono';
 export type BadgeSize = 'sm' | 'md';
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {

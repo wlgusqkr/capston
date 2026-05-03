@@ -1,20 +1,24 @@
 /**
  * Button — base interactive primitive.
  *
- * Variants:
- *   - primary    teal fill, white text  (default)
- *   - secondary  outline + teal text
- *   - ghost      no border, teal text
+ * Variants (DESIGN_SYSTEM.md):
+ *   - primary    Near-Black pill fill, white text. 1차 CTA. (default)
+ *                "이 동네 보러가기", "탐색 시작하기"
+ *   - secondary  text-only + underline. "더 자세히", "직방에서 매물 보기"
+ *   - outline    transparent + 1px Near-Black border, 30px radius. 필터 토글.
+ *   - filled     outline의 active 상태. Near-Black fill + white text. 활성 필터.
+ *   - ghost      legacy alias of secondary; new code should use `secondary`.
  *
  * Sizes:
- *   - sm  32px height
- *   - md  40px height (default)
- *   - lg  48px height
+ *   - sm  32px height (compact filter, inline action)
+ *   - md  40px height (default — controls)
+ *   - lg  48px height (CTA in dense contexts; primary uses 44px min on mobile)
  *
  * Examples:
- *   <Button>자세히 보기</Button>
- *   <Button variant="secondary">비교에 추가</Button>
- *   <Button variant="ghost" size="sm">건너뛰기</Button>
+ *   <Button>탐색 시작하기</Button>
+ *   <Button variant="secondary">더 자세히</Button>
+ *   <Button variant="outline">원룸/오피스텔</Button>
+ *   <Button variant="filled">활성</Button>
  *   <Button loading>저장 중</Button>
  *   <Button leftIcon={<HeartIcon />}>찜하기</Button>
  *   <Button onClick={handle} disabled>비활성</Button>
@@ -24,7 +28,7 @@ import { forwardRef } from 'react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import './Button.css';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'filled' | 'ghost';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

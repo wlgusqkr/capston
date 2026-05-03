@@ -1,46 +1,69 @@
-/* Score primitive — see Score.tsx for usage. */
+/* Score primitive — see Score.tsx for usage.
+ *
+ * Per DESIGN_SYSTEM.md:
+ *   - "lg" reads as a Data Display number (48px / weight 400 / -0.48px)
+ *   - "md" uses Card Heading scale (28px / weight 400)
+ *   - tabular-nums always; tracking is monospace digit alignment, not
+ *     the headline's negative tracking
+ *   - Default color is Ink. Tone variants soften the value color but are
+ *     not the system's preferred presentation.
+ */
 
 .ui-score {
   display: inline-flex;
   align-items: baseline;
   gap: var(--space-2);
   letter-spacing: var(--letter-spacing-ko);
-  line-height: 1.1;
+  line-height: 1.0;
+  color: var(--color-ink);
 }
 
 /* ---------- Sizes ---------- */
 .ui-score--md .ui-score__value {
-  font-size: var(--font-h1-size);
-  font-weight: 700;
+  font-size: var(--font-card-heading-size);
+  font-weight: var(--font-card-heading-weight);
+  line-height: var(--font-card-heading-line);
+  letter-spacing: var(--font-card-heading-tracking);
 }
 
 .ui-score--lg .ui-score__value {
-  font-size: var(--font-display-size);
-  font-weight: var(--font-display-weight);
-  line-height: var(--font-display-line);
+  font-size: var(--font-data-display-size);
+  font-weight: var(--font-data-display-weight);
+  line-height: var(--font-data-display-line);
+  letter-spacing: var(--font-data-display-tracking);
 }
 
 .ui-score__value {
+  font-family: var(--font-family-display);
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
 }
 
-.ui-score__unit {
-  font-size: var(--font-caption-size);
-  font-weight: 400;
-  color: var(--color-text-muted);
+/* ---------- Tonal color (opt-in via prop) ---------- */
+.ui-score--neutral .ui-score__value {
+  color: var(--color-ink);
 }
 
-/* ---------- Tonal color ---------- */
 .ui-score--success .ui-score__value {
   color: var(--color-success);
 }
 
 .ui-score--warning .ui-score__value {
-  color: var(--color-warning);
+  color: var(--color-coral);
 }
 
 .ui-score--danger .ui-score__value {
   color: var(--color-danger);
+}
+
+/* ---------- Unit ---------- */
+.ui-score__unit {
+  font-family: var(--font-family-base);
+  font-size: var(--font-caption-base-size);
+  font-weight: 400;
+  color: var(--color-slate);
+  letter-spacing: 0;
 }
 
 /* ---------- Delta ---------- */
@@ -48,9 +71,11 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font-size: var(--font-caption-size);
-  font-weight: 500;
-  color: var(--color-text-muted);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-mono-label-size);
+  font-weight: 400;
+  letter-spacing: var(--font-mono-label-tracking);
+  color: var(--color-muted-slate);
   margin-left: var(--space-1);
 }
 

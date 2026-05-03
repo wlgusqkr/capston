@@ -1,30 +1,38 @@
-/* Badge primitive — see Badge.tsx for usage. */
+/* Badge primitive — see Badge.tsx for usage.
+ *
+ * Two families:
+ *   - Status badges (success/warning/danger/info/neutral): pale wash + tone text
+ *   - Editorial chips (category/mono): brand-specific shapes for the new system
+ */
 
 .ui-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   height: var(--badge-height);
   padding: 3px var(--space-2);
   border-radius: var(--radius-sm);
-  font-weight: 500;
+  font-family: var(--font-family-base);
+  font-weight: 400;
   letter-spacing: var(--letter-spacing-ko);
   white-space: nowrap;
   line-height: 1;
+  border: 1px solid transparent;
 }
 
 /* ---------- Sizes ---------- */
 .ui-badge--sm {
-  font-size: var(--font-hint-size);
+  font-size: var(--font-mono-label-size);
 }
 
 .ui-badge--md {
-  font-size: var(--font-caption-size);
+  font-size: var(--font-caption-base-size);
   height: auto;
   padding: 4px var(--space-3);
 }
 
-/* ---------- Variants ---------- */
+/* ---------- Status variants ---------- */
 .ui-badge--success {
   background-color: var(--color-success-soft);
   color: var(--color-success);
@@ -32,7 +40,7 @@
 
 .ui-badge--warning {
   background-color: var(--color-warning-soft);
-  color: var(--color-warning);
+  color: var(--color-coral);
 }
 
 .ui-badge--danger {
@@ -46,6 +54,34 @@
 }
 
 .ui-badge--neutral {
-  background-color: var(--color-neutral-soft);
-  color: var(--color-neutral);
+  background-color: var(--color-soft-stone);
+  color: var(--color-slate);
+}
+
+/* ---------- Editorial chips ---------- */
+
+/* category — 동네 분류 칩 (coral). Active state — coral fill + white text. */
+.ui-badge--category {
+  background-color: var(--color-coral);
+  color: var(--color-canvas-white);
+  border-radius: 22px;             /* per design spec for neighborhood-chip */
+  padding: 4px 10px;
+  height: auto;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+/* mono — uppercase mono technical marker. Hairline outline, no fill. */
+.ui-badge--mono {
+  background-color: transparent;
+  color: var(--color-muted-slate);
+  border-color: var(--color-hairline);
+  border-radius: var(--radius-xs);
+  padding: 2px var(--space-2);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-mono-label-size);
+  line-height: var(--font-mono-label-line);
+  letter-spacing: var(--font-mono-label-tracking);
+  text-transform: uppercase;
+  height: auto;
 }

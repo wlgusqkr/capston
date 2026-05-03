@@ -1,4 +1,11 @@
-/* Slider primitive — see Slider.tsx for usage. */
+/* Slider primitive — see Slider.tsx for usage.
+ *
+ * Implements the `weight-slider` spec from DESIGN_SYSTEM.md:
+ *   - 4px Border Light track
+ *   - 4px Near-Black fill (left of thumb)
+ *   - 20px white thumb + 2px Near-Black border
+ *   - Value label is mono — handled by .ui-slider__value (font family applied here)
+ */
 
 .ui-slider {
   display: flex;
@@ -15,16 +22,20 @@
 }
 
 .ui-slider__label {
-  font-size: var(--font-caption-size);
-  font-weight: 500;
-  color: var(--color-text);
+  font-family: var(--font-family-base);
+  font-size: var(--font-caption-base-size);
+  font-weight: 400;
+  color: var(--color-ink);
   letter-spacing: var(--letter-spacing-ko);
 }
 
 .ui-slider__value {
-  font-size: var(--font-caption-size);
-  color: var(--color-primary);
-  font-weight: 600;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-mono-label-size);
+  letter-spacing: var(--font-mono-label-tracking);
+  color: var(--color-near-black);
+  font-weight: 400;
+  text-transform: uppercase;
 }
 
 /* ---------- Track ---------- */
@@ -32,11 +43,10 @@
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 24px; /* hit target */
+  height: 24px;          /* hit target */
   background: transparent;
   margin: 0;
   cursor: pointer;
-  /* Fallback fill 50% if --ui-slider-fill not set */
   --ui-slider-fill: 50%;
 }
 
@@ -49,10 +59,10 @@
   height: 4px;
   background: linear-gradient(
     to right,
-    var(--color-primary) 0%,
-    var(--color-primary) var(--ui-slider-fill),
-    var(--color-gray-200) var(--ui-slider-fill),
-    var(--color-gray-200) 100%
+    var(--color-near-black) 0%,
+    var(--color-near-black) var(--ui-slider-fill),
+    var(--color-border-light) var(--ui-slider-fill),
+    var(--color-border-light) 100%
   );
   border-radius: var(--radius-full);
 }
@@ -60,28 +70,30 @@
 /* Firefox track */
 .ui-slider__input::-moz-range-track {
   height: 4px;
-  background: var(--color-gray-200);
+  background: var(--color-border-light);
   border-radius: var(--radius-full);
 }
 
 .ui-slider__input::-moz-range-progress {
   height: 4px;
-  background: var(--color-primary);
+  background: var(--color-near-black);
   border-radius: var(--radius-full);
 }
 
-/* WebKit thumb */
+/* WebKit thumb — 20px white circle, 2px Near-Black border */
 .ui-slider__input::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: var(--radius-full);
-  background: var(--color-surface);
-  border: 2px solid var(--color-primary);
-  margin-top: -7px; /* center on 4px track */
+  background: var(--color-canvas-white);
+  border: 2px solid var(--color-near-black);
+  margin-top: -8px;     /* center on 4px track */
   cursor: pointer;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .ui-slider__input:hover::-webkit-slider-thumb {
@@ -94,13 +106,15 @@
 
 /* Firefox thumb */
 .ui-slider__input::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: var(--radius-full);
-  background: var(--color-surface);
-  border: 2px solid var(--color-primary);
+  background: var(--color-canvas-white);
+  border: 2px solid var(--color-near-black);
   cursor: pointer;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .ui-slider__input:hover::-moz-range-thumb {

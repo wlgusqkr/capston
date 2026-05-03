@@ -1,17 +1,35 @@
-/* Card primitive — see Card.tsx for usage. */
+/* Card primitive — see Card.tsx for usage.
+ *
+ * Visual system (DESIGN_SYSTEM.md):
+ *   default = plain white surface, hairline border, 12px radius (legacy intent)
+ *   inset   = Soft Stone fill — score card / 동네 요약 / 비교 패널 / data block
+ *
+ * Padding props:
+ *   none / md=16px / lg=20px
+ *
+ * Drop-shadows are NOT used. Depth comes from surface alternation (white ↔
+ * dark band) handled at the page layout level, not inside cards.
+ *
+ * For brief/data blocks that need a 16px radius, prefer wrapping in your
+ * own component that uses `--radius-card`. We keep `Card` at `--radius-lg`
+ * (12px) to avoid breaking existing layouts.
+ */
 
 .ui-card {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  /* No shadow — flat per SPEC 4.4 */
+  background-color: var(--color-surface);
+  /* No shadow — system uses surface contrast, not elevation */
 }
 
 .ui-card--default {
-  background-color: var(--color-surface);
+  background-color: var(--color-canvas-white);
+  border-color: var(--color-border-light);
 }
 
 .ui-card--inset {
-  background-color: var(--color-surface-inset);
+  background-color: var(--color-soft-stone);
+  border-color: transparent;     /* Soft Stone reads on white without a rule */
 }
 
 .ui-card--pad-none {

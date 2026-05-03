@@ -11,6 +11,7 @@
  *   - body defaults using tokens
  *   - .tabular utility for numeric displays
  *   - link reset
+ *   - Focus Blue ring on :focus-visible
  */
 
 /* ============================================================================
@@ -81,6 +82,21 @@ textarea {
 }
 
 /* ============================================================================
+ * Headings — strip default browser weight bias.
+ * The new system uses size + whitespace for hierarchy, not weight.
+ * Per-heading sizing is applied by components/page CSS via tokens.
+ * ========================================================================= */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 400;
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+/* ============================================================================
  * BODY — defaults pulled from tokens
  * ========================================================================= */
 html,
@@ -107,7 +123,8 @@ body {
 }
 
 /* ============================================================================
- * LINKS — reset to inherit, primary on hover
+ * LINKS — inherit by default; Action Blue underline on editorial use only.
+ * The .editorial-link helper marks links that should adopt brand action color.
  * ========================================================================= */
 a {
   color: inherit;
@@ -115,13 +132,21 @@ a {
 }
 
 a:hover {
-  color: var(--color-primary);
+  color: var(--color-action-blue);
 }
 
-a:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
+a.editorial-link {
+  color: var(--color-action-blue);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+a:focus-visible,
+button:focus-visible,
+[role='button']:focus-visible {
+  outline: 2px solid var(--color-focus-blue);
   outline-offset: 2px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xs);
 }
 
 /* ============================================================================
@@ -132,6 +157,16 @@ a:focus-visible {
 .tabular {
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
+}
+
+/* Mono technical label utility (e.g., "WALK 5MIN", "LINE 3"). */
+.mono-label {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-mono-label-size);
+  line-height: var(--font-mono-label-line);
+  letter-spacing: var(--font-mono-label-tracking);
+  text-transform: uppercase;
+  color: var(--color-muted-slate);
 }
 
 /* Visually hide while keeping accessible to screen readers */
@@ -148,19 +183,19 @@ a:focus-visible {
 }
 
 /* ============================================================================
- * SELECTION
+ * SELECTION — warm stone wash (brand-consistent, low contrast)
  * ========================================================================= */
 ::selection {
-  background-color: var(--color-primary-soft);
-  color: var(--color-text);
+  background-color: var(--color-soft-stone);
+  color: var(--color-ink);
 }
 
 /* ============================================================================
- * SCROLLBAR — keep subtle, theme-aware
+ * SCROLLBAR — subtle, hairline-tinted
  * ========================================================================= */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-gray-200) transparent;
+  scrollbar-color: var(--color-hairline) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -173,10 +208,10 @@ a:focus-visible {
 }
 
 *::-webkit-scrollbar-thumb {
-  background: var(--color-gray-200);
+  background: var(--color-hairline);
   border-radius: var(--radius-full);
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: var(--color-gray-400);
+  background: var(--color-muted-slate);
 }
