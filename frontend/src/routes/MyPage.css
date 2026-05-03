@@ -27,12 +27,13 @@
   gap: var(--space-3);
 }
 
+/* Back link — editorial Action Blue. */
 .mypage__back {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  font-size: var(--font-body-size);
-  color: var(--color-primary);
+  font-size: var(--font-body-base-size);
+  color: var(--color-action-blue);
   text-decoration: none;
   height: var(--control-height-sm);
   padding: 0 var(--space-2);
@@ -42,7 +43,9 @@
 }
 
 .mypage__back:hover {
-  background: var(--color-primary-soft);
+  background: var(--color-pale-blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .mypage__back:focus-visible {
@@ -51,10 +54,10 @@
 }
 
 .mypage__title {
-  font-size: var(--font-h3-size);
-  font-weight: var(--font-h3-weight);
-  line-height: var(--font-h3-line);
-  letter-spacing: var(--letter-spacing-ko);
+  font-size: var(--font-feature-heading-size);
+  font-weight: var(--font-feature-heading-weight);
+  line-height: var(--font-feature-heading-line);
+  letter-spacing: var(--font-feature-heading-tracking);
   color: var(--color-text);
   margin: 0 auto 0 var(--space-2);
 }
@@ -84,21 +87,22 @@
 }
 
 .mypage__section-title {
-  font-size: var(--font-h3-size);
-  line-height: var(--font-h3-line);
-  font-weight: var(--font-h3-weight);
+  font-size: var(--font-feature-heading-size);
+  line-height: var(--font-feature-heading-line);
+  font-weight: var(--font-feature-heading-weight);
   color: var(--color-text);
-  letter-spacing: var(--letter-spacing-ko);
+  letter-spacing: var(--font-feature-heading-tracking);
   margin: 0;
 }
 
+/* Re-learn — secondary text-only link, Action Blue. */
 .mypage__relearn {
   background: none;
   border: none;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
-  font-size: var(--font-caption-size);
-  color: var(--color-primary);
+  font-size: var(--font-caption-base-size);
+  color: var(--color-action-blue);
   font-weight: 500;
   letter-spacing: var(--letter-spacing-ko);
   cursor: pointer;
@@ -106,7 +110,9 @@
 }
 
 .mypage__relearn:hover {
-  background: var(--color-primary-soft);
+  background: var(--color-pale-blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .mypage__relearn:focus-visible {
@@ -160,9 +166,10 @@
 }
 
 .mypage__empty-link {
-  font-size: var(--font-caption-size);
-  color: var(--color-primary);
-  text-decoration: none;
+  font-size: var(--font-caption-base-size);
+  color: var(--color-action-blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
   font-weight: 500;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
@@ -170,7 +177,7 @@
 }
 
 .mypage__empty-link:hover {
-  background: var(--color-primary-soft);
+  background: var(--color-pale-blue);
 }
 
 .mypage__empty-link:focus-visible {
@@ -186,17 +193,18 @@
   gap: var(--space-4);
 }
 
+/* Avatar — Soft Stone disc with Ink initial. */
 .mypage__avatar {
   width: 56px;
   height: 56px;
   border-radius: var(--radius-full);
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
+  background: var(--color-surface-inset);
+  color: var(--color-text);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-h2-size);
-  font-weight: 700;
+  font-size: var(--font-feature-heading-size);
+  font-weight: 400;
   letter-spacing: var(--letter-spacing-ko);
   flex-shrink: 0;
 }
@@ -209,11 +217,11 @@
 }
 
 .mypage__profile-name {
-  font-size: var(--font-h2-size);
-  font-weight: var(--font-h2-weight);
-  line-height: var(--font-h2-line);
+  font-size: var(--font-card-heading-size);
+  font-weight: var(--font-card-heading-weight);
+  line-height: var(--font-card-heading-line);
+  letter-spacing: var(--font-card-heading-tracking);
   color: var(--color-text);
-  letter-spacing: var(--letter-spacing-ko);
 }
 
 .mypage__profile-meta {
@@ -250,13 +258,16 @@
 
 .mypage__bar-value {
   color: var(--color-text);
-  font-weight: 600;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-mono-label-size);
+  letter-spacing: var(--font-mono-label-tracking);
 }
 
 .mypage__bar-track {
   height: 8px;
-  background: var(--color-gray-100);
+  background: var(--color-surface-inset);
   border-radius: var(--radius-full);
   overflow: hidden;
   position: relative;
@@ -266,7 +277,7 @@
   position: absolute;
   inset: 0 auto 0 0;
   height: 100%;
-  background: var(--color-primary);
+  background: var(--color-near-black);
   border-radius: var(--radius-full);
   transition: width var(--transition-slow);
 }
@@ -288,13 +299,13 @@
   gap: var(--space-2);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-card);
   overflow: hidden;
   transition: border-color var(--transition-fast), background var(--transition-fast);
 }
 
 .mypage__fav-row:hover {
-  border-color: var(--color-border-strong);
+  border-color: var(--color-hairline);
 }
 
 .mypage__fav-main {
@@ -315,7 +326,7 @@
 }
 
 .mypage__fav-main:hover {
-  background: var(--color-gray-50);
+  background: var(--color-surface-inset);
 }
 
 .mypage__fav-main:focus-visible {
@@ -335,10 +346,11 @@
 }
 
 .mypage__fav-name {
-  font-size: var(--font-h3-size);
-  font-weight: var(--font-h3-weight);
+  font-size: var(--font-feature-heading-size);
+  font-weight: var(--font-feature-heading-weight);
   color: var(--color-text);
-  line-height: var(--font-h3-line);
+  line-height: var(--font-feature-heading-line);
+  letter-spacing: var(--font-feature-heading-tracking);
 }
 
 .mypage__fav-meta {

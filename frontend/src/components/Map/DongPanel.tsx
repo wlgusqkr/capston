@@ -299,7 +299,8 @@ interface ScoreBarProps {
 }
 
 /** A small horizontal bar that picks its color band from the score value
- *  using the same buckets as the heatmap (tokens.css --color-data-*).
+ *  using the same 5-stop quintile buckets as the heatmap
+ *  (tokens.css --heatmap-1..5).
  */
 function ScoreBar({ label, value }: ScoreBarProps) {
   const clamped = Math.max(0, Math.min(100, value));
@@ -327,12 +328,13 @@ function ScoreBar({ label, value }: ScoreBarProps) {
   );
 }
 
-function pickBucket(score: number): 'low' | 'mid1' | 'mid2' | 'high' {
-  // Mirrors scoreToHeatmapBucket in src/lib/colors.ts.
-  if (score < 25) return 'low';
-  if (score < 50) return 'mid1';
-  if (score < 75) return 'mid2';
-  return 'high';
+function pickBucket(score: number): 'q1' | 'q2' | 'q3' | 'q4' | 'q5' {
+  // Mirrors scoreToHeatmapBucket in src/lib/colors.ts (5-stop quintiles).
+  if (score < 20) return 'q1';
+  if (score < 40) return 'q2';
+  if (score < 60) return 'q3';
+  if (score < 80) return 'q4';
+  return 'q5';
 }
 
 /* -------------------------------------------------------------------------- */

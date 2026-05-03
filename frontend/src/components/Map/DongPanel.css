@@ -25,9 +25,9 @@
 .dong-panel--open {
   transform: translateX(0);
   pointer-events: auto;
-  /* faint shadow against the map background; intentional for legibility.
-   * Token system has no shadow scale; this is a soft layering hint. */
-  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.06);
+  /* Floating-on-map exception per DESIGN_SYSTEM.md "Elevation & Depth":
+   * floating map UI may use a soft 4–8% shadow. */
+  box-shadow: var(--shadow-floating);
 }
 
 /* When closed, prevent any inner element from receiving focus. */
@@ -68,12 +68,12 @@
 }
 
 .dong-panel__name {
-  font-size: var(--font-h2-size);
-  line-height: var(--font-h2-line);
-  font-weight: var(--font-h2-weight);
+  font-size: var(--font-feature-heading-size);
+  line-height: var(--font-feature-heading-line);
+  font-weight: var(--font-feature-heading-weight);
   color: var(--color-text);
   margin: 0;
-  letter-spacing: var(--letter-spacing-ko);
+  letter-spacing: var(--font-feature-heading-tracking);
 }
 
 .dong-panel__close {
@@ -94,7 +94,7 @@
 }
 
 .dong-panel__close:hover {
-  background-color: var(--color-gray-100);
+  background-color: var(--color-surface-inset);
   color: var(--color-text);
 }
 
@@ -156,12 +156,14 @@
 }
 
 .dong-panel__section-title {
-  font-size: var(--font-h3-size);
-  line-height: var(--font-h3-line);
-  font-weight: var(--font-h3-weight);
-  color: var(--color-text);
+  font-size: var(--font-mono-label-size);
+  line-height: var(--font-mono-label-line);
+  font-weight: var(--font-mono-label-weight);
+  color: var(--color-text-subtle);
   margin: 0;
-  letter-spacing: var(--letter-spacing-ko);
+  letter-spacing: var(--font-mono-label-tracking);
+  font-family: var(--font-family-mono);
+  text-transform: uppercase;
 }
 
 /* ---------- Section 2: Key metrics ---------- */
@@ -269,7 +271,7 @@
 .dong-panel__bar-track {
   width: 100%;
   height: var(--space-2);
-  background-color: var(--color-gray-100);
+  background-color: var(--color-surface-inset);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
@@ -281,20 +283,24 @@
   transition: width var(--transition-base), background-color var(--transition-base);
 }
 
-.dong-panel__bar-fill--low {
-  background-color: var(--color-data-low);
+.dong-panel__bar-fill--q1 {
+  background-color: var(--heatmap-1);
 }
 
-.dong-panel__bar-fill--mid1 {
-  background-color: var(--color-data-mid1);
+.dong-panel__bar-fill--q2 {
+  background-color: var(--heatmap-2);
 }
 
-.dong-panel__bar-fill--mid2 {
-  background-color: var(--color-data-mid2);
+.dong-panel__bar-fill--q3 {
+  background-color: var(--heatmap-3);
 }
 
-.dong-panel__bar-fill--high {
-  background-color: var(--color-data-high);
+.dong-panel__bar-fill--q4 {
+  background-color: var(--heatmap-4);
+}
+
+.dong-panel__bar-fill--q5 {
+  background-color: var(--heatmap-5);
 }
 
 /* ---------- Footer (CTA) ---------- */

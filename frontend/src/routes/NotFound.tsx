@@ -15,7 +15,14 @@ export default function NotFound() {
       }}
     >
       <h1 style={{ color: 'var(--color-text)' }}>페이지를 찾을 수 없습니다</h1>
-      <Link to="/" style={{ color: 'var(--color-primary)' }}>
+      <Link
+        to="/"
+        style={{
+          color: 'var(--color-action-blue)',
+          textDecoration: 'underline',
+          textUnderlineOffset: '2px',
+        }}
+      >
         ← 메인 지도로 돌아가기
       </Link>
     </main>

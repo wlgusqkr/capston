@@ -21,11 +21,11 @@
 
 .review__title {
   margin: 0;
-  font-size: var(--font-h2-size);
-  line-height: var(--font-h2-line);
-  font-weight: var(--font-h2-weight);
+  font-size: var(--font-section-heading-size);
+  line-height: var(--font-section-heading-line);
+  font-weight: var(--font-section-heading-weight);
   color: var(--color-text);
-  letter-spacing: var(--letter-spacing-ko);
+  letter-spacing: var(--font-section-heading-tracking);
 }
 
 .review__summary-line {
@@ -38,29 +38,30 @@
 }
 
 .review__avg {
-  font-size: var(--font-h3-size);
-  font-weight: 600;
+  font-size: var(--font-feature-heading-size);
+  font-weight: 400;
   color: var(--color-text);
 }
 
 .review__count {
-  font-size: var(--font-caption-size);
+  font-size: var(--font-caption-base-size);
 }
 
 .review__stars {
   display: inline-flex;
   gap: 2px;
-  font-size: var(--font-h3-size);
+  font-size: var(--font-feature-heading-size);
   line-height: 1;
   letter-spacing: 0;
 }
 
 .review__star {
-  color: var(--color-border-strong);
+  color: var(--color-hairline);
 }
 
+/* Filled stars — Near-Black (coral is reserved for category chips). */
 .review__star--filled {
-  color: var(--color-secondary);
+  color: var(--color-near-black);
 }
 
 .review__cards {
@@ -83,11 +84,11 @@
 
 .review__card-title {
   margin: 0;
-  font-size: var(--font-h3-size);
-  line-height: var(--font-h3-line);
-  font-weight: var(--font-h3-weight);
+  font-size: var(--font-feature-heading-size);
+  line-height: var(--font-feature-heading-line);
+  font-weight: var(--font-feature-heading-weight);
   color: var(--color-text);
-  letter-spacing: var(--letter-spacing-ko);
+  letter-spacing: var(--font-feature-heading-tracking);
 }
 
 .review__card-author {

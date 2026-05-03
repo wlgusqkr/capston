@@ -15,11 +15,11 @@
 
 .similar__title {
   margin: 0;
-  font-size: var(--font-h2-size);
-  line-height: var(--font-h2-line);
-  font-weight: var(--font-h2-weight);
+  font-size: var(--font-section-heading-size);
+  line-height: var(--font-section-heading-line);
+  font-weight: var(--font-section-heading-weight);
   color: var(--color-text);
-  letter-spacing: var(--letter-spacing-ko);
+  letter-spacing: var(--font-section-heading-tracking);
 }
 
 .similar__hint {
@@ -47,7 +47,7 @@
 }
 
 .similar__card:hover {
-  border-color: var(--color-primary);
+  border-color: var(--color-near-black);
   transform: translateY(-1px);
 }
 
@@ -63,17 +63,20 @@
 }
 
 .similar__name {
-  font-size: var(--font-h2-size);
-  line-height: var(--font-h2-line);
-  font-weight: var(--font-h2-weight);
+  font-size: var(--font-card-heading-size);
+  line-height: var(--font-card-heading-line);
+  font-weight: var(--font-card-heading-weight);
   color: var(--color-text);
-  letter-spacing: var(--letter-spacing-ko);
+  letter-spacing: var(--font-card-heading-tracking);
 }
 
+/* Similarity % — mono data marker, Ink color. */
 .similar__sim {
   margin-top: var(--space-2);
-  font-size: var(--font-body-size);
-  color: var(--color-primary);
-  font-weight: 500;
-  letter-spacing: var(--letter-spacing-ko);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-mono-label-size);
+  font-weight: var(--font-mono-label-weight);
+  letter-spacing: var(--font-mono-label-tracking);
+  color: var(--color-text);
+  text-transform: uppercase;
 }

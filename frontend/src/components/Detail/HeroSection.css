@@ -28,11 +28,11 @@
 
 .hero__name {
   margin: 0;
-  font-size: var(--font-h1-size);
-  line-height: var(--font-h1-line);
-  font-weight: var(--font-h1-weight);
+  font-size: var(--font-section-display-size);
+  line-height: var(--font-section-display-line);
+  font-weight: var(--font-section-display-weight);
   color: var(--color-text);
-  letter-spacing: var(--letter-spacing-ko);
+  letter-spacing: var(--font-section-display-tracking);
 }
 
 .hero__score-row {
@@ -56,6 +56,7 @@
   width: 280px;
   height: 280px;
   overflow: hidden;
+  border-radius: var(--radius-hero);
 }
 
 .hero__map,
@@ -66,20 +67,22 @@
 
 .hero__map-container {
   background: var(--color-surface-inset);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-hero);
 }
 
 .hero__map-pin-label {
-  font-size: var(--font-hint-size);
-  font-weight: var(--font-hint-weight);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-mono-label-size);
+  font-weight: var(--font-mono-label-weight);
+  letter-spacing: var(--font-mono-label-tracking);
+  text-transform: uppercase;
   color: var(--color-text);
-  letter-spacing: var(--letter-spacing-ko);
   background: var(--color-surface);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
   padding: 4px var(--space-2);
   white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-floating);
 }
 
 .hero__map-fallback {

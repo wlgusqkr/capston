@@ -1,4 +1,5 @@
-/* Sidebar — fixed-width left column on the main map. */
+/* Sidebar — fixed-width left column on the main map.
+ * White canvas + Near-Black CTA tone per DESIGN_SYSTEM.md. */
 
 .sidebar {
   width: 280px;
@@ -30,20 +31,20 @@
 .sidebar__logo-mark {
   width: 28px;
   height: 28px;
-  border-radius: var(--radius-md);
-  background: var(--color-primary);
-  color: var(--color-text-on-primary);
+  border-radius: var(--radius-sm);
+  background: var(--color-near-black);
+  color: var(--color-canvas-white);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-caption-size);
-  font-weight: 700;
+  font-size: var(--font-caption-base-size);
+  font-weight: 500;
   letter-spacing: var(--letter-spacing-ko);
 }
 
 .sidebar__logo-text {
-  font-size: var(--font-body-size);
-  font-weight: 600;
+  font-size: var(--font-body-base-size);
+  font-weight: 400;
   letter-spacing: var(--letter-spacing-ko);
   color: var(--color-text);
 }
@@ -71,27 +72,34 @@
   justify-content: space-between;
 }
 
+/* Section titles are mono technical markers, per DESIGN_SYSTEM.md. */
 .sidebar__section-title {
-  font-size: var(--font-caption-size);
-  font-weight: 600;
-  color: var(--color-text-muted);
-  letter-spacing: var(--letter-spacing-ko);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-mono-label-size);
+  line-height: var(--font-mono-label-line);
+  font-weight: var(--font-mono-label-weight);
+  letter-spacing: var(--font-mono-label-tracking);
+  color: var(--color-text-subtle);
   margin: 0;
   text-transform: uppercase;
 }
 
 .sidebar__sum {
-  font-size: var(--font-hint-size);
-  color: var(--color-text-muted);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-mono-label-size);
+  letter-spacing: var(--font-mono-label-tracking);
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
 }
 
+/* Layer tabs — sit on Soft Stone inset, single-row pill toggle. */
 .sidebar__tabs {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: var(--space-1);
-  background: var(--color-gray-100);
+  background: var(--color-surface-inset);
   padding: var(--space-1);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-xl);
 }
 
 .sidebar__tab {
@@ -99,10 +107,10 @@
   background: transparent;
   border: 0;
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   font-family: inherit;
-  font-size: var(--font-caption-size);
-  font-weight: 500;
+  font-size: var(--font-caption-base-size);
+  font-weight: 400;
   letter-spacing: var(--letter-spacing-ko);
   color: var(--color-text-muted);
   cursor: pointer;
@@ -113,10 +121,11 @@
   color: var(--color-text);
 }
 
+/* Active tab — Near-Black filled pill (matches button-pill-filled spec). */
 .sidebar__tab--active {
-  background: var(--color-surface);
-  color: var(--color-text);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  background: var(--color-near-black);
+  color: var(--color-canvas-white);
+  font-weight: 500;
 }
 
 .sidebar__sliders {
@@ -129,7 +138,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--font-caption-size);
+  font-size: var(--font-caption-base-size);
   color: var(--color-text);
   cursor: pointer;
 }
@@ -137,7 +146,7 @@
 .sidebar__check input[type='checkbox'] {
   width: 16px;
   height: 16px;
-  accent-color: var(--color-primary);
+  accent-color: var(--color-near-black);
   cursor: pointer;
 }
 
@@ -150,10 +159,10 @@
 
 .sidebar__compare-hint {
   margin: 0;
-  font-size: var(--font-hint-size);
+  font-size: var(--font-micro-size);
   color: var(--color-text-muted);
   letter-spacing: var(--letter-spacing-ko);
-  line-height: var(--font-caption-line);
+  line-height: var(--font-caption-base-line);
 }
 
 /* User area inside the sidebar header (logged in: nickname · 마이페이지 / out: 로그인). */
@@ -167,7 +176,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0;
-  font-size: var(--font-caption-size);
+  font-size: var(--font-caption-base-size);
   letter-spacing: var(--letter-spacing-ko);
   color: var(--color-text-muted);
   text-decoration: none;
@@ -177,8 +186,8 @@
 }
 
 .sidebar__user-link:hover {
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
+  background: var(--color-surface-inset);
+  color: var(--color-text);
 }
 
 .sidebar__user-link:focus-visible {
@@ -188,11 +197,11 @@
 
 .sidebar__user-name {
   color: var(--color-text);
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .sidebar__user-link:hover .sidebar__user-name {
-  color: var(--color-primary);
+  color: var(--color-text);
 }
 
 .sidebar__user-sep {
@@ -201,11 +210,13 @@
 }
 
 .sidebar__user-action {
-  color: var(--color-primary);
+  color: var(--color-text);
   font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .sidebar__user-link--guest {
-  color: var(--color-primary);
+  color: var(--color-text);
   font-weight: 500;
 }

@@ -10,11 +10,11 @@
 
 .transit__title {
   margin: 0;
-  font-size: var(--font-h2-size);
-  line-height: var(--font-h2-line);
-  font-weight: var(--font-h2-weight);
+  font-size: var(--font-section-heading-size);
+  line-height: var(--font-section-heading-line);
+  font-weight: var(--font-section-heading-weight);
   color: var(--color-text);
-  letter-spacing: var(--letter-spacing-ko);
+  letter-spacing: var(--font-section-heading-tracking);
 }
 
 .transit__grid {
@@ -26,11 +26,11 @@
 
 .transit__subtitle {
   margin: 0 0 var(--space-3);
-  font-size: var(--font-h3-size);
-  line-height: var(--font-h3-line);
-  font-weight: var(--font-h3-weight);
+  font-size: var(--font-feature-heading-size);
+  line-height: var(--font-feature-heading-line);
+  font-weight: var(--font-feature-heading-weight);
   color: var(--color-text);
-  letter-spacing: var(--letter-spacing-ko);
+  letter-spacing: var(--font-feature-heading-tracking);
 }
 
 .transit__stations {
@@ -59,9 +59,9 @@
 }
 
 .transit__station--top {
-  /* Subtle emphasis on the top-ranked station via a soft surface inside the list */
-  background: var(--color-primary-soft);
-  border-radius: var(--radius-md);
+  /* Subtle emphasis on the top-ranked station via a Soft Stone inset. */
+  background: var(--color-surface-inset);
+  border-radius: var(--radius-card);
   padding-left: var(--space-3);
   padding-right: var(--space-3);
   border-bottom-color: transparent;
@@ -129,16 +129,17 @@
 }
 
 .transit__bus-value {
-  font-size: var(--font-display-size);
-  line-height: var(--font-display-line);
-  font-weight: var(--font-display-weight);
+  font-size: var(--font-data-display-size);
+  line-height: var(--font-data-display-line);
+  font-weight: var(--font-data-display-weight);
+  letter-spacing: var(--font-data-display-tracking);
   color: var(--color-text);
 }
 
 .transit__bus-value-sub {
-  font-size: var(--font-h2-size);
-  line-height: var(--font-h2-line);
-  font-weight: 600;
+  font-size: var(--font-feature-heading-size);
+  line-height: var(--font-feature-heading-line);
+  font-weight: 400;
   color: var(--color-text-muted);
 }
 

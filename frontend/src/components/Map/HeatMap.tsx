@@ -17,7 +17,7 @@ import { GeoJSON, MapContainer, TileLayer, ZoomControl } from 'react-leaflet';
 
 import { useDongGeoJson } from '@/hooks/useDongGeoJson';
 import type { DongFeatureProps } from '@/hooks/useDongGeoJson';
-import { scoreToHeatmapColor } from '@/lib/colors';
+import { MAP_POLYGON_STROKE, scoreToHeatmapColor } from '@/lib/colors';
 import type { DongScore } from '@/types/api';
 
 import 'leaflet/dist/leaflet.css';
@@ -87,16 +87,20 @@ export default function HeatMap({
     return `${activeLayer}-${dongs.length}-${acc}-${heatmapVisible ? 1 : 0}`;
   }, [dongs, heatmapVisible, activeLayer]);
 
+  // DESIGN_SYSTEM.md "Map-Specific Shapes":
+  //   - default polygon stroke: 1px white @ 60% opacity
+  //   - heatmap fill opacity: 0.7
+  //   - cells without data: very faint Soft Stone wash
   const styleFn = (feature?: Feature<Geometry, DongFeatureProps>) => {
     const slug = feature?.properties?.adm_cd ?? '';
     const dong = dongBySlug[slug];
     const score = dong ? pickScore(dong, activeLayer) : null;
     return {
-      color: '#2C2C2A',
-      weight: 0.8,
-      opacity: 0.6,
-      fillColor: score !== null ? scoreToHeatmapColor(score) : '#cccccc',
-      fillOpacity: score !== null ? 0.6 : 0.1,
+      color: MAP_POLYGON_STROKE.default.color,
+      weight: MAP_POLYGON_STROKE.default.weight,
+      opacity: MAP_POLYGON_STROKE.default.opacity,
+      fillColor: score !== null ? scoreToHeatmapColor(score) : '#eeece7',
+      fillOpacity: score !== null ? 0.7 : 0.15,
     };
   };
 
@@ -127,12 +131,14 @@ export default function HeatMap({
       mouseover: (e) =>
         (e.target as { setStyle: (s: object) => void }).setStyle({
           fillOpacity: 0.85,
-          weight: 1.5,
+          weight: MAP_POLYGON_STROKE.hover.weight,
+          opacity: MAP_POLYGON_STROKE.hover.opacity,
         }),
       mouseout: (e) =>
         (e.target as { setStyle: (s: object) => void }).setStyle({
-          fillOpacity: 0.6,
-          weight: 0.8,
+          fillOpacity: 0.7,
+          weight: MAP_POLYGON_STROKE.default.weight,
+          opacity: MAP_POLYGON_STROKE.default.opacity,
         }),
     });
   };

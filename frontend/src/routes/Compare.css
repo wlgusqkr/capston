@@ -27,12 +27,13 @@
   gap: var(--space-3);
 }
 
+/* Back link — editorial Action Blue. */
 .compare__back {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  font-size: var(--font-body-size);
-  color: var(--color-primary);
+  font-size: var(--font-body-base-size);
+  color: var(--color-action-blue);
   text-decoration: none;
   height: var(--control-height-sm);
   padding: 0 var(--space-2);
@@ -42,7 +43,9 @@
 }
 
 .compare__back:hover {
-  background: var(--color-primary-soft);
+  background: var(--color-pale-blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .compare__back:focus-visible {
@@ -55,9 +58,9 @@
 }
 
 .compare__crumb-current {
-  font-size: var(--font-body-size);
+  font-size: var(--font-body-base-size);
   color: var(--color-text);
-  font-weight: 500;
+  font-weight: 400;
   letter-spacing: var(--letter-spacing-ko);
 }
 
@@ -96,13 +99,11 @@
 
 /* ---- Empty state --------------------------------------------------------- */
 
+/* Empty state — center text only, no card frame, no illustration. */
 .compare__empty {
   max-width: 480px;
-  margin: var(--space-8) auto;
+  margin: var(--space-20) auto;
   padding: var(--space-8) var(--space-6);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -111,25 +112,25 @@
 }
 
 .compare__empty-title {
-  font-size: var(--font-h2-size);
-  font-weight: var(--font-h2-weight);
-  line-height: var(--font-h2-line);
-  letter-spacing: var(--letter-spacing-ko);
+  font-size: var(--font-section-heading-size);
+  font-weight: var(--font-section-heading-weight);
+  line-height: var(--font-section-heading-line);
+  letter-spacing: var(--font-section-heading-tracking);
   color: var(--color-text);
   margin: 0;
 }
 
 .compare__empty-text {
-  font-size: var(--font-body-size);
+  font-size: var(--font-body-base-size);
   color: var(--color-text-muted);
   letter-spacing: var(--letter-spacing-ko);
-  line-height: var(--font-body-line);
+  line-height: var(--font-body-base-line);
   margin: 0;
 }
 
 .compare__empty-text strong {
   color: var(--color-text);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 /* ---- Table wrapper ------------------------------------------------------- */
@@ -137,7 +138,7 @@
 .compare__table-wrap {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card);
   overflow: hidden;
 }
 
@@ -159,26 +160,29 @@
 /* ---- Table header (column headers) -------------------------------------- */
 
 .compare__table thead tr {
-  background: var(--color-gray-100);
-  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-inset);
+  border-bottom: 1px solid var(--color-hairline);
 }
 
 .compare__th-label,
 .compare__th-dong {
   padding: var(--space-4) var(--space-5);
   text-align: left;
-  font-weight: var(--font-h3-weight);
-  font-size: var(--font-caption-size);
+  font-weight: 400;
+  font-size: var(--font-caption-base-size);
   color: var(--color-text-muted);
   vertical-align: top;
 }
 
+/* Row label header — uppercase mono technical marker. */
 .compare__th-label-text {
   display: inline-block;
-  font-size: var(--font-caption-size);
-  font-weight: 600;
-  color: var(--color-text-muted);
-  text-transform: none;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-mono-label-size);
+  font-weight: var(--font-mono-label-weight);
+  letter-spacing: var(--font-mono-label-tracking);
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
 }
 
 .compare__col-header {
@@ -200,9 +204,10 @@
 }
 
 .compare__col-name {
-  font-size: var(--font-h3-size);
-  font-weight: var(--font-h3-weight);
-  line-height: var(--font-h3-line);
+  font-size: var(--font-card-heading-size);
+  font-weight: var(--font-card-heading-weight);
+  line-height: var(--font-card-heading-line);
+  letter-spacing: var(--font-card-heading-tracking);
   color: var(--color-text);
 }
 
@@ -218,8 +223,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
   background: var(--color-surface);
   color: var(--color-text-muted);
   cursor: pointer;
@@ -244,7 +249,7 @@
 /* ---- Body rows ---------------------------------------------------------- */
 
 .compare__table tbody tr {
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-hairline);
 }
 
 .compare__table tbody tr:last-child {
@@ -254,8 +259,8 @@
 .compare__row-label {
   padding: var(--space-4) var(--space-5);
   text-align: left;
-  font-size: var(--font-caption-size);
-  font-weight: 500;
+  font-size: var(--font-caption-base-size);
+  font-weight: 400;
   color: var(--color-text-muted);
   background: var(--color-surface-inset);
   letter-spacing: var(--letter-spacing-ko);
@@ -264,38 +269,40 @@
 
 .compare__cell {
   padding: var(--space-4) var(--space-5);
-  font-size: var(--font-body-size);
+  font-size: var(--font-body-base-size);
   color: var(--color-text);
   vertical-align: middle;
 }
 
+/* "Best in row" — Pale Green inset wash + Ink text. No coral, no teal. */
 .compare__cell--best {
   font-weight: 500;
-  color: var(--color-primary);
+  color: var(--color-text);
+  background: var(--color-pale-green);
 }
 
 .compare__cell-unit {
-  font-size: var(--font-caption-size);
+  font-size: var(--font-caption-base-size);
   color: var(--color-text-muted);
   font-weight: 400;
 }
 
 .compare__cell--best .compare__cell-unit {
-  /* Keep the unit slightly muted even when the row value is highlighted. */
-  color: var(--color-primary);
-  opacity: 0.75;
+  color: var(--color-text-muted);
+  opacity: 1;
 }
 
+/* Rating — Ink color, no coral. Stars themselves remain decorative. */
 .compare__rating {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  color: var(--color-secondary);
-  font-weight: 600;
+  color: var(--color-text);
+  font-weight: 400;
 }
 
 .compare__cell--best .compare__rating {
-  color: var(--color-primary);
+  color: var(--color-text);
 }
 
 /* tabular-nums for digit columns */

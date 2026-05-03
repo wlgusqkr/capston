@@ -1,4 +1,5 @@
-/* ViewToggle — bottom-right floating chip. */
+/* ViewToggle — bottom-right floating chip on the map.
+ * Floating map UI exception — uses --shadow-floating per DESIGN_SYSTEM.md. */
 
 .view-toggle {
   position: absolute;
@@ -6,11 +7,11 @@
   bottom: var(--space-4);
   display: inline-flex;
   background: var(--color-surface);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
   overflow: hidden;
   z-index: 400;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-floating);
   font-family: var(--font-family-base);
 }
 
@@ -19,8 +20,8 @@
   background: transparent;
   border: 0;
   padding: var(--space-2) var(--space-3);
-  font-size: var(--font-caption-size);
-  font-weight: 500;
+  font-size: var(--font-caption-base-size);
+  font-weight: 400;
   color: var(--color-text-muted);
   letter-spacing: var(--letter-spacing-ko);
   cursor: pointer;
@@ -37,6 +38,7 @@
 }
 
 .view-toggle__btn--active {
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
+  background: var(--color-near-black);
+  color: var(--color-canvas-white);
+  font-weight: 500;
 }
