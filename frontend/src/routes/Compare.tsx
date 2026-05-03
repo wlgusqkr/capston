@@ -4,67 +4,53 @@
 //   - The frontend uses `dongs` in the URL to match the spec wording.
 //   - The backend API expects `?slugs=...` — getCompare() handles that mapping.
 //
-// Layout:
-//   - Topbar: ← 지도로 + breadcrumb
-//   - Main:
-//       Empty state when no slugs.
-//       Table when 1~3 slugs:
-//         left column = metric labels
-//         other columns = dongs (max 3)
-//         column header has dong name + 제거(×) + (1위 한정) "최고 점수" Badge
-//   - Footer: "+ 동네 추가하기" (안내), "공유" (URL clipboard)
+// Honest Compare (FINDING-101 + FINDING-106, 2026-05-03):
+//   The original 7-row table contained 4 placeholder fields (transit_min,
+//   single_household_pct, safety_label, review_avg/review_count) where every
+//   dong returned the same dummy value (10분 / 40.0% / 높음 / 4.7★). For a
+//   capstone demo this destroys the comparison value AND lights the "best in
+//   row" highlight on every cell. We dropped those rows and replaced them
+//   with the real, score-driven breakdown that already exists on the backend
+//   (`/api/dongs/scores` exposes `score_rent` / `score_amenity` /
+//   `score_transit` per dong — genuine variation).
 //
-// Highlight rule (SPEC 6.4):
-//   In each row, the best value(s) get font-weight 500 + color: --color-primary.
-//   Direction differs by metric:
-//     높을수록 좋음: score, single_household_pct, review_avg_rating, review_count
-//     낮을수록 좋음: rent_avg, transit_min
-//     amenity_label: 충분 > 보통 > 부족
-//     safety_label:   높음 > 보통 > 낮음
-//   Ties: every value tied with the max gets highlighted.
+//   Final 4 rows:
+//     1) 종합점수      — composite score (CompareItem.score, weighted)
+//     2) 평균 월세      — CompareItem.rent_avg (만원, derived from score_rent)
+//     3) 생활시설 점수  — DongScore.score_amenity (0~100)
+//     4) 교통 점수      — DongScore.score_transit (0~100)
+//
+// Highlight rule (FINDING-106):
+//   In each row, the best value(s) get a Pale Green background.
+//   Direction:
+//     높을수록 좋음: score, score_amenity, score_transit
+//     낮을수록 좋음: rent_avg
+//   Ties: when all displayed values agree within tolerance (±0.5 for scores,
+//   ±0 for integer rent), NO cell is highlighted and the row label shows a
+//   small "동률" badge instead. This stops the demo from lighting up every
+//   single cell when all dongs land in the same bin.
 //
 // "최고 점수" Badge:
-//   The single dong with the strictly maximum score (ties → first column).
+//   The single dong with the strictly maximum composite score (ties → no
+//   badge anywhere — same fairness rule as cell highlights).
 
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { Badge, Button } from '@/components/ui';
-import { useCompare } from '@/hooks/useDongs';
+import { useCompare, useDongScores } from '@/hooks/useDongs';
 import { DEFAULT_WEIGHTS } from '@/types/api';
-import type {
-  CompareAmenityLabel,
-  CompareItem,
-  CompareSafetyLabel,
-} from '@/types/api';
+import type { CompareItem, DongScore } from '@/types/api';
 
 import './Compare.css';
 
 const MAX_SLUGS = 3;
 
-const AMENITY_RANK: Record<CompareAmenityLabel, number> = {
-  충분: 3,
-  보통: 2,
-  부족: 1,
-};
-
-const SAFETY_RANK: Record<CompareSafetyLabel, number> = {
-  높음: 3,
-  보통: 2,
-  낮음: 1,
-};
-
-const AMENITY_VARIANT: Record<CompareAmenityLabel, 'success' | 'warning' | 'danger'> = {
-  충분: 'success',
-  보통: 'warning',
-  부족: 'danger',
-};
-
-const SAFETY_VARIANT: Record<CompareSafetyLabel, 'success' | 'warning' | 'danger'> = {
-  높음: 'success',
-  보통: 'warning',
-  낮음: 'danger',
-};
+/** Score equality tolerance — values within this band are considered tied
+ *  and no highlight is awarded. Half a percentage point is below display
+ *  precision (we render scores to 1 decimal) so a tie here is visually
+ *  indistinguishable for the demo viewer. */
+const SCORE_TIE_EPSILON = 0.5;
 
 /** Parse comma-separated `dongs` query param into a clean slug list (≤3). */
 function parseSlugs(raw: string | null): string[] {
@@ -94,11 +80,28 @@ export default function Compare() {
   // map's current sense of "best"). Weights are 33/33/34 for now — see step
   // 7B handoff F1 / step 6B handoff for the WeightsContext follow-up.
   const weights = DEFAULT_WEIGHTS;
-  const { data, isLoading, isError, error } = useCompare(
-    slugs,
-    weights,
-    slugs.length > 0
-  );
+
+  const compareQ = useCompare(slugs, weights, slugs.length > 0);
+
+  // Pull raw breakdown scores from the main /scores endpoint (already cached
+  // by the map at 60s staleTime, so on-route this is usually a cache hit).
+  // We need score_amenity and score_transit per dong — neither is included
+  // in /api/compare. Rather than expand the backend (capstone scope), we
+  // join client-side by slug.
+  const scoresQ = useDongScores(weights);
+
+  const isLoading = compareQ.isLoading || (slugs.length > 0 && scoresQ.isLoading);
+  const isError = compareQ.isError || scoresQ.isError;
+  const error = compareQ.error ?? scoresQ.error;
+
+  // Build a slug → DongScore lookup. Stable as long as scoresQ.data is.
+  const scoresBySlug = useMemo(() => {
+    const map = new Map<string, DongScore>();
+    if (scoresQ.data) {
+      for (const row of scoresQ.data) map.set(row.slug, row);
+    }
+    return map;
+  }, [scoresQ.data]);
 
   const handleRemove = (slug: string) => {
     const next = slugs.filter((s) => s !== slug);
@@ -156,9 +159,10 @@ export default function Compare() {
           </div>
         )}
 
-        {slugs.length > 0 && data && data.dongs.length > 0 && (
+        {slugs.length > 0 && compareQ.data && compareQ.data.dongs.length > 0 && (
           <CompareTable
-            dongs={data.dongs}
+            dongs={compareQ.data.dongs}
+            scoresBySlug={scoresBySlug}
             onRemove={handleRemove}
             onAddMore={handleAddMore}
           />
@@ -193,25 +197,80 @@ function EmptyState({ onBack }: { onBack: () => void }) {
 
 interface CompareTableProps {
   dongs: CompareItem[];
+  scoresBySlug: Map<string, DongScore>;
   onRemove: (slug: string) => void;
   onAddMore: () => void;
 }
 
-function CompareTable({ dongs, onRemove, onAddMore }: CompareTableProps) {
+/** Per-row best-cell decision. `bestIdx` is empty when the row is a tie
+ *  (within tolerance) — the row label then shows the "동률" mini-badge. */
+interface RowDecision {
+  bestIdx: Set<number>;
+  isTie: boolean;
+}
+
+function CompareTable({
+  dongs,
+  scoresBySlug,
+  onRemove,
+  onAddMore,
+}: CompareTableProps) {
   const [shareNotice, setShareNotice] = useState<string | null>(null);
 
-  // For "최고 점수" badge — column with the strictly highest score.
-  const topScoreIdx = useMemo(() => {
-    if (dongs.length === 0) return -1;
-    let bestIdx = 0;
-    for (let i = 1; i < dongs.length; i += 1) {
-      if (dongs[i].score > dongs[bestIdx].score) bestIdx = i;
-    }
-    return bestIdx;
-  }, [dongs]);
+  // Resolve breakdown values per dong, falling back to NaN when a dong is
+  // missing from the /scores response (shouldn't happen — every dong in the
+  // compare list comes from the same DB — but stay defensive for the demo).
+  const breakdown = useMemo(() => {
+    return dongs.map((d) => {
+      const row = scoresBySlug.get(d.slug);
+      return {
+        score_amenity: row?.score_amenity ?? NaN,
+        score_transit: row?.score_transit ?? NaN,
+      };
+    });
+  }, [dongs, scoresBySlug]);
 
-  // Per-row best index sets — used for highlight styling.
-  const bestSets = useMemo(() => computeBestSets(dongs), [dongs]);
+  // Composite score: use compare's `score` (already weighted by backend).
+  const scoreVals = useMemo(() => dongs.map((d) => d.score), [dongs]);
+  const rentVals = useMemo(() => dongs.map((d) => d.rent_avg), [dongs]);
+  const amenityVals = useMemo(
+    () => breakdown.map((b) => b.score_amenity),
+    [breakdown]
+  );
+  const transitVals = useMemo(
+    () => breakdown.map((b) => b.score_transit),
+    [breakdown]
+  );
+
+  const scoreDecision = useMemo(
+    () => decideRow(scoreVals, 'max', SCORE_TIE_EPSILON),
+    [scoreVals]
+  );
+  const rentDecision = useMemo(
+    () => decideRow(rentVals, 'min', 0),
+    [rentVals]
+  );
+  const amenityDecision = useMemo(
+    () => decideRow(amenityVals, 'max', SCORE_TIE_EPSILON),
+    [amenityVals]
+  );
+  const transitDecision = useMemo(
+    () => decideRow(transitVals, 'max', SCORE_TIE_EPSILON),
+    [transitVals]
+  );
+
+  // For "최고 점수" badge — strictly highest score, ties → no badge.
+  // Reuses the same fairness rule as cell highlights.
+  const topScoreIdx = useMemo(() => {
+    if (dongs.length <= 1) return -1;
+    if (scoreDecision.isTie) return -1;
+    // bestIdx will have a single element when not tied AND when only one
+    // dong matches the max; for multiple co-winners (above tolerance from
+    // the rest but tied with each other), bestIdx still contains them all
+    // — in that case we also withhold the single-winner badge.
+    if (scoreDecision.bestIdx.size !== 1) return -1;
+    return [...scoreDecision.bestIdx][0];
+  }, [dongs.length, scoreDecision]);
 
   const handleShare = async () => {
     const url = window.location.href;
@@ -254,79 +313,73 @@ function CompareTable({ dongs, onRemove, onAddMore }: CompareTableProps) {
           </tr>
         </thead>
         <tbody>
-          <Row label="종합점수">
+          <Row label="종합점수" decision={scoreDecision} showTie={dongs.length > 1}>
             {dongs.map((d, i) => (
-              <Cell key={d.slug} highlight={bestSets.score.has(i)}>
+              <Cell key={d.slug} highlight={scoreDecision.bestIdx.has(i)}>
                 <span className="tabular">{d.score.toFixed(1)}</span>
                 <span className="compare__cell-unit"> / 100</span>
               </Cell>
             ))}
           </Row>
-          <Row label="평균 월세">
+          <Row label="평균 월세" decision={rentDecision} showTie={dongs.length > 1}>
             {dongs.map((d, i) => (
-              <Cell key={d.slug} highlight={bestSets.rent.has(i)}>
+              <Cell key={d.slug} highlight={rentDecision.bestIdx.has(i)}>
                 <span className="tabular">{d.rent_avg}</span>
                 <span className="compare__cell-unit"> 만원</span>
               </Cell>
             ))}
           </Row>
-          <Row label="통학 시간">
-            {dongs.map((d, i) => (
-              <Cell key={d.slug} highlight={bestSets.transit.has(i)}>
-                <span className="tabular">{d.transit_min}</span>
-                <span className="compare__cell-unit"> 분</span>
-              </Cell>
-            ))}
-          </Row>
-          <Row label="편의시설">
-            {dongs.map((d, i) => (
-              <Cell key={d.slug} highlight={bestSets.amenity.has(i)}>
-                <Badge variant={AMENITY_VARIANT[d.amenity_label]}>
-                  {d.amenity_label}
-                </Badge>
-              </Cell>
-            ))}
-          </Row>
-          <Row label="자취생 비율">
-            {dongs.map((d, i) => (
-              <Cell key={d.slug} highlight={bestSets.singleHousehold.has(i)}>
-                <span className="tabular">
-                  {d.single_household_pct.toFixed(1)}
-                </span>
-                <span className="compare__cell-unit"> %</span>
-              </Cell>
-            ))}
-          </Row>
-          <Row label="안전 지수">
-            {dongs.map((d, i) => (
-              <Cell key={d.slug} highlight={bestSets.safety.has(i)}>
-                <Badge variant={SAFETY_VARIANT[d.safety_label]}>
-                  {d.safety_label}
-                </Badge>
-              </Cell>
-            ))}
-          </Row>
-          <Row label="자취생 평점">
-            {dongs.map((d, i) => (
+          <Row
+            label="생활시설 점수"
+            decision={amenityDecision}
+            showTie={dongs.length > 1}
+          >
+            {breakdown.map((b, i) => (
               <Cell
-                key={d.slug}
-                highlight={
-                  bestSets.reviewRating.has(i) || bestSets.reviewCount.has(i)
-                }
+                key={dongs[i].slug}
+                highlight={amenityDecision.bestIdx.has(i)}
               >
-                <span className="compare__rating">
-                  <span aria-hidden="true">★</span>
-                  <span className="tabular">{d.review_avg_rating.toFixed(1)}</span>
-                </span>
-                <span className="compare__cell-unit">
-                  {' '}
-                  · 리뷰 <span className="tabular">{d.review_count}</span>개
-                </span>
+                <ScoreValue value={b.score_amenity} />
+              </Cell>
+            ))}
+          </Row>
+          <Row
+            label="교통 점수"
+            decision={transitDecision}
+            showTie={dongs.length > 1}
+          >
+            {breakdown.map((b, i) => (
+              <Cell
+                key={dongs[i].slug}
+                highlight={transitDecision.bestIdx.has(i)}
+              >
+                <ScoreValue value={b.score_transit} />
               </Cell>
             ))}
           </Row>
         </tbody>
       </table>
+
+      {/* Provenance footer — mirrors the sidebar pattern (mono key + value).
+          Honest about derived rent + the three score sources. */}
+      <div className="compare__provenance" aria-label="데이터 출처">
+        <p className="compare__prov-row">
+          <span className="compare__prov-key">SCORES</span>
+          <span className="compare__prov-val">
+            자체 산출 — 소상공인진흥공단 · 서울교통빅데이터 · 국토교통부 (2026-04 기준)
+          </span>
+        </p>
+        <p className="compare__prov-row">
+          <span className="compare__prov-key">RENT</span>
+          <span className="compare__prov-val">
+            국토부 실거래가 기반 추정치 (월세 점수 반영, 5개 구 적재 한정)
+          </span>
+        </p>
+        <p className="compare__prov-note">
+          통학시간 · 자취생 비율 · 안전 지수 · 자취생 평점은 데이터 적재 전까지
+          비교에서 제외되었습니다.
+        </p>
+      </div>
 
       <footer className="compare__footer" aria-label="비교 액션">
         {dongs.length < MAX_SLUGS && (
@@ -389,15 +442,25 @@ function ColumnHeader({ dong, isTopScore, onRemove }: ColumnHeaderProps) {
 
 function Row({
   label,
+  decision,
+  showTie,
   children,
 }: {
   label: string;
+  decision: RowDecision;
+  /** Suppress the 동률 badge when there's only 1 dong (no comparison). */
+  showTie: boolean;
   children: React.ReactNode;
 }) {
   return (
     <tr>
       <th scope="row" className="compare__row-label">
-        {label}
+        <span className="compare__row-label-text">{label}</span>
+        {showTie && decision.isTie && (
+          <span className="compare__row-tie" aria-label="모든 동네 값이 같음">
+            동률
+          </span>
+        )}
       </th>
       {children}
     </tr>
@@ -422,88 +485,75 @@ function Cell({
   );
 }
 
+/** Render a 0~100 score with a /100 suffix, or "—" for missing data. */
+function ScoreValue({ value }: { value: number }) {
+  if (!Number.isFinite(value)) {
+    return <span className="compare__cell-empty">—</span>;
+  }
+  return (
+    <>
+      <span className="tabular">{value.toFixed(1)}</span>
+      <span className="compare__cell-unit"> / 100</span>
+    </>
+  );
+}
+
 /* -------------------------------------------------------------------------- */
 /* Highlight computation                                                       */
 /* -------------------------------------------------------------------------- */
 
-interface BestSets {
-  score: Set<number>;
-  rent: Set<number>;
-  transit: Set<number>;
-  amenity: Set<number>;
-  singleHousehold: Set<number>;
-  safety: Set<number>;
-  reviewRating: Set<number>;
-  reviewCount: Set<number>;
-}
-
-/** For each metric, find the indices of the best values (allowing ties).
- *  Direction per SPEC 6.4 / step 8A handoff.
+/** For a single row of values, decide which cell(s) get the "best" highlight
+ *  and whether the row should be flagged as a tie.
+ *
+ *  - direction: 'max' = higher is better; 'min' = lower is better.
+ *  - epsilon:   values within this band of the best are considered equal.
+ *               Use 0 for integer-only metrics (rent_avg).
+ *
+ *  Tie semantics (FINDING-106):
+ *    - If ALL values are within `epsilon` of the best, the row is a tie:
+ *      bestIdx is empty, isTie is true. No cell is highlighted.
+ *    - Otherwise, every cell within `epsilon` of the best wins.
+ *
+ *  Pre-NaN values (missing data) are skipped from the "best" computation
+ *  but never receive a highlight. If the entire row is NaN, isTie is false
+ *  and bestIdx is empty (nothing to compare).
  */
-function computeBestSets(dongs: CompareItem[]): BestSets {
-  const result: BestSets = {
-    score: new Set(),
-    rent: new Set(),
-    transit: new Set(),
-    amenity: new Set(),
-    singleHousehold: new Set(),
-    safety: new Set(),
-    reviewRating: new Set(),
-    reviewCount: new Set(),
-  };
-  if (dongs.length === 0) return result;
-
-  // Single dong: nothing to highlight (no comparison happening).
-  if (dongs.length === 1) return result;
-
-  pushBestIndices(result.score, dongs.map((d) => d.score), 'max');
-  pushBestIndices(result.rent, dongs.map((d) => d.rent_avg), 'min');
-  pushBestIndices(result.transit, dongs.map((d) => d.transit_min), 'min');
-  pushBestIndices(
-    result.amenity,
-    dongs.map((d) => AMENITY_RANK[d.amenity_label]),
-    'max'
-  );
-  pushBestIndices(
-    result.singleHousehold,
-    dongs.map((d) => d.single_household_pct),
-    'max'
-  );
-  pushBestIndices(
-    result.safety,
-    dongs.map((d) => SAFETY_RANK[d.safety_label]),
-    'max'
-  );
-  pushBestIndices(
-    result.reviewRating,
-    dongs.map((d) => d.review_avg_rating),
-    'max'
-  );
-  pushBestIndices(
-    result.reviewCount,
-    dongs.map((d) => d.review_count),
-    'max'
-  );
-
-  return result;
-}
-
-function pushBestIndices(
-  out: Set<number>,
+function decideRow(
   values: number[],
-  direction: 'max' | 'min'
-) {
-  if (values.length === 0) return;
-  let best = values[0];
-  for (let i = 1; i < values.length; i += 1) {
-    if (direction === 'max' ? values[i] > best : values[i] < best) {
-      best = values[i];
+  direction: 'max' | 'min',
+  epsilon: number
+): RowDecision {
+  const result: RowDecision = { bestIdx: new Set(), isTie: false };
+  if (values.length === 0) return result;
+  // No comparison happening with a single dong.
+  if (values.length === 1) return result;
+
+  const finite = values.filter((v) => Number.isFinite(v));
+  if (finite.length === 0) return result;
+
+  let best = finite[0];
+  for (let i = 1; i < finite.length; i += 1) {
+    if (direction === 'max' ? finite[i] > best : finite[i] < best) {
+      best = finite[i];
     }
   }
-  // Don't highlight when all values are equal (no winner).
-  const allEqual = values.every((v) => v === best);
-  if (allEqual) return;
+
+  const isWithin = (v: number) =>
+    Number.isFinite(v) && Math.abs(v - best) <= epsilon;
+
+  // Tie detection: every finite value within epsilon of the best.
+  // We require that ALL displayed (finite) values agree — partial NaN rows
+  // can't be called a tie because we can't compare what we don't have.
+  const allAgree =
+    finite.length === values.filter((v) => Number.isFinite(v)).length &&
+    finite.every(isWithin);
+  if (allAgree && finite.length === values.length) {
+    result.isTie = true;
+    return result; // No highlights when tied.
+  }
+
   values.forEach((v, idx) => {
-    if (v === best) out.add(idx);
+    if (isWithin(v)) result.bestIdx.add(idx);
   });
+  return result;
 }

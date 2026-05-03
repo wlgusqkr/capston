@@ -267,6 +267,30 @@
   vertical-align: middle;
 }
 
+.compare__row-label-text {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* "동률" mini-badge — sits next to the row label when every cell agrees
+ * (FINDING-106). Mono uppercase, subtle Ink color, no fill. Stops the demo
+ * from lighting up every cell with --color-pale-green when there is no
+ * meaningful winner. */
+.compare__row-tie {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: var(--space-2);
+  padding: 2px 6px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-mono-label-size);
+  letter-spacing: var(--font-mono-label-tracking);
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+  background: var(--color-surface);
+}
+
 .compare__cell {
   padding: var(--space-4) var(--space-5);
   font-size: var(--font-body-base-size);
@@ -292,22 +316,59 @@
   opacity: 1;
 }
 
-/* Rating — Ink color, no coral. Stars themselves remain decorative. */
-.compare__rating {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--color-text);
-  font-weight: 400;
-}
-
-.compare__cell--best .compare__rating {
-  color: var(--color-text);
+/* Em-dash placeholder when /scores is missing a slug — defensive only. */
+.compare__cell-empty {
+  color: var(--color-text-subtle);
 }
 
 /* tabular-nums for digit columns */
 .compare__table .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/* ---- Provenance footer (FINDING-101) ------------------------------------ */
+/* Sits between the table and the action footer. Mirrors the sidebar's
+ * "DATA / UPDATED" mono-key + Pretendard-value pattern, scoped to compare. */
+.compare__provenance {
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--color-hairline);
+  background: var(--color-surface-inset);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.compare__prov-row {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--font-micro-size);
+  line-height: var(--font-micro-line);
+  color: var(--color-text-muted);
+}
+
+.compare__prov-key {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-mono-label-size);
+  letter-spacing: var(--font-mono-label-tracking);
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+  flex: 0 0 auto;
+}
+
+.compare__prov-val {
+  font-family: var(--font-family-base);
+  letter-spacing: var(--letter-spacing-ko);
+  color: var(--color-text-muted);
+}
+
+.compare__prov-note {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-micro-size);
+  line-height: var(--font-micro-line);
+  letter-spacing: var(--letter-spacing-ko);
+  color: var(--color-text-subtle);
 }
 
 /* ---- Footer (add / share) ----------------------------------------------- */
