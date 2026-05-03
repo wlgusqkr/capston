@@ -24,11 +24,13 @@ from rest_framework.views import APIView
 
 from .compare_dummy import build_compare_row
 from .models import Dong
+from .score_point import compute_point_score
 from .serializers import (
     DongCompareItemSerializer,
     DongDetailSerializer,
     DongScoreSerializer,
     DongSummarySerializer,
+    KernelScoreRequestSerializer,
 )
 
 # 비교 가능한 최대 동 수 (SPEC 6.4)
@@ -309,3 +311,55 @@ class CompareView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+@extend_schema(
+    tags=["dongs"],
+    summary="임의 지점 커널 점수 (SPEC 11, Phase 2a)",
+    description=(
+        "지도 위 임의 클릭 지점(lat/lng)에 대해 가우시안 커널(σ=300m, 1km 컷) "
+        "기반의 종합 점수를 계산한다. 내부적으로 amenity 카테고리별 가중합, "
+        "가까운 지하철 거리, 1km 버스 정류장 수, 포인트가 속한 행정동의 score_rent "
+        "(이미 동 단위 백분위 정규화) 를 조합한다. "
+        "school 옵션 지정 시 해당 학교까지의 통학 시간(분, haversine 22km/h)을 함께 반환."
+    ),
+    request=KernelScoreRequestSerializer,
+)
+class KernelScoreView(APIView):
+    """
+    POST /api/score/point
+
+    Request body:
+      {
+        "lat": 37.5663, "lng": 126.9783,
+        "weights": {"rent": 0.3, "amenity": 0.4, "transit": 0.3},
+        "school": "동국대"  // optional
+      }
+
+    Response:
+      {
+        "score": 72.4,
+        "breakdown": {"rent": 68.2, "amenity": 81.5, "transit": 70.1},
+        "nearest": [{category, name, [line], walk_min, distance_m}, ...],
+        "radius_counts": {"convenience": 8, "cafe": 12, "hospital": 2, ...},
+        "commute_min": 22  // school 미지정 시 null
+      }
+
+    오류:
+      - lat/lng 범위 벗어남 (한반도 외) → 400
+      - weights 음수 또는 모두 0 → 400
+      - school 매핑 안 됨 → commute_min: null (오류 아님)
+    """
+
+    def post(self, request: Request) -> Response:
+        ser = KernelScoreRequestSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        data = ser.validated_data
+
+        result = compute_point_score(
+            lat=data["lat"],
+            lng=data["lng"],
+            weights=data["weights"],
+            school=data.get("school") or None,
+        )
+        return Response(result, status=status.HTTP_200_OK)

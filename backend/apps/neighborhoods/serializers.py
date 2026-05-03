@@ -208,3 +208,46 @@ class DongDetailSerializer(serializers.Serializer):
             "weights", {"rent": 1 / 3, "amenity": 1 / 3, "transit": 1 / 3}
         )
         return build_dummy_detail(instance, weights=weights)
+
+
+# ---------------------------------------------------------------------------
+# POST /api/score/point — 임의 지점 커널 점수 (Phase 2a)
+# ---------------------------------------------------------------------------
+class KernelScoreWeightsSerializer(serializers.Serializer):
+    """가중치 dict — `{"rent": 0.3, "amenity": 0.4, "transit": 0.3}`.
+
+    음수 거부. 합이 1이 아니면 View 에서 정규화 (정책: 비율만 의미 있음).
+    누락 키는 0.0 (전부 0이면 ValidationError).
+    """
+
+    rent = serializers.FloatField(required=False, default=0.0, min_value=0.0)
+    amenity = serializers.FloatField(required=False, default=0.0, min_value=0.0)
+    transit = serializers.FloatField(required=False, default=0.0, min_value=0.0)
+
+
+class KernelScoreRequestSerializer(serializers.Serializer):
+    """`POST /api/score/point` 요청 본문 검증.
+
+    - lat/lng: 서울 박스 대략 (33~39, 124~131) — 한반도 좌표 sanity. 서울 외도
+      허용하되(통학 시간 시뮬), 한국 외 좌표는 거부.
+    - weights: 음수 거부. 모두 0이면 거부.
+    - school: optional 문자열 (학교명).
+    """
+
+    lat = serializers.FloatField(min_value=33.0, max_value=39.0)
+    lng = serializers.FloatField(min_value=124.0, max_value=131.0)
+    weights = KernelScoreWeightsSerializer()
+    school = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+    def validate_weights(self, weights: dict) -> dict:
+        total = (
+            weights.get("rent", 0.0)
+            + weights.get("amenity", 0.0)
+            + weights.get("transit", 0.0)
+        )
+        if total <= 0:
+            raise serializers.ValidationError(
+                "rent/amenity/transit 중 하나 이상은 양수여야 합니다."
+            )
+        # 정규화 (합 1.0 만들기) — Phase 2a SPEC: w_i / sum(w).
+        return {k: weights.get(k, 0.0) / total for k in ("rent", "amenity", "transit")}
