@@ -343,3 +343,173 @@ export interface ApiErrorDetail {
   w_amenity?: string | string[];
   w_transit?: string | string[];
 }
+
+// -------- Transactions (Phase 1 — main map raw pin layer) ----------------
+// Source: docs/handoff/20260503-phase1a-transactions-api.md
+//   GET /api/transactions/bbox?bbox=lng1,lat1,lng2,lat2&deal_type=&from=&to=&limit=
+//   - Backend filters out geom IS NULL rows (단독다가구 좌표 없음).
+//   - Same jibun → same coordinates (privacy: 지번 중심점만, SPEC 14.2).
+
+/** Backend whitelist for the `deal_type` query parameter.
+ *  `all` is a sentinel meaning "no filter" — never appears in `RentDealPin.deal_type`.
+ */
+export type TransactionDealType = 'apt' | 'officetel' | 'villa' | 'danok';
+
+/** Same as `TransactionDealType` but with the `all` sentinel for filter UI. */
+export type TransactionDealTypeFilter = TransactionDealType | 'all';
+
+/** Single transaction pin row from GET /api/transactions/bbox. */
+export interface RentDealPin {
+  id: number;
+  /** 'YYYY-MM-DD'. */
+  date: string;
+  deal_type: TransactionDealType;
+  /** Square meters (소수 가능). */
+  area_m2: number;
+  /** Deposit (만원). */
+  deposit: number;
+  /** Monthly rent (만원). 0 → 전세. */
+  monthly_rent: number;
+  /** WGS84 latitude. */
+  lat: number;
+  /** WGS84 longitude. */
+  lng: number;
+  /** 지번 (e.g., "90-24"). */
+  jibun: string;
+  /** 행정동 한국어 이름 (e.g., "광희동"). */
+  dong_name: string;
+  /** 구 이름 (e.g., "중구"). */
+  gu: string;
+}
+
+/** Response of GET /api/transactions/bbox. */
+export interface TransactionsBboxResponse {
+  items: RentDealPin[];
+  /** True when limit + 1 fetch returned the +1 → next page exists. */
+  has_more: boolean;
+  /** Display-only count, capped at `limit * 5`. */
+  total: number;
+  /** True when `total` itself is the cap (real count is higher). */
+  has_more_total: boolean;
+}
+
+/** WGS84 bbox in (lng, lat) order matching backend query string format. */
+export interface Bbox {
+  lng1: number;
+  lat1: number;
+  lng2: number;
+  lat2: number;
+}
+
+/** Filters applied to /api/transactions/bbox. */
+export interface TransactionFilters {
+  deal_type: TransactionDealTypeFilter;
+  /** ISO date 'YYYY-MM-DD' (inclusive lower bound) or null. */
+  from: string | null;
+  /** ISO date 'YYYY-MM-DD' (inclusive upper bound) or null. */
+  to: string | null;
+}
+
+// -------- Kernel score (Phase 2 — POST /api/score/point) -----------------
+// Source: docs/handoff/20260503-phase2a-kernel-score.md
+//   POST body: { lat, lng, weights:{rent,amenity,transit}, school?:string }
+//   - Backend normalizes weights (sum need not be 1.0).
+//   - school is optional; backend's SCHOOL_COORDS dict has 16 keys
+//     (캠퍼스 정문 좌표). Unknown school → commute_min: null (not an error).
+
+/** Weights body for kernel score. Float values (0~1 range typical, but any
+ *  non-negative value works — backend normalizes by sum). */
+export interface KernelScoreWeights {
+  rent: number;
+  amenity: number;
+  transit: number;
+}
+
+/** Request body for POST /api/score/point. */
+export interface KernelScoreRequest {
+  lat: number;
+  lng: number;
+  weights: KernelScoreWeights;
+  /** Optional school name (e.g. "동국대"). Unknown name → commute_min null. */
+  school?: string;
+}
+
+/** Categories returned in `nearest` rows. Subway is special-cased
+ *  (carries `line` field). Others mirror Amenity.category. */
+export type NearestFacilityCategory =
+  | 'subway'
+  | 'convenience'
+  | 'cafe'
+  | 'hospital'
+  | 'park'
+  | 'mart'
+  | 'pharmacy'
+  | string;
+
+/** Single nearest facility row in the kernel score response. */
+export interface NearestFacility {
+  category: NearestFacilityCategory;
+  name: string;
+  /** Subway only. */
+  line?: string;
+  /** Walking minutes (rounded). */
+  walk_min: number;
+  /** Distance in meters (integer). */
+  distance_m: number;
+}
+
+/** 1km-radius facility counts. Keys are amenity categories. */
+export interface RadiusCounts {
+  convenience: number;
+  cafe: number;
+  hospital: number;
+  park: number;
+  mart: number;
+  pharmacy: number;
+  /** Forward-compat: backend may add categories. */
+  [k: string]: number;
+}
+
+/** Debug-only metadata. Phase 2b frontend may ignore. */
+export interface KernelScoreMeta {
+  dong_slug: string | null;
+  dong_name: string | null;
+  bus_count_1km: number;
+}
+
+/** Response of POST /api/score/point. */
+export interface KernelScoreResponse {
+  /** 0~100, two decimals. */
+  score: number;
+  breakdown: {
+    rent: number;
+    amenity: number;
+    transit: number;
+  };
+  nearest: NearestFacility[];
+  radius_counts: RadiusCounts;
+  /** Walking + train minutes to school (haversine + 22 km/h). null when
+   *  school omitted or unknown. */
+  commute_min: number | null;
+  _meta?: KernelScoreMeta;
+}
+
+/** Backend SCHOOL_COORDS keys (16 — see Phase 2a handoff).
+ *  Two pairs are aliases (외대/한국외대, 시립대/서울시립대). */
+export const KERNEL_SCHOOL_OPTIONS = [
+  '동국대',
+  '한양대',
+  '고려대',
+  '연세대',
+  '서강대',
+  '이화여대',
+  '홍익대',
+  '서울대',
+  '중앙대',
+  '건국대',
+  '성균관대',
+  '경희대',
+  '한국외대',
+  '서울시립대',
+] as const;
+export type KernelSchool = (typeof KERNEL_SCHOOL_OPTIONS)[number];

@@ -92,3 +92,5 @@ backend/data/raw/
 backend/data/cache/
 *.geojson.bak
 .gstack/
+.gstack-design-audit/
+.gstack-design-audit-deep/

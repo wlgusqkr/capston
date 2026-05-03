@@ -1,0 +1,438 @@
+/* KernelScorePanel — slide-in arbitrary-point score panel for the main map
+ * (Phase 2b). Mirrors TransactionPanel/DongPanel sizing & motion so the right
+ * edge feels consistent.
+ */
+
+.kernel-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 400px;
+  max-width: 100%;
+  background-color: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  transform: translateX(100%);
+  transition: transform var(--transition-slow);
+  /* Sit above DongPanel(500) and TransactionPanel(510) — only one panel
+   * is visible at a time (mutual exclusion in MainMap). */
+  z-index: 520;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.kernel-panel--open {
+  transform: translateX(0);
+  pointer-events: auto;
+  /* Floating-on-map exception per DESIGN_SYSTEM.md "Elevation & Depth". */
+  box-shadow: var(--shadow-floating);
+}
+
+.kernel-panel[aria-hidden='true'] :focus-visible {
+  outline: none;
+}
+
+.kernel-panel__inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* ---------- Header ---------- */
+.kernel-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-5) var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.kernel-panel__title {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.kernel-panel__label {
+  margin: 0;
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+}
+
+.kernel-panel__coord {
+  margin: 0;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-caption-size);
+  line-height: var(--font-caption-line);
+  color: var(--color-text-muted);
+}
+
+.kernel-panel__dong {
+  margin: var(--space-1) 0 0 0;
+  font-size: var(--font-feature-heading-size);
+  line-height: var(--font-feature-heading-line);
+  font-weight: var(--font-feature-heading-weight);
+  color: var(--color-text);
+  letter-spacing: var(--font-feature-heading-tracking);
+}
+
+.kernel-panel__close {
+  width: var(--control-height-sm);
+  height: var(--control-height-sm);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-h2-size);
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kernel-panel__close:hover {
+  background-color: var(--color-surface-inset);
+  color: var(--color-text);
+}
+
+.kernel-panel__close:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ---------- Body ---------- */
+.kernel-panel__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.kernel-panel__status {
+  font-size: var(--font-body-size);
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-ko);
+  padding: var(--space-4) 0;
+  text-align: center;
+}
+
+.kernel-panel__status--error {
+  color: var(--color-danger);
+}
+
+/* ---------- Section base ---------- */
+.kernel-panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.kernel-panel__section-title {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-mono-label-size);
+  line-height: var(--font-mono-label-line);
+  font-weight: var(--font-mono-label-weight);
+  color: var(--color-text-subtle);
+  margin: 0;
+  letter-spacing: var(--font-mono-label-tracking);
+  text-transform: uppercase;
+}
+
+/* ---------- Score section ---------- */
+.kernel-panel__score-section {
+  gap: var(--space-2);
+}
+
+.kernel-panel__score-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.kernel-panel__updating {
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+}
+
+/* ---------- Breakdown bars ---------- */
+.kernel-panel__bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.kernel-panel__bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.kernel-panel__bar-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: var(--font-caption-size);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.kernel-panel__bar-label {
+  color: var(--color-text-muted);
+}
+
+.kernel-panel__bar-value {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.kernel-panel__bar-track {
+  width: 100%;
+  height: var(--space-2);
+  background-color: var(--color-surface-inset);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.kernel-panel__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width var(--transition-base), background-color var(--transition-base);
+}
+
+.kernel-panel__bar-fill--q1 { background-color: var(--heatmap-1); }
+.kernel-panel__bar-fill--q2 { background-color: var(--heatmap-2); }
+.kernel-panel__bar-fill--q3 { background-color: var(--heatmap-3); }
+.kernel-panel__bar-fill--q4 { background-color: var(--heatmap-4); }
+.kernel-panel__bar-fill--q5 { background-color: var(--heatmap-5); }
+
+/* ---------- Weights ---------- */
+.kernel-panel__weight-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.kernel-panel__weight {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.kernel-panel__weight-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: var(--font-caption-size);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.kernel-panel__weight-label {
+  color: var(--color-text-muted);
+}
+
+.kernel-panel__weight-value {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+/* Native range styling — mirror Slider primitive look. */
+.kernel-panel__weight-input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(
+    to right,
+    var(--color-near-black) 0%,
+    var(--color-near-black) calc(var(--ui-slider-fill, 0%)),
+    var(--color-surface-inset) calc(var(--ui-slider-fill, 0%)),
+    var(--color-surface-inset) 100%
+  );
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  outline: none;
+}
+
+/* Use the input's value attr indirectly via a CSS var written from JS would
+ * be cleaner; here we rely on the browser's default progress paint. */
+.kernel-panel__weight-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-near-black);
+  border: 2px solid var(--color-surface);
+  cursor: pointer;
+  box-shadow: 0 0 0 1px var(--color-border-strong);
+}
+
+.kernel-panel__weight-input::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-near-black);
+  border: 2px solid var(--color-surface);
+  cursor: pointer;
+  box-shadow: 0 0 0 1px var(--color-border-strong);
+}
+
+.kernel-panel__weight-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-focus-ring);
+}
+
+/* ---------- School + commute ---------- */
+.kernel-panel__commute {
+  margin: 0;
+  padding: var(--space-3);
+  background-color: var(--color-surface-inset);
+  border-radius: var(--radius-card);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-body-size);
+  letter-spacing: var(--letter-spacing-ko);
+  color: var(--color-text);
+}
+
+.kernel-panel__commute-text {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0;
+}
+
+.kernel-panel__commute-school {
+  font-weight: 500;
+}
+
+.kernel-panel__commute-sep {
+  color: var(--color-text-muted);
+}
+
+.kernel-panel__commute-min {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-body-large-size);
+  font-weight: 500;
+  margin: 0 var(--space-1);
+}
+
+.kernel-panel__commute-unit {
+  color: var(--color-text-muted);
+}
+
+.kernel-panel__commute--missing {
+  color: var(--color-text-subtle);
+  background-color: transparent;
+  padding: 0;
+  text-transform: uppercase;
+}
+
+/* ---------- Nearest list ---------- */
+.kernel-panel__nearest {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--color-border);
+}
+
+.kernel-panel__nearest-row {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-body-size);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.kernel-panel__nearest-emoji {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.kernel-panel__nearest-main {
+  min-width: 0;
+  color: var(--color-text);
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0;
+  overflow: hidden;
+}
+
+.kernel-panel__nearest-name {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kernel-panel__nearest-line {
+  color: var(--color-text-muted);
+  font-size: var(--font-caption-size);
+}
+
+.kernel-panel__nearest-meta {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+}
+
+.kernel-panel__nearest-walk {
+  color: var(--color-text);
+  text-transform: uppercase;
+}
+
+.kernel-panel__nearest-dist {
+  color: var(--color-text-muted);
+  font-size: var(--font-caption-size);
+}
+
+/* ---------- Radius grid ---------- */
+.kernel-panel__radius-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.kernel-panel__radius-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background-color: var(--color-surface-inset);
+  border-radius: var(--radius-md);
+  min-height: 64px;
+  justify-content: center;
+}
+
+.kernel-panel__radius-label {
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+}
+
+.kernel-panel__radius-value {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-card-heading-size);
+  font-weight: var(--font-card-heading-weight);
+  line-height: 1;
+  color: var(--color-text);
+  letter-spacing: 0;
+}

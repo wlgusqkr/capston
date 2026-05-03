@@ -4,11 +4,14 @@ import axios from 'axios';
 import type { AxiosInstance } from 'axios';
 
 import type {
+  Bbox,
   CompareResponse,
   DongDetail,
   DongScore,
   DongSummary,
   FavoriteItem,
+  KernelScoreRequest,
+  KernelScoreResponse,
   LoginPayload,
   MePatchPayload,
   MePreference,
@@ -17,6 +20,8 @@ import type {
   PreferenceWeightsResponse,
   RegisterPayload,
   SubmitComparison,
+  TransactionFilters,
+  TransactionsBboxResponse,
   User,
   Weights,
 } from '@/types/api';
@@ -134,6 +139,58 @@ export async function submitPreferenceComparisons(
     '/preference/submit',
     { comparisons }
   );
+  return data;
+}
+
+// -------- Transactions (Phase 1 — main map raw pin layer) ------------------
+// Spec source: docs/handoff/20260503-phase1a-transactions-api.md
+
+/** GET /api/transactions/bbox — bbox-scoped RentDeal pin list.
+ *
+ *  - bbox order is (SW lng, SW lat, NE lng, NE lat); backend rejects SW>=NE.
+ *  - `deal_type='all'` is sent as the literal string 'all' (backend whitelist).
+ *    To omit the filter entirely, pass undefined.
+ *  - `from` / `to` are 'YYYY-MM-DD'; null/undefined means no bound.
+ *  - `limit` defaults to 200 server-side; the server caps at 500.
+ */
+export async function getTransactionsBbox(
+  bbox: Bbox,
+  filters: TransactionFilters,
+  limit: number = 200
+): Promise<TransactionsBboxResponse> {
+  const params: Record<string, string | number> = {
+    bbox: `${bbox.lng1},${bbox.lat1},${bbox.lng2},${bbox.lat2}`,
+    limit,
+  };
+  // 'all' is a valid filter token on the backend (no filter applied), but we
+  // still send it explicitly so the URL is deterministic for caching.
+  params.deal_type = filters.deal_type;
+  if (filters.from) params.from = filters.from;
+  if (filters.to) params.to = filters.to;
+
+  const { data } = await api.get<TransactionsBboxResponse>(
+    '/transactions/bbox',
+    { params }
+  );
+  return data;
+}
+
+// -------- Kernel score (Phase 2 — POST /api/score/point) ------------------
+// Spec source: docs/handoff/20260503-phase2a-kernel-score.md
+
+/** POST /api/score/point — Gaussian kernel score for an arbitrary lat/lng.
+ *
+ *  - Backend normalizes weights so the caller need not enforce sum = 1.0.
+ *  - `school` is optional; unknown name returns commute_min: null.
+ *  - Accepts an AbortSignal so a quick re-click can cancel an in-flight call.
+ */
+export async function postScorePoint(
+  body: KernelScoreRequest,
+  signal?: AbortSignal,
+): Promise<KernelScoreResponse> {
+  const { data } = await api.post<KernelScoreResponse>('/score/point', body, {
+    signal,
+  });
   return data;
 }
 

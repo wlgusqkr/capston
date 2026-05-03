@@ -11,7 +11,9 @@
 //   - 키 발급: https://www.vworld.kr/ (회원가입 → 인증키 신청 → localhost 도메인 등록)
 
 import { useMemo } from 'react';
-import type { Layer } from 'leaflet';
+import type { ReactNode } from 'react';
+import L from 'leaflet';
+import type { Layer, LeafletMouseEvent } from 'leaflet';
 import type { Feature, Geometry } from 'geojson';
 import { GeoJSON, MapContainer, TileLayer, ZoomControl } from 'react-leaflet';
 
@@ -49,6 +51,9 @@ export interface HeatMapProps {
   heatmapVisible?: boolean;
   /** 색상 기준이 되는 점수 축. 기본 'composite' (가중합). */
   activeLayer?: LayerKey;
+  /** 추가 레이어를 MapContainer 내부에 렌더링. react-leaflet 컴포넌트만 (e.g.,
+   *  CircleMarker, useMap 사용 컴포넌트). 일반 DOM 노드는 작동 안 함. */
+  children?: ReactNode;
 }
 
 function pickScore(d: DongScore, layer: LayerKey): number {
@@ -70,6 +75,7 @@ export default function HeatMap({
   onDongClick,
   heatmapVisible = true,
   activeLayer = 'composite',
+  children,
 }: HeatMapProps) {
   const { data: geojson, isLoading: geoLoading } = useDongGeoJson();
 
@@ -127,7 +133,12 @@ export default function HeatMap({
     );
 
     layer.on({
-      click: () => onDongClick?.(dong),
+      click: (e: LeafletMouseEvent) => {
+        // Stop the click from bubbling to map.click — otherwise the kernel
+        // score layer (Phase 2b) would also open. Polygon click → dong only.
+        L.DomEvent.stopPropagation(e);
+        onDongClick?.(dong);
+      },
       mouseover: (e) =>
         (e.target as { setStyle: (s: object) => void }).setStyle({
           fillOpacity: 0.85,
@@ -173,6 +184,8 @@ export default function HeatMap({
             onEachFeature={onEachFeature}
           />
         )}
+
+        {children}
       </MapContainer>
     </div>
   );

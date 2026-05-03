@@ -18,17 +18,36 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import DongPanel from '@/components/Map/DongPanel';
 import HeatMap from '@/components/Map/HeatMap';
+import KernelScoreLayer from '@/components/Map/KernelScoreLayer';
+import KernelScorePanel from '@/components/Map/KernelScorePanel';
 import Legend from '@/components/Map/Legend';
 import Sidebar from '@/components/Map/Sidebar';
+import TransactionFilters, {
+  buildFilters,
+} from '@/components/Map/TransactionFilters';
+import type { PeriodKey } from '@/components/Map/TransactionFilters';
+import TransactionPanel from '@/components/Map/TransactionPanel';
+import TransactionPinLayer, {
+  MIN_ZOOM_FOR_PINS,
+  jibunKeyOf,
+} from '@/components/Map/TransactionPinLayer';
+import type { MapState } from '@/components/Map/TransactionPinLayer';
 import ViewToggle from '@/components/Map/ViewToggle';
 import PreferenceModal from '@/components/Onboarding/PreferenceModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAddFavorite } from '@/hooks/useFavorites';
 import { useDongScores } from '@/hooks/useDongs';
+import { useKernelScore } from '@/hooks/useKernelScore';
+import type { LatLng } from '@/hooks/useKernelScore';
+import { useTransactions } from '@/hooks/useTransactions';
 import { putMyPreference } from '@/lib/api';
 import { getAuthErrorMessage } from '@/lib/authErrors';
 import { DEFAULT_WEIGHTS } from '@/types/api';
-import type { DongScore, Weights } from '@/types/api';
+import type {
+  DongScore,
+  TransactionDealTypeFilter,
+  Weights,
+} from '@/types/api';
 
 import './MainMap.css';
 
@@ -70,6 +89,88 @@ export default function MainMap() {
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | null>(null);
 
+  // ---- Phase 1b: transaction pin layer state ------------------------------
+  // Map state — bbox + zoom — pushed up from TransactionPinLayer (debounced).
+  const [mapState, setMapState] = useState<MapState | null>(null);
+  // Filter UI state.
+  const [txDealType, setTxDealType] = useState<TransactionDealTypeFilter>('all');
+  const [txPeriod, setTxPeriod] = useState<PeriodKey>('6m');
+  // Selected jibun (panel state). null → panel closed.
+  const [selectedJibun, setSelectedJibun] = useState<string | null>(null);
+
+  // ---- Phase 2b: kernel-score (arbitrary point click) state ---------------
+  // Clicked point. Null → kernel panel closed + marker hidden.
+  const [kernelPoint, setKernelPoint] = useState<LatLng | null>(null);
+  // Per-panel weights — start as a copy of the sidebar weights when panel
+  // opens, then evolve independently. The sliders inside the panel let the
+  // user explore "what if" without disturbing the main heatmap.
+  const [kernelWeights, setKernelWeights] = useState<Weights>(DEFAULT_WEIGHTS);
+  // Debounced version sent to the API. State updates are immediate (UI feels
+  // snappy); the network call lags by 300ms (no spam during slider drag).
+  const [kernelWeightsDebounced, setKernelWeightsDebounced] =
+    useState<Weights>(DEFAULT_WEIGHTS);
+  const kernelWeightsTimer = useRef<number | null>(null);
+  const [kernelSchool, setKernelSchool] = useState<string>('');
+
+  const txFilters = useMemo(() => buildFilters(txDealType, txPeriod), [txDealType, txPeriod]);
+
+  const txQuery = useTransactions({
+    bbox: mapState?.bbox ?? null,
+    zoom: mapState?.zoom ?? 0,
+    filters: txFilters,
+  });
+
+  const showZoomHint = mapState != null && mapState.zoom < MIN_ZOOM_FOR_PINS;
+
+  // Pins for the currently selected jibun — used by TransactionPanel.
+  const selectedJibunPins = useMemo(() => {
+    if (!selectedJibun || !txQuery.data) return [];
+    return txQuery.data.items.filter((p) => jibunKeyOf(p) === selectedJibun);
+  }, [selectedJibun, txQuery.data]);
+
+  // If filter changes drop the selected jibun from the result set, close.
+  useEffect(() => {
+    if (selectedJibun && txQuery.data && selectedJibunPins.length === 0) {
+      setSelectedJibun(null);
+    }
+  }, [selectedJibun, txQuery.data, selectedJibunPins.length]);
+
+  // ---- Phase 2b: kernel score query (debounced weights) -------------------
+  const kernelQuery = useKernelScore({
+    point: kernelPoint,
+    weights: kernelWeightsDebounced,
+    school: kernelSchool,
+  });
+
+  // Debounce kernelWeights → kernelWeightsDebounced (300ms).
+  useEffect(() => {
+    if (kernelWeightsTimer.current != null) {
+      window.clearTimeout(kernelWeightsTimer.current);
+    }
+    kernelWeightsTimer.current = window.setTimeout(() => {
+      setKernelWeightsDebounced(kernelWeights);
+      kernelWeightsTimer.current = null;
+    }, 300);
+    return () => {
+      if (kernelWeightsTimer.current != null) {
+        window.clearTimeout(kernelWeightsTimer.current);
+      }
+    };
+  }, [kernelWeights]);
+
+  // When the kernel panel opens (point becomes non-null after being null),
+  // seed the panel weights from the current sidebar weights — that's the
+  // most intuitive starting point. Compares an isOpen transition.
+  const wasKernelOpenRef = useRef(false);
+  useEffect(() => {
+    const isOpen = kernelPoint != null;
+    if (isOpen && !wasKernelOpenRef.current) {
+      setKernelWeights(weights);
+      setKernelWeightsDebounced(weights);
+    }
+    wasKernelOpenRef.current = isOpen;
+  }, [kernelPoint, weights]);
+
   // ?onboarding=1 — auto-open the preference modal (entry from MyPage).
   useEffect(() => {
     if (searchParams.get('onboarding') === '1') {
@@ -99,9 +200,34 @@ export default function MainMap() {
 
   const handleDongClick = (dong: DongScore) => {
     setSelectedSlug(dong.slug);
+    // Mutually exclusive with the transaction & kernel panels.
+    setSelectedJibun(null);
+    setKernelPoint(null);
   };
 
   const handleClosePanel = () => setSelectedSlug(null);
+
+  const handlePinClick = (jibunKey: string) => {
+    setSelectedJibun(jibunKey);
+    // Mutually exclusive with the dong & kernel panels.
+    setSelectedSlug(null);
+    setKernelPoint(null);
+  };
+
+  /** Empty-map click → kernel score panel (Phase 2b).
+   *  Click priority: pin (zoom 13+) > map background (kernel) > dong polygon.
+   *  - Pin clicks: Leaflet stops propagation by default; useMapEvents.click
+   *    here never fires.
+   *  - Polygon clicks: HeatMap.tsx onEachFeature stops propagation so this
+   *    handler never fires (DongPanel takes over).
+   *  - Empty (tile) clicks: only this handler runs.
+   *  Mutually exclusive with the dong & transaction panels.
+   */
+  const handleKernelPointClick = (latLng: LatLng) => {
+    setKernelPoint(latLng);
+    setSelectedSlug(null);
+    setSelectedJibun(null);
+  };
 
   const handleOpenDetail = (slug: string) => {
     // Detail route arrives in step 6. For now navigate; NotFound will catch it.
@@ -212,7 +338,40 @@ export default function MainMap() {
           onDongClick={handleDongClick}
           heatmapVisible={heatmapVisible}
           activeLayer={activeLayer}
+        >
+          <TransactionPinLayer
+            pins={txQuery.data?.items ?? []}
+            selectedJibun={selectedJibun}
+            onPinClick={handlePinClick}
+            onMapStateChange={setMapState}
+          />
+          <KernelScoreLayer
+            point={kernelPoint}
+            onPointClick={handleKernelPointClick}
+          />
+        </HeatMap>
+
+        <TransactionFilters
+          dealType={txDealType}
+          period={txPeriod}
+          onDealTypeChange={setTxDealType}
+          onPeriodChange={setTxPeriod}
         />
+
+        {showZoomHint && (
+          <p className="tx-zoom-hint mono-label" role="status">
+            더 확대해 거래 핀 보기
+          </p>
+        )}
+
+        {!showZoomHint && txQuery.isError && (
+          <div
+            className="main-map__overlay main-map__overlay--error"
+            role="alert"
+          >
+            거래 정보를 불러오지 못했어요.
+          </div>
+        )}
 
         {isLoading && (
           <div className="main-map__overlay" role="status" aria-live="polite">
@@ -245,6 +404,26 @@ export default function MainMap() {
           onOpenDetail={handleOpenDetail}
           onAddCompare={handleAddCompare}
           onFavorite={handleFavorite}
+        />
+
+        <TransactionPanel
+          jibunKey={selectedJibun}
+          pins={selectedJibunPins}
+          hasMore={txQuery.data?.has_more ?? false}
+          onClose={() => setSelectedJibun(null)}
+        />
+
+        <KernelScorePanel
+          point={kernelPoint}
+          data={kernelQuery.data}
+          isLoading={kernelQuery.isLoading}
+          isError={kernelQuery.isError}
+          isFetching={kernelQuery.isFetching}
+          weights={kernelWeights}
+          onWeightsChange={setKernelWeights}
+          school={kernelSchool}
+          onSchoolChange={setKernelSchool}
+          onClose={() => setKernelPoint(null)}
         />
       </section>
 
