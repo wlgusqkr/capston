@@ -91,3 +91,4 @@ pgdata/
 backend/data/raw/
 backend/data/cache/
 *.geojson.bak
+.gstack/
