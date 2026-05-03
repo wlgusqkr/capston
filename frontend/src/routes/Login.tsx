@@ -61,9 +61,9 @@ export default function Login() {
           ← 지도로
         </Link>
 
-        <div className="auth__brand">
+        <div className="auth__brand" aria-label="슬기로운 자취생활">
           <span className="auth__brand-mark" aria-hidden="true">슬</span>
-          <span className="auth__brand-text">슬기로운 자취생활</span>
+          <span className="auth__brand-text">기로운 자취생활</span>
         </div>
 
         <h1 id="login-title" className="auth__title">로그인</h1>

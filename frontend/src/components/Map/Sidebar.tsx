@@ -7,7 +7,7 @@
 import { useId } from 'react';
 import { Link } from 'react-router-dom';
 
-import { Button, Input, Slider } from '@/components/ui';
+import { Button, Slider } from '@/components/ui';
 import { rebalanceWeights } from '@/lib/weights';
 import type { Weights } from '@/types/api';
 import type { WeightKey } from '@/lib/weights';
@@ -77,17 +77,12 @@ export default function Sidebar({
     <aside className="sidebar" aria-label="메인 지도 사이드바">
       <header className="sidebar__header">
         <div className="sidebar__logo" aria-label="슬기로운 자취생활 로고">
-          <span className="sidebar__logo-mark">슬</span>
-          <span className="sidebar__logo-text">슬기로운 자취생활</span>
+          <span className="sidebar__logo-mark" aria-hidden="true">슬</span>
+          <span className="sidebar__logo-text">기로운 자취생활</span>
         </div>
-        <Input
-          type="search"
-          placeholder="동 이름 검색"
-          aria-label="동 이름 검색"
-          className="sidebar__search"
-          // Real autocomplete arrives in step 5/6 alongside /api/dongs/search.
-          disabled
-        />
+        {/* Search input intentionally hidden until /api/dongs/search lands
+         *  (step 5/6). Showing a disabled box reads as "broken feature" in
+         *  demos — bundle quick-wins FINDING-111. */}
         <div className="sidebar__user">
           {userName ? (
             <Link to="/mypage" className="sidebar__user-link">

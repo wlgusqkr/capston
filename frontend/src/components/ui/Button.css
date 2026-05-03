@@ -67,12 +67,15 @@
 
 /* ---------- Variants ---------- */
 
-/* primary — Near-Black pill, white text, 1차 CTA */
+/* primary — Near-Black, white text, 1차 CTA.
+ * Radius: --radius-md (8px subtle) per Cohere-inspired restraint. The earlier
+ * 32px pill read as bubbly on tall (44-48px) CTAs and clashed with subtler
+ * radii used on dong detail / compare. See deep-audit FINDING-105. */
 .ui-button--primary {
   background-color: var(--color-near-black);
   color: var(--color-canvas-white);
   border-color: var(--color-near-black);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-md);
   /* Mobile hit target: ensure 44px min height regardless of size choice */
   min-height: var(--control-height-cta);
   padding-left: var(--space-6);   /* 24px */

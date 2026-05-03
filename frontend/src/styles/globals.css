@@ -28,6 +28,17 @@
   box-sizing: border-box;
 }
 
+/* Universal font-family inheritance — eliminates Times serif fallback in
+ * elements that don't inherit from <body> by default (SVG <text>, dev tools
+ * surface like TanStack Query Devtools, etc.). Components that need the mono
+ * face apply it explicitly via .mono-label / .tabular / --font-family-mono;
+ * those explicit declarations win the cascade over this reset. */
+*,
+*::before,
+*::after {
+  font-family: var(--font-family-base);
+}
+
 html,
 body,
 h1,

@@ -311,6 +311,7 @@ export default function MainMap() {
 
   return (
     <div className="main-map">
+      <h1 className="sr-only">서울 동네 점수 지도</h1>
       <Sidebar
         weights={weights}
         onWeightsChange={setWeights}
