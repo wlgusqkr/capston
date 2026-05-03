@@ -1,7 +1,7 @@
 /* Button primitive — see Button.tsx for usage.
  *
  * Visual system:
- *   primary   = Near-Black pill (radius-pill, 32px) — 1차 CTA
+ *   primary   = Near-Black, subtle radius (radius-md, 8px) — 1차 CTA
  *   secondary = text-only with permanent underline — link-like inline action
  *   outline   = transparent + 1px near-black border (radius-xl, 30px) — filter toggle
  *   filled    = outline's active state (near-black fill + white text)
