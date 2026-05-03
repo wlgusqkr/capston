@@ -38,6 +38,7 @@ from django.db.models import Count, Sum  # noqa: E402
 from apps.amenities.models import Amenity  # noqa: E402
 from apps.neighborhoods.models import Dong  # noqa: E402
 from apps.realestate.models import RentDeal  # noqa: E402
+from apps.realestate.utils import convert_to_monthly  # noqa: E402
 from apps.transit.models import BusStop, NearestSubway  # noqa: E402
 
 
@@ -68,21 +69,21 @@ BUS_COUNT_CAP = 50
 
 
 # ---------------------------------------------------------------------------
-# 헬퍼: 환산 월세 (보증금 1000만원 기준)
+# 헬퍼: 환산 월세 — 표준식 (apps.realestate.utils 와 단일 진실)
 # ---------------------------------------------------------------------------
 def _converted_rent(deposit: int, monthly_rent: int) -> float:
-    """보증금 1000만원 기준 월세 환산 (만원/월).
+    """표준 환산식 (만원/월): monthly_rent + deposit × 0.005.
 
-    monthly_rent 가 0(전세) 이면 보증금 전액을 월세 환산.
-    그 외엔 1000만원 초과분만 환산 더하기.
+    구현은 apps.realestate.utils.convert_to_monthly 에 위임한다 (단일 진실).
+    score_rent 와 API 응답(`converted_rent`, `rent_converted_avg`) 가 동일한
+    계수/공식을 공유해야 표시값과 점수가 정합한다.
 
-    환산 계수 0.5 = 100만원당 0.5만원/월 (연 6% 전월세전환률 가정의 약식).
+    주: 이전 구현은 "보증금 1000만원 초과분만 환산" 이었으나, 실 거래에서
+    전세-반전세-월세 trade-off 를 일관 비교하려면 보증금 전액을 환산하는
+    국토부 표준식이 적절. 변경 후 score_rent 분포가 미세 이동하나 (보증금이
+    큰 동일수록 환산값↑ → score_rent↓) 상대 순위는 대체로 보존됨.
     """
-    if monthly_rent == 0:
-        # 전세 — 보증금 전액 환산
-        return max(0.0, deposit / 100.0 * 0.5)
-    excess = max(0, deposit - 1000)
-    return float(monthly_rent) + (excess / 100.0) * 0.5
+    return convert_to_monthly(deposit, monthly_rent)
 
 
 # ---------------------------------------------------------------------------

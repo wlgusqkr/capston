@@ -22,7 +22,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .compare_dummy import build_compare_row
+from .compare_dummy import build_compare_row, compute_rent_converted_avgs
 from .models import Dong
 from .score_point import compute_point_score
 from .serializers import (
@@ -294,8 +294,20 @@ class CompareView(APIView):
         if missing:
             raise NotFound({"detail": f"찾을 수 없는 동네: {', '.join(missing)}"})
 
+        # 환산월세 평균을 한 번에 사전 계산 (N+1 회피).
+        # 같은 구의 RentDeal 만 fetch 하므로 비용 제한적 (5개 구 27,050건 케이스).
+        target_dongs = [by_slug[s] for s in slugs]
+        rent_converted_map = compute_rent_converted_avgs(target_dongs)
+
         # 입력 순서 그대로 행 빌드
-        rows = [build_compare_row(by_slug[s], weights) for s in slugs]
+        rows = [
+            build_compare_row(
+                by_slug[s],
+                weights,
+                rent_converted_avg=rent_converted_map.get(s),
+            )
+            for s in slugs
+        ]
 
         # 응답: 적용 가중치를 정수 % 형태로 함께 반환 (프론트가 표시용으로 사용)
         applied_weights = {

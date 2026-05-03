@@ -184,6 +184,9 @@ class DongCompareItemSerializer(serializers.Serializer):
     gu = serializers.CharField()
     score = serializers.FloatField()
     rent_avg = serializers.IntegerField()
+    # 환산월세 (만원, 보증금 0.005/월 환산 포함). RentDeal <3건 동은 fallback,
+    # 모든 fallback 도 데이터 없으면 null. frontend 는 null-safe 처리 필수.
+    rent_converted_avg = serializers.IntegerField(allow_null=True)
     transit_min = serializers.IntegerField()
     amenity_label = serializers.CharField()  # "충분" | "보통" | "부족"
     single_household_pct = serializers.FloatField()
