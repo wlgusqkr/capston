@@ -11,8 +11,8 @@
 |---|---|---|---|
 | `_django.py` | Django setup helper, 환경변수 검증 | — | — |
 | `build_dong_mapping.py` | 행정동 GeoJSON 검증 + 법정동→행정동 매핑 CSV 생성 | — | Dong |
-| `fetch_realestate.py` | 국토부 실거래가 (전월세) 수집 | `MOLIT_API_KEY` | RentDeal (미존재) |
-| `fetch_amenities.py` | 소상공인진흥공단 상가정보 수집 | `SBA_API_KEY` | Amenity (미존재) |
+| `fetch_realestate.py` | 국토부 실거래가 (전월세) 수집 | `DATA_GO_KR_API_KEY` | RentDeal (미존재) |
+| `fetch_amenities.py` | 소상공인진흥공단 상가정보 수집 | `DATA_GO_KR_API_KEY` (동일 키) | Amenity (미존재) |
 | `fetch_transit.py` | 지하철역/버스 정류장 좌표 + 가까운 역 사전계산 | `SEOUL_OPEN_API_KEY` | SubwayStation/BusStop (미존재) |
 | `compute_scores.py` | 점수 계산 (SPEC 11.2) | — | 위 모델들 |
 
@@ -20,26 +20,27 @@
 
 ## 키 받는 방법
 
-### 1. 국토교통부 실거래가 (`MOLIT_API_KEY`)
+### 1. data.go.kr 인증키 (`DATA_GO_KR_API_KEY`) — 1개로 4개 데이터셋 사용
 
-- URL: <https://www.data.go.kr/>
-- 검색: "국토교통부_연립다세대 전월세 실거래가" (15126473)
-- 동일 제공자가 운영하는 다음 데이터셋도 함께 활용 신청
-  - 15126472 단독다가구 전월세
-  - 15126475 오피스텔 전월세
-- 신청 절차
-  1. data.go.kr 회원가입
-  2. 각 데이터셋 페이지에서 "활용신청" → 일반 인증키(Decoding) 발급 (즉시 또는 1일 내)
-  3. 발급된 키를 `.env` 의 `MOLIT_API_KEY` 에 저장
-- 일일 트래픽 제한: 활용신청 시 설정 (기본 10,000회/일이 일반적)
+data.go.kr 인증키는 **계정 단위**로 발급. 한 키로 그 계정에서 활용 승인된 모든 API에 접근. 즉:
 
-### 2. 소상공인진흥공단 상가(상권)정보 (`SBA_API_KEY`)
+- 키 1개 (`.env` 의 `DATA_GO_KR_API_KEY` 1개 값)
+- 활용신청 4번 (각 데이터셋 페이지에서 한 번씩 클릭)
 
-- URL: <https://www.data.go.kr/data/15012005/openapi.do>
-- 또는 소상공인 마당 OpenAPI: <https://sg.sbiz.or.kr/godo/openapi.sg>
-- 신청 후 `.env` 의 `SBA_API_KEY` 에 저장.
+**신청 절차**
 
-### 3. 서울 열린데이터광장 (`SEOUL_OPEN_API_KEY`)
+1. <https://www.data.go.kr/> 회원가입
+2. 아래 4개 데이터셋 페이지에서 각각 "활용신청" 클릭 (사유 동일하게 복붙 OK)
+   - 15126473 — 국토교통부_연립다세대 전월세 자료
+   - 15126472 — 국토교통부_단독/다가구 전월세 자료
+   - 15126475 — 국토교통부_오피스텔 전월세 자료
+   - 15012005 — 소상공인진흥공단_상가(상권)정보
+3. 보통 자동승인(수분). 마이페이지 > 인증키 발급현황에서 같은 키 1개 확인.
+4. 그 키를 `.env` 의 `DATA_GO_KR_API_KEY` 에 저장. **반드시 일반 인증키(Decoding)** — Encoding 키는 URL 인코딩 한 번 더 들어가서 깨짐.
+
+**일일 트래픽**: 활용신청 시 설정 (기본 10,000회/일). 우리는 25개 구 × 6개월 = ~150콜이라 여유.
+
+### 2. 서울 열린데이터광장 (`SEOUL_OPEN_API_KEY`)
 
 - URL: <https://data.seoul.go.kr/>
 - 회원가입 → 마이페이지 → "인증키 신청" → 일반 인증키 발급 (샘플 인증키 아님)
@@ -47,12 +48,12 @@
   - "서울교통공사_노선별 지하철역 정보" 또는 "서울시 지하철역 위치정보"
   - "서울특별시_정류소 정보 조회 서비스"
 
-### 4. VWorld (`VWORLD_API_KEY`) — 선택
+### 3. VWorld (`VWORLD_API_KEY`) — 선택
 
 - URL: <https://www.vworld.kr/>
 - 좌표 변환/지오코딩 보조용. 매물 단위 호출 금지 (SPEC 14.2). 역/정류장 좌표 누락 시 백업.
 
-### 5. 행정동 GeoJSON / 법정동 매핑 CSV — 키 불필요
+### 4. 행정동 GeoJSON / 법정동 매핑 CSV — 키 불필요
 
 - 행정동 GeoJSON
   - 국가공간정보포털 <https://www.nsdi.go.kr/>: '행정구역(읍면동)' 검색
@@ -68,10 +69,9 @@
 기존 `backend/.env.example` 에 이미 placeholder 포함됨. 키 받으면 `.env` 의 빈 값 채우기:
 
 ```env
-MOLIT_API_KEY=
-SBA_API_KEY=
-SEOUL_OPEN_API_KEY=
-VWORLD_API_KEY=
+DATA_GO_KR_API_KEY=     # 국토부 실거래가 + 소상공인 상가 (1개 키)
+SEOUL_OPEN_API_KEY=     # 지하철역·버스 정류장 (별도 사이트)
+VWORLD_API_KEY=         # 지오코딩(역/정류장 백업), 매물 단위 호출 금지
 ```
 
 ---
@@ -92,8 +92,7 @@ python scripts/build_dong_mapping.py /path/to/seoul_dongs.geojson \
 python manage.py load_dongs /path/to/seoul_dongs.geojson
 
 # 3. 키 환경변수 export (또는 .env 사용)
-export MOLIT_API_KEY=...
-export SBA_API_KEY=...
+export DATA_GO_KR_API_KEY=...    # 실거래가 + 상가, 1개 키
 export SEOUL_OPEN_API_KEY=...
 
 # 4. 데이터 수집 (각 1~수십 분 소요)

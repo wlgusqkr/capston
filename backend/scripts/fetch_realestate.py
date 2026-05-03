@@ -29,7 +29,7 @@ CURRENT STATUS
 
 Usage
 -----
-    export MOLIT_API_KEY=...                 # data.go.kr 일반인증키 (Decoding)
+    export DATA_GO_KR_API_KEY=...            # data.go.kr 일반인증키 (Decoding) — 같은 키로 fetch_amenities.py 도 동작
     python scripts/fetch_realestate.py --months 12 --deal-type villa
     python scripts/fetch_realestate.py --months 1  --dry-run --limit 5
 """
@@ -176,8 +176,8 @@ def main() -> int:
     args = parser.parse_args()
 
     api_key = require_env(
-        "MOLIT_API_KEY",
-        hint="data.go.kr 에서 '국토교통부 실거래가 정보' 활용 신청 후 일반 인증키(Decoding) 사용",
+        "DATA_GO_KR_API_KEY",
+        hint="data.go.kr 일반 인증키(Decoding). '국토교통부 실거래가 정보' 활용 신청 필요 (15126473/72/75)",
     )
 
     today = date.today()

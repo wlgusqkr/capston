@@ -12,7 +12,7 @@ CURRENT STATUS
 
 Usage
 -----
-    export SBA_API_KEY=...
+    export DATA_GO_KR_API_KEY=...            # data.go.kr 일반인증키 — fetch_realestate.py 와 같은 키
     python scripts/fetch_amenities.py --gu 중구
     python scripts/fetch_amenities.py --dry-run --limit 100
 """
@@ -115,8 +115,8 @@ def main() -> int:
     args = parser.parse_args()
 
     api_key = require_env(
-        "SBA_API_KEY",
-        hint="data.go.kr 또는 sg.sbiz.or.kr 에서 '상가(상권)정보' 활용 신청 후 발급",
+        "DATA_GO_KR_API_KEY",
+        hint="data.go.kr 일반 인증키(Decoding). '소상공인 상가(상권)정보' 활용 신청 필요 (15012005)",
     )
 
     # 행정동 목록은 Dong 테이블에서 가져옴 (10단계 적재 후 426개 모두 채워짐)
