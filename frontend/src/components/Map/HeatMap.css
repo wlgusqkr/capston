@@ -89,21 +89,47 @@
   border-bottom-color: var(--color-border);
 }
 
-/* Leaflet zoom control — white pill, hairline border. */
+/* Leaflet zoom control — white pill, hairline border, generous hit area.
+ * DESIGN_SYSTEM.md: "Map controls — bottom-right zoom controls in white pill,
+ * no other map controls visible by default." Z-stacked vertically, hairline
+ * divider between +/− buttons, no decorative shadow beyond shadow-floating. */
 .leaflet-bar {
   border: 1px solid var(--color-border) !important;
   border-radius: var(--radius-sm) !important;
   box-shadow: var(--shadow-floating) !important;
   overflow: hidden;
+  background: var(--color-surface);
 }
 
 .leaflet-bar a {
+  width: 40px !important;
+  height: 40px !important;
+  line-height: 40px !important;
   background: var(--color-surface) !important;
-  color: var(--color-text) !important;
-  border-bottom-color: var(--color-border) !important;
+  color: var(--color-near-black) !important;
+  border-bottom: 1px solid var(--color-border) !important;
   font-family: var(--font-family-base);
+  font-size: 18px !important;
+  font-weight: 400 !important;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.leaflet-bar a:last-child {
+  border-bottom: 0 !important;
 }
 
 .leaflet-bar a:hover {
   background: var(--color-surface-inset) !important;
+  color: var(--color-near-black) !important;
+}
+
+.leaflet-bar a:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.leaflet-bar a.leaflet-disabled {
+  background: var(--color-surface) !important;
+  color: var(--color-text-subtle) !important;
+  cursor: not-allowed;
 }
