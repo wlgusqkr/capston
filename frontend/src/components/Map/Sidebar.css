@@ -220,3 +220,43 @@
   color: var(--color-text);
   font-weight: 500;
 }
+
+/* Provenance footer — research-tool transparency per DESIGN_SYSTEM.md.
+ * Mono uppercase key + Pretendard value, sticky to bottom of sidebar so it
+ * stays visible even when sections scroll. */
+.sidebar__footer {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  background: var(--color-surface-inset);
+}
+
+.sidebar__provenance {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--font-micro-size);
+  line-height: var(--font-micro-line);
+  color: var(--color-text-muted);
+}
+
+.sidebar__provenance-key {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-mono-label-size);
+  letter-spacing: var(--font-mono-label-tracking);
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+  flex: 0 0 auto;
+}
+
+.sidebar__provenance-val {
+  font-family: var(--font-family-base);
+  letter-spacing: var(--letter-spacing-ko);
+  color: var(--color-text-muted);
+}

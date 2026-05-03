@@ -219,6 +219,19 @@ export default function Sidebar({
           />
         </div>
       </section>
+
+      <footer className="sidebar__footer" aria-label="데이터 출처">
+        <p className="sidebar__provenance">
+          <span className="sidebar__provenance-key">DATA</span>
+          <span className="sidebar__provenance-val">
+            국토교통부 · 소상공인진흥공단 · 서울교통빅데이터
+          </span>
+        </p>
+        <p className="sidebar__provenance">
+          <span className="sidebar__provenance-key">UPDATED</span>
+          <span className="sidebar__provenance-val">2026.05.01</span>
+        </p>
+      </footer>
     </aside>
   );
 }
