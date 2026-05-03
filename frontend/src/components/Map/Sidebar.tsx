@@ -199,7 +199,9 @@ export default function Sidebar({
               checked={rentCapEnabled}
               onChange={(e) => onRentCapToggle(e.target.checked)}
             />
-            <span>월세 상한</span>
+            {/* "환산 월세" — 보증금을 0.005/월로 환산해 합산한 값.
+                전월세 score 자체가 환산값 기반이므로 라벨만 정직하게 표기. */}
+            <span>환산 월세 상한</span>
           </label>
           <Slider
             min={20}
@@ -212,6 +214,9 @@ export default function Sidebar({
             hideHeader={false}
             label={null}
           />
+          <p className="sidebar__filter-hint mono-label">
+            보증금 환산 포함 (0.005/월)
+          </p>
         </div>
       </section>
 

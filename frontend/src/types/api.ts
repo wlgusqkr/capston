@@ -370,6 +370,9 @@ export interface RentDealPin {
   deposit: number;
   /** Monthly rent (만원). 0 → 전세. */
   monthly_rent: number;
+  /** 환산월세 (만원, 정수). 보증금을 월세로 환산해 합산: monthly_rent + deposit × 0.005.
+   *  Backend가 RentDealPinSerializer에서 직접 계산해 내려준다 (lib/rent.ts와 동일 계수). */
+  converted_rent: number;
   /** WGS84 latitude. */
   lat: number;
   /** WGS84 longitude. */

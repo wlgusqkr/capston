@@ -17,6 +17,7 @@
 import { useEffect, useMemo } from 'react';
 
 import { Badge } from '@/components/ui';
+import { formatConvertedRent } from '@/lib/rent';
 import type { RentDealPin, TransactionDealType } from '@/types/api';
 
 import './TransactionPanel.css';
@@ -151,6 +152,9 @@ export default function TransactionPanel({
 
 function DealRow({ pin }: { pin: RentDealPin }) {
   const isJeonse = pin.monthly_rent === 0;
+  // Prefer backend's converted_rent (정수 만원, 동일 계수 0.005/월) — 없는 케이스는
+  // 거래 row 단위로는 거의 발생하지 않지만 방어 차원에서 클라이언트 계산으로 폴백.
+  const convertedLabel = formatConvertedRent(pin.deposit, pin.monthly_rent);
   return (
     <li className="tx-row">
       <div className="tx-row__top">
@@ -163,9 +167,20 @@ function DealRow({ pin }: { pin: RentDealPin }) {
       <div className="tx-row__price">
         {isJeonse ? (
           <>
-            <span className="tx-row__price-label mono-label">전세</span>
-            <span className="tx-row__price-amount tabular">
-              {formatMan(pin.deposit)}
+            {/* 전세는 월세=0이라 보증금 환산값이 곧 비교 가능한 월세 부담. */}
+            <Badge variant="neutral" size="sm">전세</Badge>
+            <span className="tx-row__price-pair">
+              <span className="tx-row__price-label mono-label">보증금</span>
+              <span className="tx-row__price-amount tabular">
+                {formatMan(pin.deposit)}
+              </span>
+            </span>
+            <span className="tx-row__price-sep">·</span>
+            <span className="tx-row__price-pair">
+              <span className="tx-row__price-label mono-label">환산</span>
+              <span className="tx-row__price-amount tabular">
+                {convertedLabel}
+              </span>
             </span>
           </>
         ) : (
@@ -186,6 +201,17 @@ function DealRow({ pin }: { pin: RentDealPin }) {
           </>
         )}
       </div>
+      {/* 환산월세는 보증금 환산 합산으로 동일 기준 비교용. 전세는 위에서 inline
+          노출했으므로 중복을 피한다 (반전세/월세 케이스만 노출). */}
+      {!isJeonse && (
+        <div className="tx-row__converted">
+          <span className="tx-row__converted-label mono-label">환산</span>
+          <span className="tx-row__converted-value tabular">{convertedLabel}</span>
+          <span className="tx-row__converted-hint mono-label">
+            보증금 환산 포함
+          </span>
+        </div>
+      )}
     </li>
   );
 }

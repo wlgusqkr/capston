@@ -29,6 +29,7 @@ import {
 
 import { Card } from '@/components/ui';
 import { CHART_COLORS } from '@/lib/colors';
+import { formatConvertedRent } from '@/lib/rent';
 import type { DongDetail } from '@/types/api';
 
 import './RealEstateSection.css';
@@ -86,7 +87,13 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
 
       <div className="real-estate__grid">
         <Card padding="lg" className="real-estate__chart-card" aria-label="월별 평균 월세 추이">
-          <h3 className="real-estate__chart-title">월별 평균 월세 (만원)</h3>
+          <h3 className="real-estate__chart-title">월별 평균 월세 (raw, 만원)</h3>
+          {/* 백엔드 monthly_trend 는 유형별 raw 월세만 노출 — per-month 보증금
+              평균이 없어 환산값 산출 불가. 환산 비교는 아래 "최근 실거래" 표를
+              참고. 라벨로 "raw" 명시하여 발표 질문 차단. */}
+          <p className="real-estate__chart-hint mono-label">
+            보증금 환산 전 — 환산값은 아래 거래표 참고
+          </p>
           <div className="real-estate__chart">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trend} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
@@ -212,6 +219,10 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
       <Card padding="none" className="real-estate__deals-card" aria-label="최근 실거래 5건">
         <header className="real-estate__deals-header">
           <h3 className="real-estate__chart-title">최근 실거래 5건</h3>
+          {/* 환산식 mono 보조 — 칼럼 추가 이유를 발표 자리에서 즉시 답하기 위함. */}
+          <p className="real-estate__deals-hint mono-label">
+            환산 = 월세 + 보증금 × 0.005 (연 6%/월 0.005 가정)
+          </p>
         </header>
         <div className="real-estate__table-scroll">
           <table className="real-estate__table">
@@ -222,6 +233,7 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
                 <th scope="col">면적</th>
                 <th scope="col">보증금</th>
                 <th scope="col">월세</th>
+                <th scope="col">환산 월세</th>
               </tr>
             </thead>
             <tbody>
@@ -234,11 +246,19 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
                   <td className="tabular">
                     {deal.monthly_rent === 0 ? '-' : `${deal.monthly_rent}만원`}
                   </td>
+                  <td className="tabular real-estate__converted-cell">
+                    {/* DongDetail.real_estate.recent_deals 에는 converted_rent 가
+                        없으므로 client 계산. lib/rent.ts 가 백엔드와 동일 계수. */}
+                    {formatConvertedRent(deal.deposit, deal.monthly_rent)}
+                    {deal.monthly_rent === 0 && (
+                      <span className="real-estate__converted-tag mono-label"> 전세</span>
+                    )}
+                  </td>
                 </tr>
               ))}
               {realEstate.recent_deals.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="real-estate__table-empty">
+                  <td colSpan={6} className="real-estate__table-empty">
                     최근 실거래 내역이 없습니다.
                   </td>
                 </tr>

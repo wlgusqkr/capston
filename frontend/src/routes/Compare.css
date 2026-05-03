@@ -316,6 +316,15 @@
   opacity: 1;
 }
 
+/* "raw 월세" 보조 라벨 — 환산값 미노출 동안의 정직성 표기 (한 줄 아래로
+ * 떨어지는 작은 mono). 백엔드가 rent_converted_avg 노출 시 제거. */
+.compare__cell-foot {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--font-mono-label-size);
+  color: var(--color-text-subtle);
+}
+
 /* Em-dash placeholder when /scores is missing a slug — defensive only. */
 .compare__cell-empty {
   color: var(--color-text-subtle);

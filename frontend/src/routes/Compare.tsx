@@ -321,11 +321,17 @@ function CompareTable({
               </Cell>
             ))}
           </Row>
+          {/* 평균 월세 — 백엔드는 score_rent (환산월세 기반 점수) 만 노출하고
+              아직 동 단위 평균 환산값(rent_converted_avg)은 미노출. raw 월세
+              값을 그대로 보여주되 footer에서 환산 공식과 score 계산이 환산값
+              기반임을 명시 (FINDING 정직성). 백엔드가 신규 필드를 노출하면
+              여기 셀과 라벨을 동시에 교체. */}
           <Row label="평균 월세" decision={rentDecision} showTie={dongs.length > 1}>
             {dongs.map((d, i) => (
               <Cell key={d.slug} highlight={rentDecision.bestIdx.has(i)}>
                 <span className="tabular">{d.rent_avg}</span>
                 <span className="compare__cell-unit"> 만원</span>
+                <span className="compare__cell-foot mono-label">raw 월세</span>
               </Cell>
             ))}
           </Row>
@@ -361,7 +367,9 @@ function CompareTable({
       </table>
 
       {/* Provenance footer — mirrors the sidebar pattern (mono key + value).
-          Honest about derived rent + the three score sources. */}
+          Honest about derived rent + the three score sources. RENT row makes
+          the 환산식을 explicit so reviewers can spot-check ("왜 26만원인 동이
+          비싸 보여요?" — 환산값 = 월세 + 보증금×0.005 = 다른 숫자). */}
       <div className="compare__provenance" aria-label="데이터 출처">
         <p className="compare__prov-row">
           <span className="compare__prov-key">SCORES</span>
@@ -372,7 +380,9 @@ function CompareTable({
         <p className="compare__prov-row">
           <span className="compare__prov-key">RENT</span>
           <span className="compare__prov-val">
-            국토부 실거래가 기반 추정치 (월세 점수 반영, 5개 구 적재 한정)
+            환산 월세 = 월세 + 보증금 × 0.005 (서울 평균 전환률 6%/년 가정).
+            점수(score_rent)는 환산값 기반이며, 위 셀의 "raw 월세"는 보증금 환산 전 표시값입니다.
+            국토부 실거래가 5개 구 적재 한정.
           </span>
         </p>
         <p className="compare__prov-note">

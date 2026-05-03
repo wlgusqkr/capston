@@ -209,3 +209,32 @@
 .tx-row__price-sep {
   color: var(--color-text-subtle);
 }
+
+/* 환산월세 보조 행 — raw 보증금/월세는 위에 그대로 두고, derived 환산값은
+ * 별도 줄에 mono 라벨로 노출 (정직성: 둘 다 보이고 환산은 derived임을 명시).
+ * 졸업 발표 질문 ("왜 26만원인 동이 비싸 보여요?")의 직접 답변 위치. */
+.tx-row__converted {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding-top: var(--space-1);
+  border-top: 1px dashed var(--color-hairline);
+  margin-top: var(--space-1);
+}
+
+.tx-row__converted-label {
+  color: var(--color-text-subtle);
+}
+
+.tx-row__converted-value {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-body-base-size);
+  color: var(--color-text);
+  letter-spacing: 0;
+}
+
+.tx-row__converted-hint {
+  color: var(--color-text-subtle);
+  font-size: var(--font-mono-label-size);
+  margin-left: auto;
+}

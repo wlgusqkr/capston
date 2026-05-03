@@ -152,6 +152,13 @@
   padding-left: var(--space-1);
 }
 
+/* "보증금 환산 포함" 등 슬라이더 보조 설명 — 작은 mono. */
+.sidebar__filter-hint {
+  margin: 0;
+  color: var(--color-text-subtle);
+  font-size: var(--font-mono-label-size);
+}
+
 .sidebar__compare-hint {
   margin: 0;
   font-size: var(--font-micro-size);
