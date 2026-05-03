@@ -1,0 +1,60 @@
+name: Deploy to VM
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "deploy/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-vm
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: SSH deploy (backend + frontend)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Load SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add VM to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Run deploy on VM
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          ssh "${SSH_USER}@${SSH_HOST}" bash <<'REMOTE'
+          set -euo pipefail
+          cd ~/slgi
+          git fetch --all --prune
+          git reset --hard origin/main
+          bash deploy/deploy.sh
+          REMOTE
+
+      - name: Smoke test (backend healthcheck)
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          for i in 1 2 3 4 5; do
+            if curl -fsS --max-time 5 "http://${SSH_HOST}/api/schema/" > /dev/null; then
+              echo "Backend OK"
+              exit 0
+            fi
+            echo "Retry $i..."
+            sleep 3
+          done
+          echo "Backend healthcheck failed"
+          exit 1

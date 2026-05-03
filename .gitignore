@@ -21,6 +21,7 @@ docs/*
 .env.*.local
 backend/.env
 frontend/.env
+frontend/.env.production
 *.pem
 *.key
 
