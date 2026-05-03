@@ -16,8 +16,12 @@ log() { printf "\n\033[1;34m[deploy]\033[0m %s\n" "$*"; }
 # ---------------------------------------------------------------------------
 export PATH="$HOME/.local/bin:$PATH"
 if [ -s "$HOME/.nvm/nvm.sh" ]; then
+  # nvm은 unbound 변수를 참조하므로 set -u 잠시 해제
+  set +u
   # shellcheck disable=SC1091
   . "$HOME/.nvm/nvm.sh"
+  nvm use --lts >/dev/null 2>&1 || true
+  set -u
 fi
 
 # ---------------------------------------------------------------------------

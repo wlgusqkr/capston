@@ -57,6 +57,8 @@ if [ ! -s "$HOME/.nvm/nvm.sh" ]; then
   log "nvm 설치"
   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 fi
+# nvm은 unbound 변수를 참조하므로 set -u 잠시 해제
+set +u
 # shellcheck disable=SC1091
 . "$HOME/.nvm/nvm.sh"
 if ! nvm ls --no-colors 2>/dev/null | grep -q "lts/"; then
@@ -65,6 +67,7 @@ if ! nvm ls --no-colors 2>/dev/null | grep -q "lts/"; then
   nvm alias default 'lts/*'
 fi
 nvm use --lts >/dev/null
+set -u
 
 # ---------------------------------------------------------------------------
 # 4. .env 템플릿 — 없을 때만 복사
