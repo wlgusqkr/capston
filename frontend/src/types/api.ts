@@ -237,8 +237,10 @@ export interface CompareItem {
   gu: string;
   /** Weighted composite 0~100 (two decimals). */
   score: number;
-  /** Average monthly rent in 만원 (정수). */
+  /** Raw average monthly rent in 만원 (정수, dummy: 120 - score_rent). */
   rent_avg: number;
+  /** 환산월세 평균 in 만원 (정수). 월세 + 보증금 × 0.005, RentDeal 실거래 기반. null = 데이터 부족. */
+  rent_converted_avg: number | null;
   /** Walking minutes to nearest subway station (정수). */
   transit_min: number;
   amenity_label: CompareAmenityLabel;

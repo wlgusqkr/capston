@@ -232,7 +232,13 @@ function CompareTable({
 
   // Composite score: use compare's `score` (already weighted by backend).
   const scoreVals = useMemo(() => dongs.map((d) => d.score), [dongs]);
-  const rentVals = useMemo(() => dongs.map((d) => d.rent_avg), [dongs]);
+  // 환산 월세(rent_converted_avg)를 primary 비교값으로. raw rent_avg는 derived dummy
+  // (120 - score_rent) 라 신뢰 어렵고, score_rent 자체가 환산값 기반이라 환산이
+  // 시스템적으로 일관됨. null(데이터 부족) 인 동은 highlight 제외.
+  const rentVals = useMemo(
+    () => dongs.map((d) => (d.rent_converted_avg ?? NaN)),
+    [dongs]
+  );
   const amenityVals = useMemo(
     () => breakdown.map((b) => b.score_amenity),
     [breakdown]
@@ -321,19 +327,26 @@ function CompareTable({
               </Cell>
             ))}
           </Row>
-          {/* 평균 월세 — 백엔드는 score_rent (환산월세 기반 점수) 만 노출하고
-              아직 동 단위 평균 환산값(rent_converted_avg)은 미노출. raw 월세
-              값을 그대로 보여주되 footer에서 환산 공식과 score 계산이 환산값
-              기반임을 명시 (FINDING 정직성). 백엔드가 신규 필드를 노출하면
-              여기 셀과 라벨을 동시에 교체. */}
-          <Row label="평균 월세" decision={rentDecision} showTie={dongs.length > 1}>
-            {dongs.map((d, i) => (
-              <Cell key={d.slug} highlight={rentDecision.bestIdx.has(i)}>
-                <span className="tabular">{d.rent_avg}</span>
-                <span className="compare__cell-unit"> 만원</span>
-                <span className="compare__cell-foot mono-label">raw 월세</span>
-              </Cell>
-            ))}
+          {/* 평균 환산 월세 — 월세 + 보증금×0.005. 백엔드 rent_converted_avg
+              사용. score_rent와 같은 가정이라 시스템 일관. 데이터 부족 동은
+              "—" 표시 (highlight 제외). */}
+          <Row label="평균 환산 월세" decision={rentDecision} showTie={dongs.length > 1}>
+            {dongs.map((d, i) => {
+              const v = d.rent_converted_avg;
+              if (v == null) {
+                return (
+                  <Cell key={d.slug} highlight={false}>
+                    <span className="compare__cell-empty">—</span>
+                  </Cell>
+                );
+              }
+              return (
+                <Cell key={d.slug} highlight={rentDecision.bestIdx.has(i)}>
+                  <span className="tabular">{v}</span>
+                  <span className="compare__cell-unit"> 만원</span>
+                </Cell>
+              );
+            })}
           </Row>
           <Row
             label="생활시설 점수"
@@ -381,8 +394,7 @@ function CompareTable({
           <span className="compare__prov-key">RENT</span>
           <span className="compare__prov-val">
             환산 월세 = 월세 + 보증금 × 0.005 (서울 평균 전환률 6%/년 가정).
-            점수(score_rent)는 환산값 기반이며, 위 셀의 "raw 월세"는 보증금 환산 전 표시값입니다.
-            국토부 실거래가 5개 구 적재 한정.
+            점수(score_rent)와 동일 공식. 국토부 실거래가 5개 구 적재 한정 — 그 외 동은 "—".
           </span>
         </p>
         <p className="compare__prov-note">
