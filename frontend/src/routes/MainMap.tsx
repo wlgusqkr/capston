@@ -337,7 +337,11 @@ export default function MainMap() {
        *   readers have something to land on. */}
       <h1 className="sr-only">서울 동네 점수 지도</h1>
 
-      <section className="main-map__map" aria-label="서울 동네 히트맵">
+      <section
+        id="main"
+        className="main-map__map"
+        aria-label="서울 동네 히트맵"
+      >
         <HeatMap
           dongs={data ?? []}
           onDongClick={handleDongClick}
