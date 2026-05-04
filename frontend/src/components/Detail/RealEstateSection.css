@@ -1,24 +1,20 @@
-/* RealEstateSection — SPEC 6.3 Section 2. */
+/* RealEstateSection — SPEC 6.3 Section 2.
+ *
+ * R-3 (design-polish-v2.md): Card wrappers stripped. Section frame is owned
+ * by the shared `.detail-section` class in DongDetail.css. The deals table
+ * sits unframed against the page background; only the inner thead row keeps
+ * the inset wash to mark column headers.
+ */
 
-.real-estate {
-  margin-bottom: var(--space-8);
-}
+/* Removed (post-R-3): .real-estate__chart-card, .real-estate__deals-card.
+ * Their boxed styles moved into the page-level .detail-section vocabulary. */
 
 .real-estate__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  margin-bottom: var(--space-4);
-}
-
-.real-estate__title {
-  margin: 0;
-  font-size: var(--font-section-heading-size);
-  line-height: var(--font-section-heading-line);
-  font-weight: var(--font-section-heading-weight);
-  color: var(--color-text);
-  letter-spacing: var(--font-section-heading-tracking);
+  margin-bottom: var(--space-6);
 }
 
 .real-estate__period {
@@ -64,14 +60,14 @@
 .real-estate__grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-4);
-  margin-bottom: var(--space-4);
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
 }
 
-.real-estate__chart-card {
+.real-estate__chart-block {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .real-estate__chart-title {
@@ -88,35 +84,34 @@
   height: 240px;
 }
 
-.real-estate__deals-card {
-  overflow: hidden;
+.real-estate__deals {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .real-estate__deals-header {
-  padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid var(--color-border);
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-hairline);
 }
 
-/* 환산 공식을 표 헤더 우측에 mono로 표기 — derivation 투명화. */
 .real-estate__deals-hint {
   margin: 0;
   color: var(--color-text-subtle);
   font-size: var(--font-mono-label-size);
 }
 
-/* 라인 차트 위쪽 보조 — 보증금 환산 전 raw 데이터임을 표기. */
 .real-estate__chart-hint {
   margin: 0;
   color: var(--color-text-subtle);
   font-size: var(--font-mono-label-size);
 }
 
-/* "환산 월세" 컬럼 셀 — mono 강조 (다른 셀과 구분). */
 .real-estate__converted-cell {
   font-family: var(--font-family-mono);
   color: var(--color-text);

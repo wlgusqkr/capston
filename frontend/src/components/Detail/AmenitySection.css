@@ -1,25 +1,17 @@
-/* AmenitySection — SPEC 6.3 Section 3. */
-
-.amenity {
-  margin-bottom: var(--space-8);
-}
+/* AmenitySection — SPEC 6.3 Section 3.
+ *
+ * R-3 (design-polish-v2.md): Card wrappers stripped (`.amenity__card` deleted).
+ * Each amenity is now an unframed row inside a hairline-separated grid.
+ * The follow-up commit adds a 4th cell (TOP X%) per A-7a.
+ */
 
 .amenity__header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-4);
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-5);
   flex-wrap: wrap;
-}
-
-.amenity__title {
-  margin: 0;
-  font-size: var(--font-section-heading-size);
-  line-height: var(--font-section-heading-line);
-  font-weight: var(--font-section-heading-weight);
-  color: var(--color-text);
-  letter-spacing: var(--font-section-heading-tracking);
 }
 
 .amenity__hint {
@@ -32,16 +24,18 @@
 .amenity__grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-3);
+  column-gap: var(--space-6);
 }
 
-.amenity__card {
+.amenity__row {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-hairline);
 }
 
-.amenity__card-row {
+.amenity__row-head {
   display: flex;
   align-items: center;
   justify-content: space-between;

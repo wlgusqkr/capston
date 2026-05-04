@@ -1,4 +1,10 @@
-/* DongDetail — wrapper for SPEC 6.3 detail page. */
+/* DongDetail — wrapper for SPEC 6.3 detail page.
+ *
+ * R-3 (design-polish-v2.md): page-level vocabulary for unframed sections.
+ * Each detail section uses .detail-section for its frame, with content
+ * capped at 720px so unframed rows stay dense (audit risk: 3-4 cells on a
+ * 1280px page reading "lost in whitespace").
+ */
 
 .dong-detail {
   min-height: 100vh;
@@ -10,10 +16,51 @@
  * via the brand logo and contextual page identity via PageTitleContext. */
 
 .dong-detail__main {
+  /* The page-level container hosts the hero (full content width up to
+   * 1200px) plus the section stack. Inner sections cap at 720px via
+   * .detail-section so rows stay dense. */
   max-width: 1200px;
   margin: 0 auto;
-  padding: var(--space-6);
+  padding: 0 var(--space-6);
 }
+
+/* ---- Shared section frame ----------------------------------------------
+ * Used by RealEstate / Amenity / Transit / Review / SimilarDongs (R-3).
+ * The hero deliberately opts out — it spans the page-level container width
+ * (and uses its own padding tokens).
+ *
+ * 80px top padding gives the DS-mandated whitespace between data blocks
+ * (DESIGN_SYSTEM.md: "데스크톱 브리핑 페이지 섹션 간 80px+"). 1px hairline
+ * top rule reinforces the separation without a card border.
+ *
+ * Note on token usage: the plan ASCII annotated `padding: var(--space-10) 0`
+ * with a "(80px)" comment, but --space-10 is 40px in our scale. To honor the
+ * DS rule (80px+ between data blocks) we use --space-20 (80px) here. */
+.detail-section {
+  max-width: 720px;
+  padding-top: var(--space-20);
+  padding-bottom: 0;
+  border-top: 1px solid var(--color-hairline);
+}
+
+/* Mono English eyebrow above each section heading. Decorative — the section
+ * is named by its real <h2> via aria-labelledby. */
+.detail-section__eyebrow {
+  margin: 0 0 var(--space-3);
+  color: var(--color-muted-slate);
+}
+
+/* Korean section heading — Section Heading 36px, NOT mono. */
+.detail-section__heading {
+  margin: 0;
+  font-size: var(--font-section-heading-size);
+  line-height: var(--font-section-heading-line);
+  font-weight: var(--font-section-heading-weight);
+  color: var(--color-text);
+  letter-spacing: var(--font-section-heading-tracking);
+}
+
+/* ---- Status / error banners --------------------------------------------- */
 
 .dong-detail__status {
   max-width: 1200px;
@@ -42,6 +89,10 @@
   margin-top: var(--space-2);
 }
 
+/* ---- Sticky bottom CTA bar ---------------------------------------------- */
+/* Pre-R-3 sticky bar. Removed in the D-3 follow-up commit (replaced by the
+ * scroll-sticky pill rail). Kept here only so the existing JSX still renders
+ * during the de-card commit. */
 .dong-detail__cta-bar {
   position: sticky;
   bottom: 0;
@@ -53,7 +104,4 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
   margin-top: var(--space-6);
-  /* No shadow. DESIGN_SYSTEM.md restricts soft shadows to floating-map-UI only;
-   * a page-level sticky bar is not map UI. The 1px border + opaque white surface
-   * already separates it visually from scrolled content. design-audit F-26. */
 }

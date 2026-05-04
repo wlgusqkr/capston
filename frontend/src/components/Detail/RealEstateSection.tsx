@@ -1,18 +1,17 @@
 // RealEstateSection — SPEC 6.3 Section 2 (부동산 시세).
 //
-// Layout:
-//   - Header: title + period toggle (3/6/12 months — UI only, doesn't filter data yet)
-//   - Top grid (2 cols on desktop):
-//       Left  — LineChart of monthly rent trend (3 lines: villa/multi/officetel,
-//               null gaps render as a line break thanks to connectNulls={false})
-//       Right — Horizontal BarChart of avg monthly rent per deposit band
-//   - Bottom: table of 5 most recent deals.
+// R-3: <Card> wrappers stripped. Section is `.detail-section` with mono
+// English eyebrow ("BUDGET / RENT") + Korean Section Heading + content
+// max-width: 720px (set by parent .detail-section).
 //
-// Recharts limitations addressed:
-//   - Recharts cannot consume CSS variables → palette imported from lib/colors.
-//   - Tooltip / legend / axis colors set explicitly to keep light/dark switching.
-//     For now we serve the light palette; dark theme switching is deferred (still
-//     readable on dark surfaces because the palette mirrors data tokens).
+// Layout:
+//   - Header: title + period toggle (3/6/12 months — UI only, doesn't filter
+//     data yet)
+//   - Top grid (2 cols on desktop): unframed charts side by side
+//       Left  — LineChart of monthly rent trend (3 lines, null gaps OK)
+//       Right — Horizontal BarChart of avg monthly rent per deposit band
+//   - Bottom: table of 5 most recent deals (already unframed transaction-row
+//     pattern post-DS).
 import { useState } from 'react';
 import {
   Bar,
@@ -27,7 +26,6 @@ import {
   YAxis,
 } from 'recharts';
 
-import { Card } from '@/components/ui';
 import { CHART_COLORS } from '@/lib/colors';
 import { formatConvertedRent } from '@/lib/rent';
 import type { DongDetail } from '@/types/api';
@@ -49,21 +47,26 @@ const PERIOD_OPTIONS: Array<{ value: Period; label: string; months: number }> = 
 export default function RealEstateSection({ realEstate }: RealEstateSectionProps) {
   const [period, setPeriod] = useState<Period>('6m');
 
-  // Slice the trend data to the selected period.
-  // Trend is sent oldest → newest; take the last N entries.
   const months = PERIOD_OPTIONS.find((p) => p.value === period)?.months ?? 6;
   const trend = realEstate.monthly_trend.slice(-months);
 
-  // Format band labels: '0' → '0~500', '500' → '500~1000', etc.
   const bands = realEstate.deposit_band_avg.map((b) => ({
     band: formatBandLabel(b.band),
     monthly: b.avg_monthly_rent,
   }));
 
   return (
-    <section className="real-estate" aria-label="부동산 시세">
+    <section
+      className="detail-section real-estate"
+      aria-labelledby="rent-heading"
+    >
+      <p className="mono-label detail-section__eyebrow" aria-hidden="true">
+        BUDGET / RENT
+      </p>
       <header className="real-estate__header">
-        <h2 className="real-estate__title">부동산 시세</h2>
+        <h2 id="rent-heading" className="detail-section__heading">
+          부동산 시세
+        </h2>
         <div className="real-estate__period" role="tablist" aria-label="기간 선택">
           {PERIOD_OPTIONS.map((opt) => {
             const active = opt.value === period;
@@ -86,11 +89,8 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
       </header>
 
       <div className="real-estate__grid">
-        <Card padding="lg" className="real-estate__chart-card" aria-label="월별 평균 월세 추이">
+        <div className="real-estate__chart-block" aria-label="월별 평균 월세 추이">
           <h3 className="real-estate__chart-title">월별 평균 월세 (raw, 만원)</h3>
-          {/* 백엔드 monthly_trend 는 유형별 raw 월세만 노출 — per-month 보증금
-              평균이 없어 환산값 산출 불가. 환산 비교는 아래 "최근 실거래" 표를
-              참고. 라벨로 "raw" 명시하여 발표 질문 차단. */}
           <p className="real-estate__chart-hint mono-label">
             보증금 환산 전 — 환산값은 아래 거래표 참고
           </p>
@@ -165,9 +165,9 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </Card>
+        </div>
 
-        <Card padding="lg" className="real-estate__chart-card" aria-label="보증금 구간별 평균 월세">
+        <div className="real-estate__chart-block" aria-label="보증금 구간별 평균 월세">
           <h3 className="real-estate__chart-title">보증금 구간별 평균 월세 (만원)</h3>
           <div className="real-estate__chart">
             <ResponsiveContainer width="100%" height="100%">
@@ -213,13 +213,12 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </Card>
+        </div>
       </div>
 
-      <Card padding="none" className="real-estate__deals-card" aria-label="최근 실거래 5건">
+      <div className="real-estate__deals" aria-label="최근 실거래 5건">
         <header className="real-estate__deals-header">
           <h3 className="real-estate__chart-title">최근 실거래 5건</h3>
-          {/* 환산식 mono 보조 — 칼럼 추가 이유를 발표 자리에서 즉시 답하기 위함. */}
           <p className="real-estate__deals-hint mono-label">
             환산 = 월세 + 보증금 × 0.005 (연 6%/월 0.005 가정)
           </p>
@@ -247,8 +246,6 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
                     {deal.monthly_rent === 0 ? '-' : `${deal.monthly_rent}만원`}
                   </td>
                   <td className="tabular real-estate__converted-cell">
-                    {/* DongDetail.real_estate.recent_deals 에는 converted_rent 가
-                        없으므로 client 계산. lib/rent.ts 가 백엔드와 동일 계수. */}
                     {formatConvertedRent(deal.deposit, deal.monthly_rent)}
                     {deal.monthly_rent === 0 && (
                       <span className="real-estate__converted-tag mono-label"> 전세</span>
@@ -266,7 +263,7 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
             </tbody>
           </table>
         </div>
-      </Card>
+      </div>
     </section>
   );
 }

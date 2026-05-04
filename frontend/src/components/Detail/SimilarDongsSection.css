@@ -1,8 +1,8 @@
-/* SimilarDongsSection — SPEC 6.3 Section 6. */
-
-.similar {
-  margin-bottom: var(--space-8);
-}
+/* SimilarDongsSection — SPEC 6.3 Section 6.
+ *
+ * R-3 (design-polish-v2.md): Card wrappers stripped. Each similar dong is
+ * an unframed row separated by hairlines (transaction-row vocabulary).
+ */
 
 .similar__header {
   display: flex;
@@ -13,15 +13,6 @@
   flex-wrap: wrap;
 }
 
-.similar__title {
-  margin: 0;
-  font-size: var(--font-section-heading-size);
-  line-height: var(--font-section-heading-line);
-  font-weight: var(--font-section-heading-weight);
-  color: var(--color-text);
-  letter-spacing: var(--font-section-heading-tracking);
-}
-
 .similar__hint {
   margin: 0;
   font-size: var(--font-caption-size);
@@ -29,31 +20,56 @@
   letter-spacing: var(--letter-spacing-ko);
 }
 
-.similar__grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-3);
+.similar__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-.similar__card {
-  appearance: none;
-  font-family: inherit;
-  text-align: left;
-  cursor: pointer;
+.similar__row {
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.similar__row:last-child {
+  border-bottom: none;
+}
+
+.similar__row-btn {
+  width: 100%;
   display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  transition: transform var(--transition-fast), border-color var(--transition-fast);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  letter-spacing: var(--letter-spacing-ko);
+  transition: background var(--transition-fast);
 }
 
-.similar__card:hover {
-  border-color: var(--color-near-black);
-  transform: translateY(-1px);
+.similar__row-btn:hover {
+  background: var(--color-surface-inset);
+  /* Padding sits inside the row but we want the hover to bleed slightly so
+   * it reads as a row hover, not a button hover. The negative margin trick
+   * keeps the hairline alignment intact. */
+  padding-left: var(--space-3);
+  padding-right: var(--space-3);
+  margin-left: calc(var(--space-3) * -1);
+  margin-right: calc(var(--space-3) * -1);
 }
 
-.similar__card:focus-visible {
+.similar__row-btn:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
+}
+
+.similar__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .similar__gu {
@@ -70,9 +86,8 @@
   letter-spacing: var(--font-card-heading-tracking);
 }
 
-/* Similarity % — mono data marker, Ink color. */
+/* Similarity % — mono data marker. */
 .similar__sim {
-  margin-top: var(--space-2);
   font-family: var(--font-family-mono);
   font-size: var(--font-mono-label-size);
   font-weight: var(--font-mono-label-weight);

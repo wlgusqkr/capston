@@ -1,41 +1,31 @@
-/* TransitSection — SPEC 6.3 Section 4. */
-
-.transit {
-  margin-bottom: var(--space-8);
-}
-
-.transit__header {
-  margin-bottom: var(--space-4);
-}
-
-.transit__title {
-  margin: 0;
-  font-size: var(--font-section-heading-size);
-  line-height: var(--font-section-heading-line);
-  font-weight: var(--font-section-heading-weight);
-  color: var(--color-text);
-  letter-spacing: var(--font-section-heading-tracking);
-}
+/* TransitSection — SPEC 6.3 Section 4.
+ *
+ * R-3 (design-polish-v2.md): Card wrappers stripped (`.transit__stations`,
+ * `.transit__bus` deleted). Section frame is `.detail-section`; inner
+ * blocks are unframed.
+ */
 
 .transit__grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: var(--space-4);
-  align-items: stretch;
+  gap: var(--space-6);
+  align-items: start;
+  margin-top: var(--space-5);
+}
+
+.transit__block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .transit__subtitle {
-  margin: 0 0 var(--space-3);
+  margin: 0;
   font-size: var(--font-feature-heading-size);
   line-height: var(--font-feature-heading-line);
   font-weight: var(--font-feature-heading-weight);
   color: var(--color-text);
   letter-spacing: var(--font-feature-heading-tracking);
-}
-
-.transit__stations {
-  display: flex;
-  flex-direction: column;
 }
 
 .transit__station-list {
@@ -51,15 +41,16 @@
   align-items: center;
   gap: var(--space-4);
   padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-hairline);
 }
 
 .transit__station:last-child {
   border-bottom: none;
 }
 
+/* Top-ranked station — Soft Stone inset for subtle emphasis. Card pattern is
+ * gone, but the rank-1 row still earns a visible accent. */
 .transit__station--top {
-  /* Subtle emphasis on the top-ranked station via a Soft Stone inset. */
   background: var(--color-surface-inset);
   border-radius: var(--radius-card);
   padding-left: var(--space-3);
@@ -109,17 +100,10 @@
   text-align: center;
 }
 
-.transit__bus {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-}
-
 .transit__bus-metrics {
   display: flex;
   align-items: center;
   gap: var(--space-5);
-  margin-top: var(--space-2);
 }
 
 .transit__bus-metric {
@@ -152,7 +136,7 @@
 .transit__bus-divider {
   width: 1px;
   align-self: stretch;
-  background: var(--color-border);
+  background: var(--color-hairline);
 }
 
 .transit__bus-metric--secondary {

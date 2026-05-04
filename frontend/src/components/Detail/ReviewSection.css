@@ -1,8 +1,9 @@
-/* ReviewSection — SPEC 6.3 Section 5. */
-
-.review {
-  margin-bottom: var(--space-8);
-}
+/* ReviewSection — SPEC 6.3 Section 5.
+ *
+ * R-3 (design-polish-v2.md): Card wrappers stripped (`.review__card`,
+ * `.review__empty` rebuilt as inline list items). Reviews are unframed
+ * hairline-separated rows under .detail-section.
+ */
 
 .review__header {
   display: flex;
@@ -10,22 +11,13 @@
   justify-content: space-between;
   gap: var(--space-4);
   flex-wrap: wrap;
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-5);
 }
 
 .review__heading-group {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-}
-
-.review__title {
-  margin: 0;
-  font-size: var(--font-section-heading-size);
-  line-height: var(--font-section-heading-line);
-  font-weight: var(--font-section-heading-weight);
-  color: var(--color-text);
-  letter-spacing: var(--font-section-heading-tracking);
 }
 
 .review__summary-line {
@@ -64,25 +56,33 @@
   color: var(--color-near-black);
 }
 
-.review__cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-3);
+.review__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-.review__card {
+.review__item {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-hairline);
 }
 
-.review__card-meta {
+.review__item:last-child {
+  border-bottom: none;
+}
+
+.review__item-head {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
 }
 
-.review__card-title {
+.review__item-title {
   margin: 0;
   font-size: var(--font-feature-heading-size);
   line-height: var(--font-feature-heading-line);
@@ -91,38 +91,29 @@
   letter-spacing: var(--font-feature-heading-tracking);
 }
 
-.review__card-author {
+.review__item-meta {
+  display: flex;
+  gap: var(--space-2);
   font-size: var(--font-caption-size);
-  color: var(--color-text-muted);
+  color: var(--color-text-subtle);
   letter-spacing: var(--letter-spacing-ko);
 }
 
-.review__card-rating {
-  font-size: var(--font-body-size);
+.review__item-meta time {
+  font-variant-numeric: tabular-nums;
 }
 
-.review__card-body {
+.review__item-body {
   margin: 0;
   font-size: var(--font-body-size);
   line-height: var(--font-body-line);
   color: var(--color-text);
   letter-spacing: var(--letter-spacing-ko);
-  /* Truncate long bodies to keep cards even */
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.review__card-date {
-  font-size: var(--font-hint-size);
-  color: var(--color-text-subtle);
-  letter-spacing: var(--letter-spacing-ko);
-  margin-top: auto;
 }
 
 .review__empty {
-  grid-column: 1 / -1;
+  padding: var(--space-5) 0;
   text-align: center;
   color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-ko);
 }

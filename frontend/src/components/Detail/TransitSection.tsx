@@ -1,10 +1,14 @@
 // TransitSection — SPEC 6.3 Section 4 (교통).
 //
+// R-3 (design-polish-v2.md): Card wrappers stripped. Mono English eyebrow
+// "TRANSIT" + Korean Section Heading. Inner Feature headings (가까운
+// 지하철역, 버스) stay normal-weight Pretendard, NOT mono — they are user
+// categories not system markers.
+//
 // Layout (2 columns on desktop):
-//   Left  — top 3 nearest subway stations (rank badge + name·line + distance/time).
-//           Rank 1 emphasized via a success Badge; ranks 2/3 use neutral.
+//   Left  — top 3 nearest subway stations (rank badge + name·line + distance).
 //   Right — bus stop card (large stop count + small route count).
-import { Badge, Card } from '@/components/ui';
+import { Badge } from '@/components/ui';
 import type { DongDetail } from '@/types/api';
 
 import './TransitSection.css';
@@ -17,13 +21,19 @@ export default function TransitSection({ transit }: TransitSectionProps) {
   const stations = [...transit.nearest_stations].sort((a, b) => a.rank - b.rank);
 
   return (
-    <section className="transit" aria-label="교통">
-      <header className="transit__header">
-        <h2 className="transit__title">교통</h2>
-      </header>
+    <section
+      className="detail-section transit"
+      aria-labelledby="transit-heading"
+    >
+      <p className="mono-label detail-section__eyebrow" aria-hidden="true">
+        TRANSIT
+      </p>
+      <h2 id="transit-heading" className="detail-section__heading">
+        교통
+      </h2>
 
       <div className="transit__grid">
-        <Card padding="lg" className="transit__stations" aria-label="가까운 지하철역 3곳">
+        <div className="transit__block" aria-label="가까운 지하철역 3곳">
           <h3 className="transit__subtitle">가까운 지하철역</h3>
           <ol className="transit__station-list">
             {stations.map((s) => {
@@ -59,9 +69,9 @@ export default function TransitSection({ transit }: TransitSectionProps) {
               <li className="transit__station-empty">근처 지하철역 정보가 없습니다.</li>
             )}
           </ol>
-        </Card>
+        </div>
 
-        <Card padding="lg" className="transit__bus" aria-label="버스 정류장">
+        <div className="transit__block" aria-label="버스 정류장">
           <h3 className="transit__subtitle">버스</h3>
           <div className="transit__bus-metrics">
             <div className="transit__bus-metric">
@@ -76,7 +86,7 @@ export default function TransitSection({ transit }: TransitSectionProps) {
               <span className="transit__bus-unit">노선</span>
             </div>
           </div>
-        </Card>
+        </div>
       </div>
     </section>
   );

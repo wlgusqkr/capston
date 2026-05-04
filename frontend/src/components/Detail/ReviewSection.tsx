@@ -1,9 +1,9 @@
 // ReviewSection — SPEC 6.3 Section 5 (자취생 리뷰).
 //
-// Aggregate header (avg rating + review count) plus 1~3 representative review
-// cards. "전체 리뷰 보기 →" CTA opens an alert for now (full review page is
-// out of scope until later).
-import { Button, Card } from '@/components/ui';
+// R-3 (design-polish-v2.md): Card wrappers stripped. Mono English eyebrow
+// "VOICES" + Korean Section Heading. Reviews are unframed rows separated
+// by hairlines, matching the transaction-row vocabulary.
+import { Button } from '@/components/ui';
 import type { DongDetail } from '@/types/api';
 
 import './ReviewSection.css';
@@ -39,10 +39,18 @@ function Stars({ rating, ariaLabel }: { rating: number; ariaLabel?: string }) {
 
 export default function ReviewSection({ reviews }: ReviewSectionProps) {
   return (
-    <section className="review" aria-label="자취생 리뷰">
+    <section
+      className="detail-section review"
+      aria-labelledby="review-heading"
+    >
+      <p className="mono-label detail-section__eyebrow" aria-hidden="true">
+        VOICES
+      </p>
       <header className="review__header">
         <div className="review__heading-group">
-          <h2 className="review__title">자취생 리뷰</h2>
+          <h2 id="review-heading" className="detail-section__heading">
+            자취생 리뷰
+          </h2>
           <div className="review__summary-line">
             <Stars
               rating={reviews.avg_rating}
@@ -63,28 +71,27 @@ export default function ReviewSection({ reviews }: ReviewSectionProps) {
         </Button>
       </header>
 
-      <div className="review__cards">
+      <ul className="review__list">
         {reviews.representatives.map((r, idx) => (
-          <Card key={`${r.title}-${idx}`} padding="lg" className="review__card">
-            <div className="review__card-meta">
-              <h3 className="review__card-title">{r.title}</h3>
-              <div className="review__card-author">{r.author_school}</div>
-            </div>
-            <div className="review__card-rating">
+          <li key={`${r.title}-${idx}`} className="review__item">
+            <div className="review__item-head">
+              <h3 className="review__item-title">{r.title}</h3>
               <Stars rating={r.rating} ariaLabel={`${r.rating}점`} />
             </div>
-            <p className="review__card-body">{r.body}</p>
-            <time className="review__card-date" dateTime={r.created_at}>
-              {r.created_at}
-            </time>
-          </Card>
+            <div className="review__item-meta">
+              <span>{r.author_school}</span>
+              <span aria-hidden="true">·</span>
+              <time dateTime={r.created_at}>{r.created_at}</time>
+            </div>
+            <p className="review__item-body">{r.body}</p>
+          </li>
         ))}
         {reviews.representatives.length === 0 && (
-          <Card padding="lg" className="review__empty">
-            아직 등록된 리뷰가 없습니다. 첫 리뷰를 남겨주세요.
-          </Card>
+          <li className="review__empty">
+            아직 등록된 리뷰가 없어요. 첫 리뷰를 남겨주세요.
+          </li>
         )}
-      </div>
+      </ul>
     </section>
   );
 }

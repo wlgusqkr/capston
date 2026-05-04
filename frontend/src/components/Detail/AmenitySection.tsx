@@ -1,9 +1,10 @@
 // AmenitySection — SPEC 6.3 Section 3 (편의시설).
 //
-// 8 categories rendered as a 2-column card grid. Each card shows category name,
-// count, density per km², and a level badge (sufficient → success, normal →
-// warning, lacking → danger).
-import { Badge, Card } from '@/components/ui';
+// R-3 (design-polish-v2.md): Card wrappers stripped. Mono English eyebrow
+// "AMENITIES" + Korean Section Heading. The 4-cell row layout (name | score
+// | density | TOP X%) lands in the follow-up commit alongside A-7a percentile
+// compute.
+import { Badge } from '@/components/ui';
 import type { AmenityLevel, DongDetail } from '@/types/api';
 
 import './AmenitySection.css';
@@ -23,9 +24,17 @@ const LEVEL_LABELS: Record<
 
 export default function AmenitySection({ amenities }: AmenitySectionProps) {
   return (
-    <section className="amenity" aria-label="편의시설">
+    <section
+      className="detail-section amenity"
+      aria-labelledby="amenity-heading"
+    >
+      <p className="mono-label detail-section__eyebrow" aria-hidden="true">
+        AMENITIES
+      </p>
       <header className="amenity__header">
-        <h2 className="amenity__title">편의시설</h2>
+        <h2 id="amenity-heading" className="detail-section__heading">
+          편의시설
+        </h2>
         <p className="amenity__hint">서울 전체 기준 상위 33% 충분 / 중간 33% 보통 / 하위 33% 부족</p>
       </header>
 
@@ -33,8 +42,8 @@ export default function AmenitySection({ amenities }: AmenitySectionProps) {
         {amenities.map((item) => {
           const label = LEVEL_LABELS[item.level];
           return (
-            <Card key={item.category} padding="lg" className="amenity__card">
-              <div className="amenity__card-row">
+            <div key={item.category} className="amenity__row">
+              <div className="amenity__row-head">
                 <h3 className="amenity__category">{item.category}</h3>
                 <Badge variant={label.variant}>{label.text}</Badge>
               </div>
@@ -50,7 +59,7 @@ export default function AmenitySection({ amenities }: AmenitySectionProps) {
                   <span className="amenity__metric-unit">개/㎢</span>
                 </div>
               </div>
-            </Card>
+            </div>
           );
         })}
       </div>
