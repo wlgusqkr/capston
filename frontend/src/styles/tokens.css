@@ -1,6 +1,7 @@
 /**
  * Design tokens — 슬기로운 자취생활
- * Source of truth: docs/DESIGN_SYSTEM.md (Cohere-inspired research/analytical aesthetic)
+ * Source of truth: .claude/DESIGN_SYSTEM.md (Cohere-inspired research/analytical aesthetic)
+ * (Moved from docs/ to .claude/ in commit ed67691 — internal reference, not public docs.)
  *
  * Usage:
  *   import './styles/tokens.css';
@@ -339,7 +340,7 @@
   --radius-card: 16px;    /* 데이터 블록, 동네 요약 카드 */
   --radius-hero: 22px;    /* hero 사진 카드, 대형 미디어 */
   --radius-xl:   30px;    /* 필터 pill, 카테고리 토글 outline */
-  --radius-pill: 32px;    /* 1차 CTA, 큰 필터 칩 (filled) */
+  --radius-pill: 32px;    /* 큰 필터 칩 (filled). 1차 CTA는 --radius-md (8px) 사용 — post-D-11 + FINDING-105 기준. */
   --radius-full: 9999px;  /* 라운드 상태 도트 */
 
   /* =========================================================================
