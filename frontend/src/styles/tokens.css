@@ -86,7 +86,13 @@
 
   --color-text:             var(--color-ink);
   --color-text-muted:       var(--color-slate);
-  --color-text-subtle:      var(--color-muted-slate);
+  /* design-audit F-19: muted-slate (#93939f) is 3.04:1 on white — fails WCAG AA
+   * for normal text (4.5:1 required). Most --color-text-subtle consumers render at
+   * 12-14px (captions, table meta, source labels), so route to slate (4.47:1) which
+   * sits at the AA threshold while preserving the muted feel. The raw muted-slate
+   * token still exists for input placeholder and Badge/Score where the visual is
+   * intentionally tertiary and the size is large enough to qualify as "large text". */
+  --color-text-subtle:      var(--color-slate);
   --color-text-on-primary:  var(--color-canvas-white);
 
   --color-border:           var(--color-border-light);
