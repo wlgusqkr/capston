@@ -220,6 +220,21 @@
   vertical-align: middle;
 }
 
+/* P-3: directional hint for lower-is-better rows. The ↓ glyph sits beside
+ * the label inline; the longer "낮을수록 좋음" caption renders below as
+ * a mono caption so the demo viewer can decode the highlight direction. */
+.compare__row-hint {
+  color: var(--color-text-subtle);
+}
+
+.compare__row-hint-text {
+  display: block;
+  font-size: var(--font-caption-size);
+  color: var(--color-text-subtle);
+  letter-spacing: var(--letter-spacing-ko);
+  margin-top: 2px;
+}
+
 /* "동률" mini-badge — sits next to the row label when every cell agrees
  * (FINDING-106). Mono uppercase, subtle Ink color, no fill. Stops the demo
  * from lighting up every cell with --color-pale-green when there is no

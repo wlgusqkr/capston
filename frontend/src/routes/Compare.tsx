@@ -325,7 +325,12 @@ function CompareTable({
           {/* 평균 환산 월세 — 월세 + 보증금×0.005. 백엔드 rent_converted_avg
               사용. score_rent와 같은 가정이라 시스템 일관. 데이터 부족 동은
               "—" 표시 (highlight 제외). */}
-          <Row label="평균 환산 월세" decision={rentDecision} showTie={dongs.length > 1}>
+          <Row
+            label="평균 환산 월세"
+            hint="낮을수록 좋음"
+            decision={rentDecision}
+            showTie={dongs.length > 1}
+          >
             {dongs.map((d, i) => {
               const v = d.rent_converted_avg;
               if (v == null) {
@@ -459,11 +464,17 @@ function ColumnHeader({ dong, isTopScore, onRemove }: ColumnHeaderProps) {
 
 function Row({
   label,
+  hint,
   decision,
   showTie,
   children,
 }: {
   label: string;
+  /** Optional directional hint for rows where lower-is-better (P-3).
+   *  Other rows are higher-is-better and don't need a hint. Renders a
+   *  small mono caption under the label so the demo viewer doesn't have
+   *  to guess which direction "best in row" highlights mean. */
+  hint?: string;
   decision: RowDecision;
   /** Suppress the 동률 badge when there's only 1 dong (no comparison). */
   showTie: boolean;
@@ -472,7 +483,20 @@ function Row({
   return (
     <tr>
       <th scope="row" className="compare__row-label">
-        <span className="compare__row-label-text">{label}</span>
+        <span className="compare__row-label-text">
+          {label}
+          {hint && (
+            <span className="compare__row-hint" aria-hidden="true">
+              {' '}
+              ↓
+            </span>
+          )}
+        </span>
+        {hint && (
+          <span className="compare__row-hint-text" aria-label={hint}>
+            {hint}
+          </span>
+        )}
         {showTie && decision.isTie && (
           <span className="compare__row-tie" aria-label="모든 동네 값이 같음">
             동률
