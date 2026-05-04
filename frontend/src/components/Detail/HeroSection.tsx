@@ -71,23 +71,30 @@ export default function HeroSection({
             size="lg"
             ariaLabel={`${detail.name} 종합 점수 ${detail.score.toFixed(1)}점`}
           />
-          <div className="hero__bars" aria-label="점수 구성">
-            <MetricBar
-              label="전월세"
-              value={breakdown?.score_rent ?? 0}
-              tone="score"
-            />
-            <MetricBar
-              label="생활시설"
-              value={breakdown?.score_amenity ?? 0}
-              tone="score"
-            />
-            <MetricBar
-              label="교통"
-              value={breakdown?.score_transit ?? 0}
-              tone="score"
-            />
-          </div>
+          {breakdown ? (
+            <div className="hero__bars" aria-label="점수 구성">
+              <MetricBar
+                label="전월세"
+                value={breakdown.score_rent}
+                tone="score"
+              />
+              <MetricBar
+                label="생활시설"
+                value={breakdown.score_amenity}
+                tone="score"
+              />
+              <MetricBar
+                label="교통"
+                value={breakdown.score_transit}
+                tone="score"
+              />
+            </div>
+          ) : (
+            // Loading: hide the bars entirely instead of rendering 0%.
+            // Codex flagged the prior `?? 0` fallback as "false data, not
+            // a loading state" — a 0% bar reads as a verdict.
+            <div className="hero__bars hero__bars--loading" aria-busy="true" />
+          )}
         </div>
 
         <div className="hero__aside">

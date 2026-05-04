@@ -73,6 +73,12 @@
   max-width: 360px;
 }
 
+/* Loading state — reserve the slot so the layout doesn't shift when
+ * breakdown data lands. 3 bars × 8px track + 2 × 12px gap = 48px. */
+.hero__bars--loading {
+  min-height: calc((var(--space-2) * 3) + (var(--space-3) * 2));
+}
+
 .hero__aside {
   display: flex;
   flex-direction: column;
