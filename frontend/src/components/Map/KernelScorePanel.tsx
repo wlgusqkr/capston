@@ -13,7 +13,7 @@
 // ESC closes the panel.
 import { useMemo } from 'react';
 
-import { MetricBar, Score, Select } from '@/components/ui';
+import { MetricBar, Score, Select, Slider } from '@/components/ui';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { KERNEL_SCHOOL_OPTIONS } from '@/types/api';
 import type {
@@ -296,24 +296,17 @@ function WeightRow({
   value: number;
   onChange: (next: number) => void;
 }) {
+  // Uses the shared <Slider> primitive (post-R-6 dedup). DS spec is
+  // 4px track + 20px white thumb + 2px Near-Black border — owned by
+  // Slider.css, not re-rolled here.
   return (
-    <div className="kernel-panel__weight">
-      <div className="kernel-panel__weight-header">
-        <span className="kernel-panel__weight-label">{label}</span>
-        <span className="kernel-panel__weight-value tabular">{value}</span>
-      </div>
-      <input
-        type="range"
-        min={0}
-        max={100}
-        step={1}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="kernel-panel__weight-input"
-        aria-label={`${label} 가중치`}
-        style={{ ['--ui-slider-fill' as string]: `${value}%` }}
-      />
-    </div>
+    <Slider
+      label={label}
+      value={value}
+      onChange={onChange}
+      valueText={`${value}`}
+      aria-label={`${label} 가중치`}
+    />
   );
 }
 
