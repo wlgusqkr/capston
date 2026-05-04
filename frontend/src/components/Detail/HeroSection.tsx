@@ -1,13 +1,25 @@
 // HeroSection — top of dong detail page (SPEC 6.3 Section 1).
+// Rebuilt for R-3 (design-polish-v2.md):
 //
-// 좌: 구·동 이름 + 종합 점수 + vs 서울 평균 배지 + 한 줄 요약
-// 우: 280px 미니 지도 (Leaflet + VWorld). 동 중심에 점수 색상 마커.
+//   ┌─── HERO ──────────────────────────────────────────┐
+//   │ 노원구 (caption, NOT mono — Codex finding #1)       │
+//   │ 공릉1동 (60px Page Display)                          │
+//   │ 매일 데이터 갱신 · ... (18px subtle)                  │
+//   │ ┌──────────────┐  ┌─────────────────────────────┐ │
+//   │ │ Score lg     │  │ 280×280 mini-map (no Card)  │ │
+//   │ │ 3× MetricBar │  └─────────────────────────────┘ │
+//   │ │              │  [비교] [찜] [공유] page-local    │
+//   │ └──────────────┘                                  │
+//   └──────────────────────────────────────────────────┘
+//
+// No <Card> wrapper anywhere — hero is its own composition. Height:
+// `min(520px, calc(100vh - 56px))` so first fold shows hero + start of
+// next section.
+import { CircleMarker, MapContainer, TileLayer } from 'react-leaflet';
 
-import { CircleMarker, MapContainer, TileLayer, Tooltip } from 'react-leaflet';
-
-import { Badge, Card, Score } from '@/components/ui';
+import { Button, MetricBar, Score } from '@/components/ui';
 import { MAP_POLYGON_STROKE, scoreToHeatmapColor } from '@/lib/colors';
-import type { DongDetail } from '@/types/api';
+import type { DongDetail, DongScore } from '@/types/api';
 
 import 'leaflet/dist/leaflet.css';
 import './HeroSection.css';
@@ -24,47 +36,62 @@ const TILE_ATTRIBUTION =
 
 interface HeroSectionProps {
   detail: DongDetail;
+  /** Score breakdown for the current dong, joined client-side from
+   *  /api/dongs/scores. Optional — when absent the MetricBar block
+   *  renders zeros (rare; same /scores call already powers percentile). */
+  breakdown?: Pick<DongScore, 'score_rent' | 'score_amenity' | 'score_transit'>;
+  onAddCompare: () => void;
+  onFavorite: () => void;
+  onShare: () => void;
 }
 
-function vsBadgeVariant(pct: number): 'success' | 'warning' | 'danger' {
-  if (pct >= 5) return 'success';
-  if (pct <= -5) return 'danger';
-  return 'warning';
-}
-
-function vsBadgeLabel(pct: number): string {
-  const sign = pct > 0 ? '+' : pct < 0 ? '' : '±';
-  return `서울 평균 ${sign}${pct.toFixed(1)}%`;
-}
-
-export default function HeroSection({ detail }: HeroSectionProps) {
+export default function HeroSection({
+  detail,
+  breakdown,
+  onAddCompare,
+  onFavorite,
+  onShare,
+}: HeroSectionProps) {
   const center: [number, number] = [detail.centroid.lat, detail.centroid.lng];
   const polygonColor = scoreToHeatmapColor(detail.score);
 
   return (
     <section className="hero" aria-label="동네 개요">
-      <div className="hero__grid">
-        <div className="hero__left">
-          <p className="hero__gu">{detail.gu}</p>
-          <h1 className="hero__name">{detail.name}</h1>
+      {/* 노원구 — Pretendard 14px subtle, NOT mono.
+       *  Codex flagged the initial draft's mono-on-Korean misuse (R-3 #1). */}
+      <p className="hero__gu">{detail.gu}</p>
+      <h1 className="hero__name">{detail.name}</h1>
+      <p className="hero__summary">{detail.summary}</p>
 
-          <div className="hero__score-row">
-            <Score
-              value={Math.round(detail.score)}
-              unit="/ 100"
-              size="lg"
-              ariaLabel={`${detail.name} 종합 점수 ${detail.score.toFixed(1)}점`}
+      <div className="hero__split">
+        <div className="hero__data">
+          <Score
+            value={Math.round(detail.score)}
+            unit="/ 100"
+            size="lg"
+            ariaLabel={`${detail.name} 종합 점수 ${detail.score.toFixed(1)}점`}
+          />
+          <div className="hero__bars" aria-label="점수 구성">
+            <MetricBar
+              label="전월세"
+              value={breakdown?.score_rent ?? 0}
+              tone="score"
             />
-            <Badge variant={vsBadgeVariant(detail.vs_seoul_avg_pct)} size="md">
-              {vsBadgeLabel(detail.vs_seoul_avg_pct)}
-            </Badge>
+            <MetricBar
+              label="생활시설"
+              value={breakdown?.score_amenity ?? 0}
+              tone="score"
+            />
+            <MetricBar
+              label="교통"
+              value={breakdown?.score_transit ?? 0}
+              tone="score"
+            />
           </div>
-
-          <p className="hero__summary">{detail.summary}</p>
         </div>
 
-        <Card className="hero__map-card" padding="none" aria-label="동네 위치 미니 지도">
-          <div className="hero__map">
+        <div className="hero__aside">
+          <div className="hero__map-container" aria-label="동네 위치 미니 지도">
             <MapContainer
               center={center}
               zoom={14}
@@ -72,7 +99,7 @@ export default function HeroSection({ detail }: HeroSectionProps) {
               zoomControl={false}
               dragging={false}
               doubleClickZoom={false}
-              className="hero__map-container"
+              className="hero__map-leaflet"
               attributionControl={false}
             >
               <TileLayer attribution={TILE_ATTRIBUTION} url={TILE_URL} maxZoom={18} />
@@ -85,16 +112,26 @@ export default function HeroSection({ detail }: HeroSectionProps) {
                   fillColor: polygonColor,
                   fillOpacity: 1,
                 }}
-              >
-                <Tooltip direction="top" offset={[0, -6]} permanent>
-                  <span className="hero__map-pin-label">
-                    {detail.gu} · {detail.name}
-                  </span>
-                </Tooltip>
-              </CircleMarker>
+              />
             </MapContainer>
           </div>
-        </Card>
+
+          {/* Page-local action group (D-3, R-3 wireframe right column).
+           *  Visible on first fold. After hero leaves viewport,
+           *  DongDetail renders a scroll-sticky pill rail with the same 3
+           *  actions. */}
+          <div className="hero__actions" aria-label="동네 액션">
+            <Button variant="secondary" size="md" onClick={onAddCompare}>
+              비교에 추가
+            </Button>
+            <Button variant="secondary" size="md" onClick={onFavorite}>
+              찜하기
+            </Button>
+            <Button variant="secondary" size="md" onClick={onShare}>
+              공유
+            </Button>
+          </div>
+        </div>
       </div>
     </section>
   );
