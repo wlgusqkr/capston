@@ -111,7 +111,7 @@ capston/
 │   └── src/
 │       ├── routes/           MainMap, DongDetail, Compare, Login/Register, MyPage
 │       ├── components/
-│       │   ├── ui/           디자인 프리미티브 (자세히 → DESIGN_SYSTEM.md)
+│       │   ├── ui/           디자인 프리미티브 (Button/Card/Badge/Score/...)
 │       │   ├── Map/          HeatMap, Sidebar, DongPanel, Legend, ViewToggle
 │       │   ├── Detail/       6 sections of /dong/:slug
 │       │   └── Onboarding/   PreferenceModal
@@ -213,4 +213,3 @@ GET    /api/users/me | preference | favorites | reviews
 - [`DEVELOPMENT.md`](DEVELOPMENT.md) — 로컬 개발 환경
 - [`deploy/README.md`](https://github.com/wlgusqkr/capston/blob/main/deploy/README.md) — 배포 운영 가이드
 - [`ROADMAP.md`](ROADMAP.md) — 한계와 고도화 방향
-- [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) — 디자인 토큰
