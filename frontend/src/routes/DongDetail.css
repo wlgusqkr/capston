@@ -104,6 +104,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
   margin-top: var(--space-6);
-  /* Floating chrome on page — only allowed shadow variant. */
-  box-shadow: var(--shadow-floating);
+  /* No shadow. DESIGN_SYSTEM.md restricts soft shadows to floating-map-UI only;
+   * a page-level sticky bar is not map UI. The 1px border + opaque white surface
+   * already separates it visually from scrolled content. design-audit F-26. */
 }
