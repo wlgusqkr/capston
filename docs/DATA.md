@@ -67,69 +67,129 @@
 
 ### 3.1 실거래가 (전월세)
 
-**스크립트**: `backend/scripts/fetch_realestate.py`
+- **스크립트**: `backend/scripts/fetch_realestate.py`
+- **출처**: 국토부 (data.go.kr 15126473/472/475)
 
 **처리 절차**
-1. **자치구(LAWD_CD) × 월 단위** XML 호출 — 25개 구 × 6개월 × 3 deal_type = 450 호출
-2. 응답 파싱 → 법정동명(`umdNm`), 지번, 면적, 보증금, 월세, 계약일 추출
-3. **지오코딩**: 지번 단위로만 VWorld에 좌표 요청. 매물(건물) 단위 정밀 좌표는 사용하지 않음 — `JibunGeocodeCache` 에 영구 캐시
-4. **행정동 매핑**: PostGIS spatial join (`Dong.geom__contains=point`). 좌표 실패 시 같은 구 내 같은 이름 행정동 fallback
-5. **사전 컷**: `deposit==0 AND monthly_rent==0` skip / `monthly_rent > 5000만` skip
-6. **이상치 클리핑**: IQR 1.5배 (area_m2 / deposit / monthly_rent 각각)
-7. `RentDeal.update_or_create(external_hash=...)` — 멱등 적재
 
-**환산식 (전월세 통일 비교)**
+1. **API 호출** — 자치구(LAWD_CD) × 월 단위 XML
+    - 25개 구 × 6개월 × 3 deal_type = **약 450 호출**
+
+2. **응답 파싱** — 거래 한 건당 다음 필드 추출
+    - 법정동명 (`umdNm`)
+    - 지번 (`jibun`) — 단독·다가구는 응답에 없음
+    - 면적 (`excluUseAr` / `totalFloorAr`)
+    - 보증금 (`deposit`), 월세 (`monthlyRent`)
+    - 계약일 (`dealYear` + `dealMonth` + `dealDay`)
+
+3. **지오코딩** — VWorld 호출, 지번 단위만
+    - 같은 지번이 여러 거래에 반복 → `JibunGeocodeCache` 영구 캐시 (히트율 64.5%)
+    - 매물(건물) 단위 정밀 좌표는 사용 안 함 (지번 단위로만)
+
+4. **행정동 매핑** — 2단계
+    - 1차: PostGIS `Dong.geom__contains=point` spatial join
+    - 2차: 좌표 없으면 같은 구 + 같은 이름 행정동 fallback
+    - 그래도 매칭 실패 → row skip
+
+5. **사전 컷** — 명백한 노이즈 제거
+    - `deposit == 0 AND monthly_rent == 0` → skip
+    - `monthly_rent > 5000만원` → skip
+
+6. **이상치 클리핑** — IQR 1.5배
+    - `area_m2`, `deposit`, `monthly_rent` 각각 독립 적용
+
+7. **DB 적재** — 멱등
+    - `RentDeal.update_or_create(external_hash=...)` — 같은 거래 재호출 안전
+
+**환산식 — 전월세 통일 비교**
+
 ```python
 converted_rent = monthly_rent + deposit * 0.005   # 만원/월
 ```
-계수 0.005 = 연 6% 전월세전환률 / 12개월. 국토부 공시 서울 평균 4~6%에 정렬. 이 값이 점수 계산 + 차트 + 비교에서 모두 동일하게 사용됨 (`apps/realestate/utils.py:convert_to_monthly` 단일 진실).
+
+- 계수 `0.005` = 연 6% 전월세전환률 / 12개월
+- 국토부 공시 서울 평균 4~6%에 정렬
+- 이 값이 **점수 계산 + 차트 + 비교 + 핀 hover** 에서 모두 동일하게 사용됨
+- 단일 진실: `apps/realestate/utils.py:convert_to_monthly`
 
 **주요 한계**
-- 단독·다가구는 응답에 지번이 없는 경우가 많아 좌표 없이 적재 (skip 비율 ↑)
-- 거래량 3건 미만 동은 점수 계산 시 fallback (구 평균 → 서울 중위)
+
+- 단독·다가구는 응답에 지번이 없어 좌표 null 적재 (전체 14.1%, 17,339건)
+- 거래량 3건 미만 동은 점수 계산 시 fallback (구 평균 → 서울 중위) — 425개 중 13개
+
+---
 
 ### 3.2 편의시설 (소상공인 상가 + 도시공원)
 
-**스크립트**: `backend/scripts/fetch_amenities.py`
+- **스크립트**: `backend/scripts/fetch_amenities.py`
+- **출처**:
+    - 소상공인진흥공단 상가정보 (data.go.kr 15012005)
+    - 서울시 도시공원 정보 (data.seoul.go.kr `SearchParkInfoService`)
 
 **처리 절차**
-1. **상가**: `divId=signguCd` 로 자치구 1회 호출당 ~24k건 페이지네이션 수신
-2. 응답에 `lon/lat` (WGS84) 포함 — 별도 지오코딩 불필요
-3. SBA의 `adongCd` 와 `Dong.code` 가 다른 체계라 코드 직접 매핑 불가 → 좌표 → `Dong.geom__contains` spatial join 으로 행정동 결정
-4. SPEC 6.3 의 10개 카테고리로 매핑 (위 표 참고). 매핑 안 되는 업종은 skip
-5. **공원**: 서울시 별도 API로 133개 도시공원 좌표 수신, 같은 spatial join
 
-**가중치** (점수 계산용 — `compute_scores.AMENITY_WEIGHTS`)
-```
-convenience  0.20    가장 가중. 자취 1순위
-hospital     0.15
-mart         0.10
-restaurant   0.10
-cafe         0.10
-studycafe    0.10
-pharmacy     0.10
-laundry      0.05
-oliveyoung   0.05
-park         0.05
-```
+1. **상가 호출** — 자치구 단위
+    - `divId=signguCd, key={구 코드}` → 1회 호출당 ~24k건
+    - 페이지네이션으로 자치구 전체 수신
+
+2. **좌표 처리** — 응답에 `lon/lat` (WGS84) 포함 → 지오코딩 불필요
+
+3. **행정동 매핑** — spatial join 으로
+    - SBA의 `adongCd` 와 `Dong.code` 가 다른 체계 → 코드 직접 매핑 불가
+    - 좌표 → `Dong.geom__contains` spatial join
+
+4. **카테고리 매핑** — 10개 카테고리 (위 표 참고)
+    - 매핑 안 되는 업종 → skip
+
+5. **공원** — 별도 API
+    - 서울시 도시공원 ~133개 좌표 수신
+    - 같은 방식 spatial join → `category='park'` 적재
+
+**카테고리별 가중치** — 점수 계산용 (`compute_scores.AMENITY_WEIGHTS`)
+
+| 카테고리 | 가중치 | 비고 |
+|---|---:|---|
+| convenience | 0.20 | 가장 가중. 자취 1순위 |
+| hospital | 0.15 | |
+| mart | 0.10 | |
+| restaurant | 0.10 | |
+| cafe | 0.10 | |
+| studycafe | 0.10 | |
+| pharmacy | 0.10 | |
+| laundry | 0.05 | |
+| oliveyoung | 0.05 | |
+| park | 0.05 | |
+
+---
 
 ### 3.3 교통 (지하철 + 버스)
 
-**스크립트**: `backend/scripts/fetch_transit.py`
+- **스크립트**: `backend/scripts/fetch_transit.py`
+- **출처**: 서울 열린데이터광장
+    - `subwayStationMaster` (지하철역, ~783 row)
+    - `busStopLocationXyInfo` (버스 정류장, ~11,200 row)
 
 **처리 절차**
-1. **지하철**: `subwayStationMaster` 1회 호출(~783 row) → `(name, line)` 단위 `update_or_create`
-2. **버스 정류장**: `busStopLocationXyInfo` 페이지네이션 (1000/page) → 좌표 `Dong.geom__contains` spatial join → 서울 외부는 skip
-3. **NearestSubway**: 모든 `Dong.centroid` 에서 ST_Distance(geography) 로 가장 가까운 지하철역 top-3 사전계산 (raw SQL)
 
-**점수 가중 배분** — 도시형 표준
-```
-TRANSIT_W_SUBWAY  0.60
-TRANSIT_W_BUS     0.40
+1. **지하철역 적재**
+    - 1회 호출로 783 row 수신
+    - `(name, line)` 단위 `update_or_create`
 
-지하철: 1000m 이내일 때만 점수 (0m=1.0, 1000m+=0.0 선형)
-버스:   log1p(count) / log1p(50) — 50개=만점 클램프
-```
+2. **버스 정류장 적재**
+    - 페이지네이션 (1000/page)
+    - 좌표 → `Dong.geom__contains` spatial join
+    - 서울 행정동 polygon 밖 정류장 → skip
+
+3. **NearestSubway 사전계산**
+    - 모든 `Dong.centroid` 에서 가장 가까운 지하철역 top-3 미리 계산
+    - `ST_Distance(geography)` raw SQL — 정확한 미터 단위 거리
+
+**점수 가중치** — 도시형 표준
+
+| 항목 | 가중치 | 계산식 |
+|---|---:|---|
+| 지하철 | 0.60 | 0m=1.0, 1000m+=0.0 선형. (그 이상은 0점) |
+| 버스 | 0.40 | `log1p(count) / log1p(50)` — 50개=만점 클램프 |
 
 ### 3.4 행정동 경계 (Dong)
 
@@ -162,27 +222,50 @@ class Dong:
 score_total = score_rent · w_rent + score_amenity · w_amenity + score_transit · w_transit
 ```
 
-### 4.1 score_rent (저렴할수록 높음)
-1. 동별 최근 6개월 거래의 `converted_rent` 평균 계산
-2. 거래 3건 미만 동: 같은 구 평균 → 서울 중위 fallback
-3. **백분위 변환** → `100 - 백분위` (저렴=고점)
+### 4.1 score_rent (저렴할수록 점수 높음)
+
+1. **동별 평균 환산월세** 계산
+    - 최근 6개월 거래의 `converted_rent` (위 환산식) 평균
+
+2. **fallback** — 거래 3건 미만 동
+    - 1차: 같은 구 평균
+    - 2차: 서울 중위 (구 평균도 없을 때)
+    - 해당: 425개 중 13개 동 (3%)
+
+3. **백분위 변환** → `100 - 백분위`
+    - 저렴 = 고점 (역방향 정규화)
 
 ### 4.2 score_amenity
-1. 동별 카테고리별 카운트
-2. 각 카테고리 `log1p(count) × 가중치` 합산 (위 가중치 표)
-3. 백분위 변환 (높을수록 좋음)
+
+1. **동별 카테고리별 카운트** 집계
+    - 10개 카테고리 (convenience, hospital, mart, ...)
+
+2. **가중합** 계산
+    - `Σ (log1p(count) × 가중치)` — 카테고리별 가중치는 위 표 참고
+    - log scale 이라 한 카테고리에서 100개 vs 200개 차이 둔화
+
+3. **백분위 변환** — 높을수록 좋음
 
 ### 4.3 score_transit
-1. 가장 가까운 지하철 거리 → `max(0, 1 - dist/1000)` (subway_score)
-2. 동 내 버스 정류장 수 → `min(1, log1p(count)/log1p(50))` (bus_score)
-3. `0.6 × subway_score + 0.4 × bus_score`
-4. 백분위 변환
 
-### 4.4 백분위 정규화
-- 동률은 평균 rank
-- 모든 점수 0~100, 평균 50, 표준편차 약 28.9 (균등 정규화 결과)
+1. **subway_score** — 가장 가까운 지하철 거리
+    - `max(0, 1 - dist / 1000)` — 0m=1.0, 1000m+=0.0
+    - `NearestSubway` 사전계산 테이블 사용
 
-### 4.5 검증 (현재 분포)
+2. **bus_score** — 동 내 버스 정류장 수
+    - `min(1, log1p(count) / log1p(50))` — 50개 이상=만점
+
+3. **가중합** — `0.6 × subway_score + 0.4 × bus_score`
+
+4. **백분위 변환** — 높을수록 좋음
+
+### 4.4 백분위 정규화 (공통 규칙)
+
+- 동률은 평균 rank 처리
+- 모든 점수 0~100, 평균 50, 표준편차 약 28.9 (균등 분포 보장)
+
+### 4.5 현재 분포 (검증)
+
 ```
 score_rent     min=0.0  max=100.0  mean=50.0  std=28.9
 score_amenity  min=0.0  max=100.0  mean=50.0  std=28.9

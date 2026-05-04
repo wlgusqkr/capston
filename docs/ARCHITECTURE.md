@@ -1,8 +1,8 @@
-# 시스템 설명
+# 시스템 구성
 
-서비스가 무엇으로, 왜 그렇게 만들어졌는지. 기술 스택과 결정 근거.
+서비스가 어떤 컴포넌트로 구성되어 있고 어떻게 데이터가 흐르는지.
 
-명세 원본은 [`SPEC.md`](SPEC.md), 데이터는 [`DATA.md`](DATA.md), 배포는 [`deploy/README.md`](https://github.com/wlgusqkr/capston/blob/main/deploy/README.md) 참고.
+명세 원본은 [`SPEC.md`](SPEC.md), 데이터 출처·점수는 [`DATA.md`](DATA.md), 배포는 [`deploy/README.md`](https://github.com/wlgusqkr/capston/blob/main/deploy/README.md) 참고.
 
 ---
 
@@ -14,50 +14,22 @@
 
 ## 2. 기술 스택
 
-| 레이어 | 스택 | 선택 이유 |
-|---|---|---|
-| 백엔드 | Django 5 + DRF + GeoDjango | 공간 쿼리 1급 지원 (`ST_Distance`, `geom__contains` 등을 ORM에서) |
-| DB | PostgreSQL 16 + PostGIS 3.4 | 단일 DB로 지오메트리·관계형 동시 처리 |
-| 캐시 | Redis 7 | 5분 TTL (현재 활성). API 가중치 쿼리 캐시 |
-| 프론트 | React 18 + Vite + TypeScript (strict) | 학습 비용 낮고 생태계 풍부 |
-| 지도 | Leaflet + react-leaflet + VWorld 타일 | 2D 히트맵·핀에 충분. deck.gl/Mapbox는 3D 필요 시만 |
-| 차트 | Recharts | React 친화, 학습 곡선 완만 |
-| 인증 | Django session (username/password) | CSRF 면제, 카카오 명시적 미사용 |
-| API 문서 | drf-spectacular | OpenAPI 3 스키마 자동 생성, Swagger UI 제공 |
-| 배포 | GCP VM 단일 인스턴스 + nginx + gunicorn(systemd) + docker compose(DB/Redis) | 학부 캡스톤 트래픽 0~100명, 마이크로서비스 안티패턴 |
-| CI/CD | GitHub Actions → SSH 배포 | 50초 배포, 시크릿 관리 단순 |
+| 레이어 | 스택 |
+|---|---|
+| 백엔드 | Django 5 + DRF + GeoDjango |
+| DB | PostgreSQL 16 + PostGIS 3.4 |
+| 캐시 | Redis 7 (5분 TTL) |
+| 프론트 | React 18 + Vite + TypeScript (strict) |
+| 지도 | Leaflet + react-leaflet + VWorld 타일 |
+| 차트 | Recharts |
+| 인증 | Django session (username/password) |
+| API 문서 | drf-spectacular (OpenAPI 3 + Swagger UI) |
+| 배포 | GCP VM 단일 인스턴스 + nginx + gunicorn(systemd) + docker compose(DB/Redis) |
+| CI/CD | GitHub Actions → SSH 배포 |
 
 ---
 
-## 3. 핵심 결정 근거
-
-### 3.1 왜 GeoDjango + PostGIS?
-- 매물 좌표 → 행정동 매핑이 한 줄: `Dong.objects.filter(geom__contains=point)`
-- 가까운 지하철 top-3 사전계산: `ST_Distance(geography)` raw SQL 한 번으로 1,275행 생성
-- 별도 GIS 서버 (GeoServer 등) 불필요
-
-### 3.2 왜 단일 모놀리식 VM?
-- Kubernetes/마이크로서비스 = 학부 캡스톤 안티패턴 (CLAUDE.md 명시)
-- 단일 nginx 오리진으로 프론트 + 백엔드 동시 서빙 → CORS / CSRF 단순화
-- GitHub Actions → SSH 배포 50초. 빠르고 시크릿 관리 단순
-
-### 3.3 왜 Leaflet (3D 아님)?
-- 2D 히트맵 + 실거래 핀이면 Leaflet 충분
-- VWorld 타일로 한국 행정동 지명·지번 정확 (OSM은 부정확)
-- 3D는 SPEC 우선순위 10번 (시간 남으면 deck.gl)
-
-### 3.4 왜 카카오 로그인 X?
-- 명시적 결정 (CLAUDE.md). 외부 의존성·도메인 등록·CSRF 페이로드 등 학부 일정 대비 비용 큼
-- Django 표준 username/password + session = 5줄 코드
-
-### 3.5 왜 sub-agent 위임 패턴?
-- 5개 전문 에이전트 (`backend-engineer`, `frontend-engineer`, `design-system-keeper`, `data-pipeline`, `design-qa-reviewer`) 로 작업 분해
-- 단계별 핸드오프 문서 (`.claude/handoff/`) 로 컨텍스트 보존
-- 메인 코디네이터는 SPEC 부합 검증과 git commit 담당
-
----
-
-## 4. 시스템 다이어그램
+## 3. 시스템 다이어그램
 
 ```
                           ┌────────────────────┐
@@ -92,7 +64,7 @@
 
 ---
 
-## 5. 프로젝트 구조
+## 4. 프로젝트 구조
 
 ```
 capston/
@@ -126,7 +98,7 @@ capston/
 
 ---
 
-## 6. 데이터 흐름
+## 5. 데이터 흐름
 
 ```
 공공 API (data.go.kr / data.seoul.go.kr / VWorld)
@@ -154,7 +126,7 @@ backend/scripts/fetch_*.py  ──▶  PostgreSQL/PostGIS  ◀──  scripts/co
 
 ---
 
-## 7. API 표면 (요약)
+## 6. API 표면 (요약)
 
 전체 OpenAPI 스키마: http://34.47.101.188/api/schema/swagger-ui/
 
@@ -176,7 +148,7 @@ GET    /api/users/me | preference | favorites | reviews
 
 ---
 
-## 8. 모듈별 책임
+## 7. 모듈별 책임
 
 | 모듈 | 책임 | 다른 모듈 의존 |
 |---|---|---|
@@ -194,7 +166,7 @@ GET    /api/users/me | preference | favorites | reviews
 
 ---
 
-## 9. 비기능 요구사항
+## 8. 비기능 요구사항
 
 | 항목 | 목표 | 현재 |
 |---|---|---|
@@ -206,9 +178,9 @@ GET    /api/users/me | preference | favorites | reviews
 
 ---
 
-## 10. 참고 문서
+## 9. 참고 문서
 
-- [`SPEC.md`](SPEC.md) — 명세 원본 (798줄, 권위 문서)
+- [`SPEC.md`](SPEC.md) — 명세 원본 (앱 흐름·화면별 명세·API·데이터 모델)
 - [`DATA.md`](DATA.md) — 데이터 출처·처리·점수 알고리즘
 - [`DEVELOPMENT.md`](DEVELOPMENT.md) — 로컬 개발 환경
 - [`deploy/README.md`](https://github.com/wlgusqkr/capston/blob/main/deploy/README.md) — 배포 운영 가이드
