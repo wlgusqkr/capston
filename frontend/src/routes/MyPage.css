@@ -1,5 +1,10 @@
-/* MyPage — full-screen profile + preferences + favorites + reviews (SPEC 6.6).
- * All colors / spacing / typography from tokens.css. No hardcoded hex.
+/* MyPage — R-4 (design-polish-v2.md) 2-column workspace.
+ *
+ *   ≥1080px:  LEFT rail (max 360px, sticky) + RIGHT column (max 720px).
+ *   <1080px:  collapses to single column (left → on top, right → below).
+ *   <768px:   not supported (mobile WONTFIX).
+ *
+ * All values via tokens.css. No hardcoded hex.
  */
 
 .mypage {
@@ -10,26 +15,110 @@
 
 /* Per-route topbar removed in Stage 3 — global TopNav handles back-to-/
  * via the brand logo and nickname title (D-2 contextual). 로그아웃 button
- * moved into the page content via .mypage__logout-row below. */
+ * lives in the page content via .mypage__logout-row. */
 
 .mypage__logout-row {
-  max-width: 880px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: var(--space-4) var(--space-6) 0;
   display: flex;
   justify-content: flex-end;
 }
 
-/* ---- Content scroller --------------------------------------------------- */
+/* ---- 2-column layout ---------------------------------------------------- */
 
-.mypage__content {
-  max-width: 880px;
+.mypage__layout {
+  max-width: 1100px;
   margin: 0 auto;
   padding: var(--space-6);
   display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
+  align-items: flex-start;
+  gap: var(--space-10);
 }
+
+/* LEFT rail — sticky on desktop. The 56px term mirrors TopNav height
+ * (R-2). 24px below the nav for breathing room. */
+.mypage__rail {
+  flex: 0 0 360px;
+  max-width: 360px;
+  position: sticky;
+  top: calc(56px + var(--space-6));
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+}
+
+/* RIGHT content column. */
+.mypage__content {
+  flex: 1 1 auto;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+  min-width: 0;
+}
+
+/* Collapse to single column under the desktop breakpoint. The DS calls
+ * <1024px Tablet — we cap the workspace layout slightly higher (1080px)
+ * because the rail+content+gutters need ~1080px to feel uncramped. */
+@media (max-width: 1080px) {
+  .mypage__layout {
+    flex-direction: column;
+  }
+  .mypage__rail {
+    position: static;
+    flex: 0 0 auto;
+    max-width: none;
+    width: 100%;
+  }
+  .mypage__content {
+    max-width: none;
+  }
+}
+
+/* ---- Profile (LEFT, top) ----------------------------------------------- */
+
+.mypage__profile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* nickname at Page Display 60px — the visual anchor for the page identity
+ * (R-4 wireframe). */
+.mypage__display-name {
+  margin: 0;
+  font-size: var(--font-page-display-size);
+  line-height: var(--font-page-display-line);
+  font-weight: var(--font-page-display-weight);
+  color: var(--color-text);
+  letter-spacing: var(--font-page-display-tracking);
+}
+
+.mypage__profile-meta {
+  margin: 0;
+  font-size: var(--font-body-size);
+  line-height: var(--font-body-line);
+  color: var(--color-text-subtle);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+/* ---- Weights (LEFT, bottom) -------------------------------------------- */
+
+.mypage__weights {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.mypage__bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ---- Section primitives (RIGHT) ---------------------------------------- */
 
 .mypage__section {
   display: flex;
@@ -39,22 +128,28 @@
 
 .mypage__section-head {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: var(--space-3);
+  flex-wrap: wrap;
 }
 
-.mypage__section-title {
-  font-size: var(--font-feature-heading-size);
-  line-height: var(--font-feature-heading-line);
-  font-weight: var(--font-feature-heading-weight);
-  color: var(--color-text);
-  letter-spacing: var(--font-feature-heading-tracking);
+.mypage__section-heading {
   margin: 0;
+  font-size: var(--font-card-heading-size);
+  line-height: var(--font-card-heading-line);
+  font-weight: var(--font-card-heading-weight);
+  color: var(--color-text);
+  letter-spacing: var(--font-card-heading-tracking);
 }
 
-/* Re-learn — secondary text-only link, Action Blue. */
-.mypage__relearn {
+.mypage__count {
+  color: var(--color-text-subtle);
+  font-weight: 400;
+}
+
+/* Inline secondary action — text-only Action Blue link. */
+.mypage__action-link {
   background: none;
   border: none;
   padding: var(--space-1) var(--space-2);
@@ -67,18 +162,18 @@
   transition: background var(--transition-fast);
 }
 
-.mypage__relearn:hover {
+.mypage__action-link:hover {
   background: var(--color-pale-blue);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-.mypage__relearn:focus-visible {
+.mypage__action-link:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
 
-/* ---- Status / empty ----------------------------------------------------- */
+/* ---- Status / empty ---------------------------------------------------- */
 
 .mypage__status {
   padding: var(--space-6) var(--space-4);
@@ -102,12 +197,10 @@
 }
 
 .mypage__empty {
-  padding: var(--space-5) var(--space-4);
+  padding: var(--space-5) 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: var(--space-2);
-  text-align: center;
 }
 
 .mypage__empty-text {
@@ -124,6 +217,7 @@
 }
 
 .mypage__empty-link {
+  align-self: flex-start;
   font-size: var(--font-caption-base-size);
   color: var(--color-action-blue);
   text-decoration: underline;
@@ -143,85 +237,30 @@
   outline-offset: 2px;
 }
 
-/* ---- 1. Profile --------------------------------------------------------- */
-
-.mypage__profile {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-}
-
-/* Avatar — Soft Stone disc with Ink initial. */
-.mypage__avatar {
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-full);
-  background: var(--color-surface-inset);
-  color: var(--color-text);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--font-feature-heading-size);
-  font-weight: 400;
-  letter-spacing: var(--letter-spacing-ko);
-  flex-shrink: 0;
-}
-
-.mypage__profile-text {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.mypage__profile-name {
-  font-size: var(--font-card-heading-size);
-  font-weight: var(--font-card-heading-weight);
-  line-height: var(--font-card-heading-line);
-  letter-spacing: var(--font-card-heading-tracking);
-  color: var(--color-text);
-}
-
-.mypage__profile-meta {
-  font-size: var(--font-caption-size);
-  color: var(--color-text-muted);
-  letter-spacing: var(--letter-spacing-ko);
-}
-
-/* ---- 2. Preference bars ------------------------------------------------- */
-/* Bars themselves render via the shared <MetricBar tone="weight"> primitive (R-5).
- * Only the wrapper layout stays here. */
-
-.mypage__bars {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-/* ---- 3. Favorites list -------------------------------------------------- */
+/* ---- Favorites list (RIGHT) -------------------------------------------- */
 
 .mypage__fav-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
 }
 
+/* Each favorite is an unframed row separated by hairlines (transaction-row
+ * vocabulary). The remove × is hidden by default; appears on hover via
+ * the follow-up hover-reveal commit. */
 .mypage__fav-row {
   display: flex;
   align-items: stretch;
-  gap: var(--space-2);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-card);
-  overflow: hidden;
-  transition: border-color var(--transition-fast), background var(--transition-fast);
+  border-bottom: 1px solid var(--color-hairline);
+  transition: background var(--transition-fast);
 }
 
 .mypage__fav-row:hover {
-  border-color: var(--color-hairline);
+  background: var(--color-surface-inset);
+}
+
+.mypage__fav-row:last-child {
+  border-bottom: none;
 }
 
 .mypage__fav-main {
@@ -230,7 +269,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4) 0;
   background: none;
   border: none;
   cursor: pointer;
@@ -238,11 +277,6 @@
   font: inherit;
   color: inherit;
   letter-spacing: var(--letter-spacing-ko);
-  transition: background var(--transition-fast);
-}
-
-.mypage__fav-main:hover {
-  background: var(--color-surface-inset);
 }
 
 .mypage__fav-main:focus-visible {
@@ -287,11 +321,10 @@
   align-items: center;
   justify-content: center;
   border: none;
-  border-left: 1px solid var(--color-border);
-  background: var(--color-surface);
+  background: transparent;
   color: var(--color-text-muted);
   cursor: pointer;
-  font-size: 18px; /* glyph size — control box uses --control-height-md token */
+  font-size: 18px;
   line-height: 1;
   transition: background var(--transition-fast), color var(--transition-fast);
 }

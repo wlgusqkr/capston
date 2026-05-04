@@ -1,16 +1,16 @@
 // MyPage (`/mypage`) — SPEC 6.6.
 //
-// Sections (top → bottom):
-//   1. Profile  — avatar (initial) + nickname + school·year + 수정 button
-//   2. 내 가중치 — 통학/주거비/생활시설 % bars + "다시 학습하기" link
-//   3. 찜한 동네 — list of favorite cards + "N개 모두 비교하기 →"
-//   4. 내가 쓴 리뷰 — empty state (Review model not implemented yet)
+// R-4 (design-polish-v2.md): rebuilt as a 2-column workspace.
+//   LEFT rail (sticky)   — Profile + MY WEIGHTS
+//   RIGHT column (scroll) — MY FAVORITES + MY REVIEWS
 //
-// Auth gate: redirects to /login when not authenticated.
+// Strip <Card> wrappers; sections are unframed under the shared layout.
+// At <1080px the columns collapse to a single column (left → on top).
+// Mobile <768px is WONTFIX (project rule).
 import { useMemo } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 
-import { Badge, Button, Card, MetricBar } from '@/components/ui';
+import { Badge, Button, MetricBar } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFavorites, useRemoveFavorite } from '@/hooks/useFavorites';
 import type { FavoriteItem, MeResponse } from '@/types/api';
@@ -26,7 +26,7 @@ export default function MyPage() {
   // Wait until the boot-time getMe() resolves before deciding redirect.
   if (isLoading) {
     return (
-      <main className="mypage">
+      <main className="mypage" id="main">
         <div className="mypage__status" role="status" aria-live="polite">
           불러오는 중…
         </div>
@@ -45,33 +45,34 @@ export default function MyPage() {
 
   return (
     <main className="mypage" id="main">
-      {/* Per-route topbar removed in Stage 3 — global TopNav handles
-       *  back-to-/ + nickname title (D-2 contextual). The 로그아웃 action
-       *  moves into the page content next to the profile section header. */}
       <h1 className="sr-only">마이페이지</h1>
+
       <div className="mypage__logout-row">
         <Button variant="ghost" size="sm" onClick={handleLogout}>
           로그아웃
         </Button>
       </div>
 
-      <div className="mypage__content">
-        <ProfileSection user={user} />
-        <PreferenceSection user={user} />
-        <FavoritesSection />
-        <ReviewsSection />
+      <div className="mypage__layout">
+        <aside className="mypage__rail" aria-label="프로필 및 가중치">
+          <ProfileSection user={user} />
+          <PreferenceSection user={user} />
+        </aside>
+        <div className="mypage__content">
+          <FavoritesSection />
+          <ReviewsSection />
+        </div>
       </div>
     </main>
   );
 }
 
 /* -------------------------------------------------------------------------- */
-/* 1. Profile                                                                  */
+/* Profile (LEFT rail, top)                                                    */
 /* -------------------------------------------------------------------------- */
 
 function ProfileSection({ user }: { user: MeResponse }) {
   const display = (user.nickname && user.nickname.trim()) || user.username;
-  const initial = display.slice(0, 1).toUpperCase();
 
   const meta: string[] = [];
   if (user.school && user.school.trim()) meta.push(user.school);
@@ -84,27 +85,25 @@ function ProfileSection({ user }: { user: MeResponse }) {
   };
 
   return (
-    <Card padding="lg" className="mypage__section">
-      <div className="mypage__profile">
-        <div className="mypage__avatar" aria-hidden="true">
-          {initial}
-        </div>
-        <div className="mypage__profile-text">
-          <div className="mypage__profile-name">{display}</div>
-          <div className="mypage__profile-meta">
-            {meta.length > 0 ? meta.join(' · ') : '학교·학년 정보를 추가해주세요.'}
-          </div>
-        </div>
+    <section className="mypage__profile" aria-labelledby="profile-heading">
+      <p className="mono-label" aria-hidden="true">PROFILE</p>
+      <h2 id="profile-heading" className="mypage__display-name">
+        {display}
+      </h2>
+      <p className="mypage__profile-meta">
+        {meta.length > 0 ? meta.join(' · ') : '학교·학년 정보를 추가해주세요.'}
+      </p>
+      <div>
         <Button variant="secondary" size="sm" onClick={handleEdit}>
           수정
         </Button>
       </div>
-    </Card>
+    </section>
   );
 }
 
 /* -------------------------------------------------------------------------- */
-/* 2. Preference (weights)                                                     */
+/* Preference (LEFT rail, bottom)                                              */
 /* -------------------------------------------------------------------------- */
 
 function PreferenceSection({ user }: { user: MeResponse }) {
@@ -112,34 +111,31 @@ function PreferenceSection({ user }: { user: MeResponse }) {
   const { w_rent, w_amenity, w_transit } = user.preference;
 
   const handleRelearn = () => {
-    // Send the user back to the main map with a flag so it auto-opens the
-    // PreferenceModal. MainMap handles ?onboarding=1.
     navigate('/?onboarding=1');
   };
 
   return (
-    <Card padding="lg" className="mypage__section">
-      <div className="mypage__section-head">
-        <h2 className="mypage__section-title">내 가중치</h2>
-        <button
-          type="button"
-          className="mypage__relearn"
-          onClick={handleRelearn}
-        >
-          다시 학습하기 →
-        </button>
-      </div>
+    <section className="mypage__weights" aria-labelledby="weights-heading">
+      <p className="mono-label" aria-hidden="true">MY WEIGHTS</p>
+      <h2 id="weights-heading" className="mypage__section-heading">
+        내 자취 기준
+      </h2>
       <div className="mypage__bars">
-        <MetricBar label="통학" value={w_transit} tone="weight" unit="%" />
-        <MetricBar label="주거비" value={w_rent} tone="weight" unit="%" />
+        <MetricBar label="전월세" value={w_rent} tone="weight" unit="%" />
         <MetricBar label="생활시설" value={w_amenity} tone="weight" unit="%" />
+        <MetricBar label="교통" value={w_transit} tone="weight" unit="%" />
       </div>
-    </Card>
+      <div>
+        <Button variant="secondary" size="sm" onClick={handleRelearn}>
+          선호 학습 다시 →
+        </Button>
+      </div>
+    </section>
   );
 }
 
 /* -------------------------------------------------------------------------- */
-/* 3. Favorites                                                                */
+/* Favorites (RIGHT column, top)                                               */
 /* -------------------------------------------------------------------------- */
 
 function FavoritesSection() {
@@ -161,19 +157,25 @@ function FavoritesSection() {
   };
 
   return (
-    <Card padding="lg" className="mypage__section">
-      <div className="mypage__section-head">
-        <h2 className="mypage__section-title">찜한 동네</h2>
+    <section className="mypage__section" aria-labelledby="favorites-heading">
+      <p className="mono-label" aria-hidden="true">MY FAVORITES</p>
+      <header className="mypage__section-head">
+        <h2 id="favorites-heading" className="mypage__section-heading">
+          찜한 동네
+          {items.length > 0 && (
+            <span className="mypage__count tabular"> ({items.length})</span>
+          )}
+        </h2>
         {items.length >= 2 && (
           <button
             type="button"
-            className="mypage__relearn"
+            className="mypage__action-link"
             onClick={handleCompareAll}
           >
             {Math.min(items.length, MAX_COMPARE)}개 모두 비교하기 →
           </button>
         )}
-      </div>
+      </header>
 
       {isLoading && (
         <div className="mypage__status" role="status">
@@ -212,7 +214,7 @@ function FavoritesSection() {
           ))}
         </ul>
       )}
-    </Card>
+    </section>
   );
 }
 
@@ -274,21 +276,24 @@ function formatDate(iso: string): string {
 }
 
 /* -------------------------------------------------------------------------- */
-/* 4. Reviews (empty)                                                          */
+/* Reviews (RIGHT column, bottom — empty state)                                */
 /* -------------------------------------------------------------------------- */
 
 function ReviewsSection() {
   return (
-    <Card padding="lg" className="mypage__section">
-      <div className="mypage__section-head">
-        <h2 className="mypage__section-title">내가 쓴 리뷰</h2>
-      </div>
+    <section className="mypage__section" aria-labelledby="reviews-heading">
+      <p className="mono-label" aria-hidden="true">MY REVIEWS</p>
+      <header className="mypage__section-head">
+        <h2 id="reviews-heading" className="mypage__section-heading">
+          내가 쓴 리뷰
+        </h2>
+      </header>
       <div className="mypage__empty">
         <p className="mypage__empty-text">아직 작성한 리뷰가 없어요.</p>
         <span className="mypage__empty-text--muted">
-          동네 상세 페이지에서 자취 후기를 남길 수 있어요.
+          동네 상세에서 리뷰를 남겨보세요.
         </span>
       </div>
-    </Card>
+    </section>
   );
 }
