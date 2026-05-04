@@ -1,0 +1,47 @@
+/* Map floating panel — DESIGN_SYSTEM.md §Components > `map-floating-panel`.
+ *
+ * The shared chrome for any panel that floats over the heatmap on `/`.
+ * Used by R-1 (LayerPills, CriteriaPanel, CompareChip, LegendPanel) and
+ * any future map UI overlay.
+ *
+ * Spec (DESIGN_SYSTEM.md line 201):
+ *   "white + 8px radius + 1px #e5e7eb + 선택적 4% 섀도우. 16-24px padding."
+ *
+ * Floating panels are the ONLY UI surface allowed to use --shadow-floating
+ * per the DS "Elevation & Depth" rule. Page-layer chrome (e.g., dong-detail
+ * sticky CTA bar) does NOT get this shadow — F-26 design-review fix.
+ *
+ * Positioning: callers set `position: absolute` + inset values. The class
+ * provides the shared visual treatment only.
+ */
+
+.map-floating-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md); /* 8px subtle per post-D-11 DS */
+  padding: var(--space-3) var(--space-4); /* 12 / 16 — most panels override */
+  box-shadow: var(--shadow-floating);
+  z-index: 500;
+  pointer-events: auto;
+}
+
+/* Variants — opt-in, set via additional class on the panel root.
+ * Each variant only changes layout-specific values, never the visual core. */
+
+.map-floating-panel--snug {
+  /* Pill-style compact panel (e.g., 기준 (3) ▾ collapsed pill). */
+  padding: var(--space-2) var(--space-3); /* 8 / 12 */
+  border-radius: var(--radius-pill); /* round-cap pill */
+}
+
+.map-floating-panel--card {
+  /* Larger data card (e.g., expanded CriteriaPanel with sliders). */
+  padding: var(--space-4) var(--space-5); /* 16 / 20 */
+  border-radius: var(--radius-card); /* 16px data block */
+}
+
+/* When a panel is closed via the `inert` attribute (post-F-20 a11y fix),
+ * make sure focus styles inside the panel don't bleed out visually. */
+.map-floating-panel[inert] :focus-visible {
+  outline: none;
+}
