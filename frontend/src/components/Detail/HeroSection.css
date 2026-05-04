@@ -1,7 +1,7 @@
 /* HeroSection styles (R-3 — design-polish-v2.md).
  *
  * - No <Card> wrapper. Hero is its own composition.
- * - Height: min(520px, calc(100vh - 56px)) so first fold shows hero +
+ * - Height: min(520px, calc(100vh - var(--space-14))) so first fold shows hero +
  *   start of next section's mono eyebrow.
  * - Two-column flex inside: LEFT = score + 3 MetricBars, RIGHT = mini-map +
  *   page-local action buttons (D-3).
@@ -9,8 +9,8 @@
  */
 
 .hero {
-  /* Hero box. The 56px term matches TopNav height (R-2). */
-  min-height: min(520px, calc(100vh - 56px));
+  /* Hero box. var(--space-14) matches the sticky TopNav height (56px). */
+  min-height: min(520px, calc(100vh - var(--space-14)));
   display: flex;
   flex-direction: column;
   gap: var(--space-3);

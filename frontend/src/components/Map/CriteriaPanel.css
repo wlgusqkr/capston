@@ -46,7 +46,9 @@
 /* ---------- Expanded panel ---------- */
 .criteria-panel {
   width: 280px;
-  max-height: calc(100vh - 56px - 48px);
+  /* TopNav height (--space-14 = 56px) + bottom inset (--space-6 = 24px) +
+   * symmetric top breathing room (24px) = 104px reserved. */
+  max-height: calc(100vh - var(--space-14) - var(--space-6) - var(--space-6));
   overflow-y: auto;
   display: flex;
   flex-direction: column;
