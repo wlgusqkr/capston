@@ -89,19 +89,38 @@
   margin-top: var(--space-2);
 }
 
-/* ---- Sticky bottom CTA bar ---------------------------------------------- */
-/* Pre-R-3 sticky bar. Removed in the D-3 follow-up commit (replaced by the
- * scroll-sticky pill rail). Kept here only so the existing JSX still renders
- * during the de-card commit. */
-.dong-detail__cta-bar {
-  position: sticky;
-  bottom: 0;
+/* ---- D-3 scroll-sticky pill rail ---------------------------------------
+ * Replaces the pre-R-3 sticky bottom CTA bar (audit feedback: a non-map FAB
+ * pattern reads as mobile chrome on a desktop research page).
+ *
+ * Behavior: hidden by default. When DongDetail's IntersectionObserver
+ * reports the hero has left the viewport, .dong-detail__scroll-rail--visible
+ * is added and the rail fades + slides into bottom-right. ESC / re-scrolling
+ * the hero into view tears it back down.
+ *
+ * The default `pointer-events: none` while hidden prevents the invisible
+ * rail from blocking clicks on map tiles or chart hover hits.
+ */
+.dong-detail__scroll-rail {
+  position: fixed;
+  right: var(--space-6);
+  bottom: var(--space-6);
   display: flex;
-  justify-content: flex-end;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-card);
-  margin-top: var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-floating);
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition: opacity var(--transition-base), transform var(--transition-base);
+  z-index: 50;
+}
+
+.dong-detail__scroll-rail--visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
 }

@@ -1,6 +1,12 @@
 // DongDetail — full detail page (SPEC 6.3).
 // Six sections: Hero, RealEstate, Amenity, Transit, Review, SimilarDongs.
-import { useCallback, useMemo } from 'react';
+//
+// D-3 (design-polish-v2.md): the page-local action group lives in the hero
+// right column (visible on first fold). After the hero leaves the viewport,
+// a scroll-sticky pill rail slides in from bottom-right with the same 3
+// actions in compact form. The previous sticky bottom CTA bar is gone —
+// audit feedback flagged it as a non-map FAB pattern.
+import { useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import AmenitySection from '@/components/Detail/AmenitySection';
@@ -12,6 +18,7 @@ import TransitSection from '@/components/Detail/TransitSection';
 import { Button } from '@/components/ui';
 import { usePageTitle } from '@/contexts/PageTitleContext';
 import { useDongDetail, useDongScores } from '@/hooks/useDongs';
+import { useIntersection } from '@/hooks/useIntersection';
 import { DEFAULT_WEIGHTS } from '@/types/api';
 
 import './DongDetail.css';
@@ -41,6 +48,12 @@ export default function DongDetail() {
 
   // Publish page title to TopNav center zone (R-2 contextual nav).
   usePageTitle(data?.name);
+
+  // D-3: hero visibility drives the scroll-sticky pill rail. The
+  // useIntersection default (intersecting=true) means the rail starts
+  // hidden on mount — no flash before the observer reports.
+  const heroRef = useRef<HTMLDivElement>(null);
+  const heroVisible = useIntersection(heroRef, { threshold: 0 });
 
   const handleAddCompare = useCallback(
     () => alert('비교 목록에 추가됨 (8단계에서 구현)'),
@@ -81,38 +94,65 @@ export default function DongDetail() {
         </div>
       )}
 
-      {data && (
-        <main className="dong-detail__main" id="main">
-          <HeroSection
-            detail={data}
-            breakdown={breakdown}
-            onAddCompare={handleAddCompare}
-            onFavorite={handleFavorite}
-            onShare={handleShare}
-          />
-          <RealEstateSection realEstate={data.real_estate} />
-          <AmenitySection
-            amenities={data.amenities}
-            allDongs={scoresQ.data}
-            currentSlug={data.slug}
-          />
-          <TransitSection transit={data.transit} />
-          <ReviewSection reviews={data.reviews} />
-          <SimilarDongsSection similar={data.similar_dongs} />
+      {/* main wrapper renders unconditionally so heroRef is observed by the
+       *  IntersectionObserver from mount — without this, conditional render
+       *  on `data` left ref.current null when useIntersection's effect ran
+       *  and the rail never appeared on scroll. */}
+      <main
+        className="dong-detail__main"
+        id="main"
+        hidden={!data}
+        aria-hidden={!data}
+      >
+        <div ref={heroRef}>
+          {data && (
+            <HeroSection
+              detail={data}
+              breakdown={breakdown}
+              onAddCompare={handleAddCompare}
+              onFavorite={handleFavorite}
+              onShare={handleShare}
+            />
+          )}
+        </div>
+        {data && (
+          <>
+            <RealEstateSection realEstate={data.real_estate} />
+            <AmenitySection
+              amenities={data.amenities}
+              allDongs={scoresQ.data}
+              currentSlug={data.slug}
+            />
+            <TransitSection transit={data.transit} />
+            <ReviewSection reviews={data.reviews} />
+            <SimilarDongsSection similar={data.similar_dongs} />
+          </>
+        )}
 
-          <footer className="dong-detail__cta-bar" aria-label="동네 액션">
-            <Button variant="secondary" size="md" onClick={handleAddCompare}>
+        {/* D-3 scroll-sticky pill rail — appears after the hero leaves
+         *  the viewport. Animates via opacity/transform; aria-hidden when
+         *  the hero is visible so screen readers don't see duplicate
+         *  actions while the hero's own group is still on screen. */}
+        {data && (
+          <div
+            className={`dong-detail__scroll-rail${
+              heroVisible ? '' : ' dong-detail__scroll-rail--visible'
+            }`}
+            aria-label="동네 액션"
+            aria-hidden={heroVisible}
+          >
+            <Button variant="secondary" size="sm" onClick={handleAddCompare}>
               비교에 추가
             </Button>
-            <Button variant="secondary" size="md" onClick={handleFavorite}>
-              찜하기
+            <Button variant="secondary" size="sm" onClick={handleFavorite}>
+              찜
             </Button>
-            <Button variant="secondary" size="md" onClick={handleShare}>
+            <Button variant="secondary" size="sm" onClick={handleShare}>
               공유
             </Button>
-          </footer>
-        </main>
-      )}
+          </div>
+        )}
+      </main>
     </div>
   );
 }
