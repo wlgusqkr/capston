@@ -135,22 +135,12 @@
    * COLOR — Heatmap (5-stop, Pale Green Wash → Deep Forest)
    * Computed by perceptually-uniform interpolation between the two anchors.
    * Opacity 0.7 is applied at the polygon layer, NOT here.
-   *
-   * NOTE: These tokens replace the old 4-color (blue/teal/orange/red) palette.
-   * The old --color-data-low / mid1 / mid2 / high names are kept as aliases
-   * for transitional compatibility (mapped to the closest 5-stop step).
    * ====================================================================== */
   --heatmap-1: #edfce9;   /* 0–20  : Pale Green Wash */
   --heatmap-2: #b9dfb6;   /* 20–40 */
   --heatmap-3: #6fa985;   /* 40–60 */
   --heatmap-4: #2c7559;   /* 60–80 */
   --heatmap-5: #003c33;   /* 80–100: Deep Forest */
-
-  /* Legacy 4-stop aliases — DO NOT use in new code. Map to 5-stop. */
-  --color-data-low:  var(--heatmap-2);   /* "low value" cell */
-  --color-data-mid1: var(--heatmap-3);
-  --color-data-mid2: var(--heatmap-4);
-  --color-data-high: var(--heatmap-5);   /* "high value" cell */
 
   /* =========================================================================
    * COLOR — Subway lines (지도 위에서만, UI chrome 금지)
