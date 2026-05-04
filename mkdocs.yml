@@ -1,0 +1,92 @@
+site_name: 슬기로운 자취생활
+site_description: 서울 자취 입문자를 위한 공공데이터 기반 동네 대시보드
+site_url: https://wlgusqkr.github.io/capston/
+repo_url: https://github.com/wlgusqkr/capston
+repo_name: wlgusqkr/capston
+edit_uri: edit/main/docs/
+
+docs_dir: docs
+
+theme:
+  name: material
+  language: ko
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.instant
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - content.code.copy
+    - content.tabs.link
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: black
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: 다크 모드로
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: 라이트 모드로
+  font:
+    text: Noto Sans KR
+    code: JetBrains Mono
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - tables
+  - toc:
+      permalink: true
+      permalink_title: 이 섹션 링크
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+plugins:
+  - search:
+      lang:
+        - ko
+        - en
+
+nav:
+  - Home: index.md
+  - 명세서: SPEC.md
+  - 시스템 설명: ARCHITECTURE.md
+  - 데이터: DATA.md
+  - 개발: DEVELOPMENT.md
+  - 로드맵: ROADMAP.md
+  - 발표: PRESENTATION.md
+  - 디자인 시스템: DESIGN_SYSTEM.md
+  - 부록:
+      - 프로젝트 셋업: SETUP.md
+      - 작업 프롬프트: PROMPTS.md
