@@ -91,7 +91,11 @@ export default function DongDetail() {
             onShare={handleShare}
           />
           <RealEstateSection realEstate={data.real_estate} />
-          <AmenitySection amenities={data.amenities} />
+          <AmenitySection
+            amenities={data.amenities}
+            allDongs={scoresQ.data}
+            currentSlug={data.slug}
+          />
           <TransitSection transit={data.transit} />
           <ReviewSection reviews={data.reviews} />
           <SimilarDongsSection similar={data.similar_dongs} />
