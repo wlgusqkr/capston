@@ -44,10 +44,12 @@
 }
 
 /* Mono English eyebrow above each section heading. Decorative — the section
- * is named by its real <h2> via aria-labelledby. */
+ * is named by its real <h2> via aria-labelledby.
+ * Color: --color-text-subtle (slate, AA-passing). The raw --color-muted-slate
+ * (#93939f) was a 3.04:1 contrast violation at 13px. */
 .detail-section__eyebrow {
   margin: 0 0 var(--space-3);
-  color: var(--color-muted-slate);
+  color: var(--color-text-subtle);
 }
 
 /* Korean section heading — Section Heading 36px, NOT mono. */

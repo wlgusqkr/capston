@@ -170,14 +170,20 @@ button:focus-visible,
   font-feature-settings: 'tnum' 1;
 }
 
-/* Mono technical label utility (e.g., "WALK 5MIN", "LINE 3"). */
+/* Mono technical label utility (e.g., "WALK 5MIN", "LINE 3").
+ *
+ * Color: --color-text-subtle (slate, 4.47:1 on white — WCAG AA). The
+ * previous fill --color-muted-slate (#93939f) is 3.04:1 — fails AA at the
+ * 13px regular weight this class renders. F-19 patched the alias but
+ * forgot the utility itself; cross-model audit (codex + subagent) caught
+ * it on 2026-05-04. */
 .mono-label {
   font-family: var(--font-family-mono);
   font-size: var(--font-mono-label-size);
   line-height: var(--font-mono-label-line);
   letter-spacing: var(--font-mono-label-tracking);
   text-transform: uppercase;
-  color: var(--color-muted-slate);
+  color: var(--color-text-subtle);
 }
 
 /* Visually hide while keeping accessible to screen readers */
