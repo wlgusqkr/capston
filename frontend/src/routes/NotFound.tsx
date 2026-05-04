@@ -29,7 +29,7 @@ export default function NotFound() {
       >
         페이지를 찾을 수 없습니다
       </h1>
-      <p style={{ margin: 0, maxWidth: '40ch' }}>
+      <p style={{ margin: 0, maxWidth: '40ch', wordBreak: 'keep-all' }}>
         주소가 바뀌었거나, 더 이상 사용하지 않는 페이지일 수 있어요. 메인 지도에서 다시
         시작해 주세요.
       </p>
