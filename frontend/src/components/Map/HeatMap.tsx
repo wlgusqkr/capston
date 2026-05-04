@@ -19,7 +19,7 @@ import { GeoJSON, MapContainer, TileLayer, ZoomControl } from 'react-leaflet';
 
 import { useDongGeoJson } from '@/hooks/useDongGeoJson';
 import type { DongFeatureProps } from '@/hooks/useDongGeoJson';
-import { MAP_POLYGON_STROKE, scoreToHeatmapColor } from '@/lib/colors';
+import { HEATMAP_NO_DATA, MAP_POLYGON_STROKE, scoreToHeatmapColor } from '@/lib/colors';
 import type { DongScore } from '@/types/api';
 
 import 'leaflet/dist/leaflet.css';
@@ -105,7 +105,7 @@ export default function HeatMap({
       color: MAP_POLYGON_STROKE.default.color,
       weight: MAP_POLYGON_STROKE.default.weight,
       opacity: MAP_POLYGON_STROKE.default.opacity,
-      fillColor: score !== null ? scoreToHeatmapColor(score) : '#eeece7',
+      fillColor: score !== null ? scoreToHeatmapColor(score) : HEATMAP_NO_DATA,
       fillOpacity: score !== null ? 0.7 : 0.15,
     };
   };

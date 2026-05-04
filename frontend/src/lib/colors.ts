@@ -52,6 +52,10 @@ export const HEATMAP_COLORS_ORDERED = [
   HEATMAP_COLORS.q5,
 ] as const;
 
+/** Polygon fill for dongs that have no score (data not yet available).
+ *  Soft Stone keeps it on-palette and clearly distinct from the green ramp. */
+export const HEATMAP_NO_DATA = '#eeece7'; // Soft Stone
+
 export type HeatmapBucket = 'q1' | 'q2' | 'q3' | 'q4' | 'q5';
 
 /**
