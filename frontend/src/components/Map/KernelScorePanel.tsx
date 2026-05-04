@@ -137,6 +137,9 @@ export default function KernelScorePanel({
   return (
     <aside
       className={`kernel-panel${isOpen ? ' kernel-panel--open' : ''}`}
+      // @ts-expect-error — `inert` lands as a boolean attr but React typed it later.
+      // design-audit F-20: keep focusable buttons behind a closed panel out of tab order.
+      inert={!isOpen ? '' : undefined}
       aria-hidden={!isOpen}
       aria-label="커널 점수 패널"
       role="complementary"

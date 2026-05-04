@@ -100,6 +100,11 @@ export default function DongPanel({
   return (
     <aside
       className={`dong-panel${isOpen ? ' dong-panel--open' : ''}`}
+      // `inert` removes descendants from the tab order entirely while closed —
+      // aria-hidden alone leaves <button> elements keyboard-focusable behind the
+      // hidden panel. design-audit F-20.
+      // @ts-expect-error — `inert` lands as a boolean attr but React typed it later.
+      inert={!isOpen ? '' : undefined}
       aria-hidden={!isOpen}
       aria-label="동네 요약 패널"
       role="complementary"

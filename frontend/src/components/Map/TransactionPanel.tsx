@@ -94,6 +94,9 @@ export default function TransactionPanel({
   return (
     <aside
       className={`tx-panel${isOpen ? ' tx-panel--open' : ''}`}
+      // @ts-expect-error — `inert` lands as a boolean attr but React typed it later.
+      // design-audit F-20: keep focusable buttons behind a closed panel out of tab order.
+      inert={!isOpen ? '' : undefined}
       aria-hidden={!isOpen}
       aria-label="거래 정보 패널"
       role="complementary"
