@@ -11,9 +11,10 @@
 //   7. Radius counts grid — 6 categories, mono uppercase label + big number
 //
 // ESC closes the panel.
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 
 import { Score, Select } from '@/components/ui';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { KERNEL_SCHOOL_OPTIONS } from '@/types/api';
 import type {
   KernelScoreResponse,
@@ -106,18 +107,8 @@ export default function KernelScorePanel({
 }: KernelScorePanelProps) {
   const isOpen = point != null;
 
-  // ESC closes when open.
-  useEffect(() => {
-    if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [isOpen, onClose]);
+  // ESC closes when open — shared useEscapeKey (post-A-7 dedup).
+  useEscapeKey(onClose, isOpen);
 
   const sortedNearest = useMemo<NearestFacility[]>(() => {
     if (!data?.nearest) return [];

@@ -23,10 +23,9 @@
 // Keyboard:
 //   ESC closes the panel (only when open and the user is not typing in an
 //   input — the panel does not contain any inputs in this iteration).
-import { useEffect } from 'react';
-
 import { Badge, Button, Card, Score } from '@/components/ui';
 import { useDongSummary } from '@/hooks/useDongs';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import type {
   AmenityLevel,
   DongSummary,
@@ -84,18 +83,8 @@ export default function DongPanel({
   const isOpen = slug != null;
   const { data, isLoading, isError, error } = useDongSummary(slug, weights);
 
-  // ESC closes the panel when open.
-  useEffect(() => {
-    if (!isOpen) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isOpen, onClose]);
+  // ESC closes the panel when open — shared useEscapeKey (post-A-7 dedup).
+  useEscapeKey(onClose, isOpen);
 
   return (
     <aside

@@ -27,6 +27,9 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
+
+import { useEscapeKey } from '@/hooks/useEscapeKey';
+
 import './Modal.css';
 
 export interface ModalProps {
@@ -77,18 +80,8 @@ function Modal({
   const cardRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
 
-  /* ESC handler */
-  useEffect(() => {
-    if (!open || !dismissOnEsc) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, dismissOnEsc, onClose]);
+  /* ESC handler — shared useEscapeKey hook (post-A-7 dedup). */
+  useEscapeKey(onClose, open && dismissOnEsc);
 
   /* Body scroll lock */
   useEffect(() => {

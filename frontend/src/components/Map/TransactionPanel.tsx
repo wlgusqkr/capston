@@ -14,9 +14,10 @@
 //   3. Footer — "+N more" hint when caller passes a `truncated` count.
 //
 // ESC closes the panel.
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 
 import { Badge } from '@/components/ui';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { formatConvertedRent } from '@/lib/rent';
 import type { RentDealPin, TransactionDealType } from '@/types/api';
 
@@ -75,18 +76,8 @@ export default function TransactionPanel({
     return copy;
   }, [pins]);
 
-  // ESC closes when open.
-  useEffect(() => {
-    if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [isOpen, onClose]);
+  // ESC closes when open — shared useEscapeKey (post-A-7 dedup).
+  useEscapeKey(onClose, isOpen);
 
   // Header text — derived from the first pin (all share dong/gu/jibun).
   const head = sorted[0];
