@@ -18,7 +18,6 @@
 | 데이터 출처와 처리·점수 알고리즘 | [데이터](DATA.md) |
 | 로컬에서 개발하기 | [개발](DEVELOPMENT.md) |
 | 한계와 고도화 방향 | [로드맵](ROADMAP.md) |
-| 발표 시나리오·Q&A | [발표](PRESENTATION.md) |
 | 디자인 토큰 | [디자인 시스템](DESIGN_SYSTEM.md) |
 
 ---

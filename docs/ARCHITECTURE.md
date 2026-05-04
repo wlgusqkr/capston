@@ -52,7 +52,7 @@
 
 ### 3.5 왜 sub-agent 위임 패턴?
 - 5개 전문 에이전트 (`backend-engineer`, `frontend-engineer`, `design-system-keeper`, `data-pipeline`, `design-qa-reviewer`) 로 작업 분해
-- 단계별 핸드오프 문서 (`docs/handoff/`) 로 컨텍스트 보존
+- 단계별 핸드오프 문서 (`.claude/handoff/`) 로 컨텍스트 보존
 - 메인 코디네이터는 SPEC 부합 검증과 git commit 담당
 
 ---
@@ -213,5 +213,4 @@ GET    /api/users/me | preference | favorites | reviews
 - [`DEVELOPMENT.md`](DEVELOPMENT.md) — 로컬 개발 환경
 - [`deploy/README.md`](https://github.com/wlgusqkr/capston/blob/main/deploy/README.md) — 배포 운영 가이드
 - [`ROADMAP.md`](ROADMAP.md) — 한계와 고도화 방향
-- [`PRESENTATION.md`](PRESENTATION.md) — 발표 시나리오와 Q&A
 - [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) — 디자인 토큰

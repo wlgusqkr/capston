@@ -147,7 +147,7 @@ uv run python manage.py shell
 
 ## 6. 작업 흐름
 
-이 프로젝트는 sub-agent 위임 패턴으로 진행됩니다 ([`PROMPTS.md`](PROMPTS.md), [핸드오프 디렉토리](https://github.com/wlgusqkr/capston/tree/main/docs/handoff)).
+이 프로젝트는 sub-agent 위임 패턴으로 진행됩니다 (단계별 프롬프트와 핸드오프는 `.claude/` 폴더에 있음 — 사이트 비공개).
 
 | Sub-agent | 담당 |
 |---|---|
@@ -160,7 +160,7 @@ uv run python manage.py shell
 원칙:
 - 한 번에 하나의 화면 또는 기능을 완성 (백엔드 API + 프론트 UI 묶음)
 - sub-agent에게 일을 시킬 때는 SPEC 섹션 번호를 명시
-- 각 단계 산출물은 `docs/handoff/YYYYMMDD-task-name.md` 로 핸드오프
+- 각 단계 산출물은 `.claude/handoff/YYYYMMDD-task-name.md` 로 핸드오프
 - 단계 종료 시 conventional commits 형식으로 git commit
 
 ---
