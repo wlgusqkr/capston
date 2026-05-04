@@ -14,7 +14,10 @@
 
 .auth__card {
   width: 100%;
-  max-width: 420px;
+  /* P-8: widened from 420 → 480 — at 1440 viewport the narrower card looked
+   * anxious. 480 sits more confidently in the empty canvas without crowding
+   * the form fields (which are already constrained by their own max-widths). */
+  max-width: 480px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
