@@ -315,18 +315,33 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Hover-reveal × button + inline confirm. The remove control is invisible
+ * by default; appears on row hover or keyboard focus inside the row.
+ * Once clicked, the row swaps to a confirm prompt ("확실해요? 예/아니요"). */
 .mypage__fav-remove {
-  width: var(--control-height-md);
+  align-self: center;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 4px;
+  padding: var(--space-1) var(--space-2);
   border: none;
   background: transparent;
   color: var(--color-text-muted);
   cursor: pointer;
-  font-size: 18px;
-  line-height: 1;
-  transition: background var(--transition-fast), color var(--transition-fast);
+  font: inherit;
+  font-size: var(--font-caption-size);
+  letter-spacing: var(--letter-spacing-ko);
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  transition: opacity var(--transition-fast), background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+/* Keep the control reachable for keyboard users — when the row or its
+ * children get focus-within, reveal the × even without hover. */
+.mypage__fav-row:hover .mypage__fav-remove,
+.mypage__fav-row:focus-within .mypage__fav-remove {
+  opacity: 1;
 }
 
 .mypage__fav-remove:hover:not(:disabled) {
@@ -336,10 +351,98 @@
 
 .mypage__fav-remove:focus-visible {
   outline: 2px solid var(--color-focus-ring);
-  outline-offset: -2px;
+  outline-offset: 1px;
+  opacity: 1;
 }
 
 .mypage__fav-remove:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Inline confirm — appears when × is clicked. Stays visible (no hover
+ * dependency) until 예/아니요 resolves it. */
+.mypage__fav-confirm {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-caption-size);
+  color: var(--color-text);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.mypage__fav-confirm-prompt {
+  color: var(--color-text-muted);
+}
+
+.mypage__fav-confirm-yes,
+.mypage__fav-confirm-no {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-2);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-caption-size);
+  letter-spacing: var(--letter-spacing-ko);
+  color: var(--color-text);
+  transition: background var(--transition-fast), border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.mypage__fav-confirm-yes:hover:not(:disabled) {
+  background: var(--color-danger-soft);
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.mypage__fav-confirm-no:hover:not(:disabled) {
+  background: var(--color-surface-inset);
+}
+
+.mypage__fav-confirm-yes:focus-visible,
+.mypage__fav-confirm-no:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.mypage__fav-confirm-yes:disabled,
+.mypage__fav-confirm-no:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- Profile inline edit form ------------------------------------------ */
+
+.mypage__profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.mypage__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.mypage__field-label {
+  font-size: var(--font-caption-size);
+  color: var(--color-text-muted);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.mypage__field-error {
+  margin: 0;
+  font-size: var(--font-caption-size);
+  color: var(--color-danger);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.mypage__form-actions {
+  display: flex;
+  gap: var(--space-2);
 }

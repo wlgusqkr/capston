@@ -4,15 +4,16 @@
 //   LEFT rail (sticky)   — Profile + MY WEIGHTS
 //   RIGHT column (scroll) — MY FAVORITES + MY REVIEWS
 //
-// Strip <Card> wrappers; sections are unframed under the shared layout.
-// At <1080px the columns collapse to a single column (left → on top).
-// Mobile <768px is WONTFIX (project rule).
-import { useMemo } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+// R-4 phase B: inline edit on profile (NOT modal — modal is for transient
+// flows), hover-reveal × on favorites with inline confirm, weights empty
+// state with primary action when default-weighted.
+import { useMemo, useState } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
 
-import { Badge, Button, MetricBar } from '@/components/ui';
+import { Badge, Button, Input, MetricBar, Select } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFavorites, useRemoveFavorite } from '@/hooks/useFavorites';
+import { patchMe } from '@/lib/api';
 import type { FavoriteItem, MeResponse } from '@/types/api';
 
 import './MyPage.css';
@@ -68,25 +69,36 @@ export default function MyPage() {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Profile (LEFT rail, top)                                                    */
+/* Profile (LEFT rail, top) — view + inline edit                              */
 /* -------------------------------------------------------------------------- */
 
 function ProfileSection({ user }: { user: MeResponse }) {
-  const display = (user.nickname && user.nickname.trim()) || user.username;
-
-  const meta: string[] = [];
-  if (user.school && user.school.trim()) meta.push(user.school);
-  if (user.year != null) meta.push(`${user.year}학년`);
-
-  const handleEdit = () => {
-    // Phase B: simple inline placeholder. Profile editing arrives later
-    // (PATCH /api/users/me already wired in lib/api.ts).
-    window.alert('프로필 편집은 추후 추가됩니다.');
-  };
+  const [editing, setEditing] = useState(false);
 
   return (
     <section className="mypage__profile" aria-labelledby="profile-heading">
       <p className="mono-label" aria-hidden="true">PROFILE</p>
+      {editing ? (
+        <ProfileEditForm
+          user={user}
+          onCancel={() => setEditing(false)}
+          onSaved={() => setEditing(false)}
+        />
+      ) : (
+        <ProfileView user={user} onEdit={() => setEditing(true)} />
+      )}
+    </section>
+  );
+}
+
+function ProfileView({ user, onEdit }: { user: MeResponse; onEdit: () => void }) {
+  const display = (user.nickname && user.nickname.trim()) || user.username;
+  const meta: string[] = [];
+  if (user.school && user.school.trim()) meta.push(user.school);
+  if (user.year != null) meta.push(`${user.year}학년`);
+
+  return (
+    <>
       <h2 id="profile-heading" className="mypage__display-name">
         {display}
       </h2>
@@ -94,11 +106,117 @@ function ProfileSection({ user }: { user: MeResponse }) {
         {meta.length > 0 ? meta.join(' · ') : '학교·학년 정보를 추가해주세요.'}
       </p>
       <div>
-        <Button variant="secondary" size="sm" onClick={handleEdit}>
+        <Button variant="secondary" size="sm" onClick={onEdit}>
           수정
         </Button>
       </div>
-    </section>
+    </>
+  );
+}
+
+const YEAR_OPTIONS = [
+  { value: '', label: '학년 미입력' },
+  { value: '1', label: '1학년' },
+  { value: '2', label: '2학년' },
+  { value: '3', label: '3학년' },
+  { value: '4', label: '4학년' },
+  { value: '5', label: '5학년 이상' },
+];
+
+interface ProfileEditFormProps {
+  user: MeResponse;
+  onCancel: () => void;
+  onSaved: () => void;
+}
+
+function ProfileEditForm({ user, onCancel, onSaved }: ProfileEditFormProps) {
+  const { refresh } = useAuth();
+  const [nickname, setNickname] = useState(user.nickname);
+  const [school, setSchool] = useState(user.school);
+  const [year, setYear] = useState<string>(
+    user.year != null ? String(user.year) : '',
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSaving(true);
+    try {
+      await patchMe({
+        nickname: nickname.trim(),
+        school: school.trim(),
+        year: year === '' ? null : Number(year),
+      });
+      await refresh();
+      onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '저장에 실패했어요.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form className="mypage__profile-form" onSubmit={handleSubmit}>
+      <h2 id="profile-heading" className="sr-only">
+        프로필 수정
+      </h2>
+      <label className="mypage__field">
+        <span className="mypage__field-label">닉네임</span>
+        <Input
+          name="nickname"
+          value={nickname}
+          onChange={(e) => setNickname(e.target.value)}
+          placeholder="예: jihyeon"
+          maxLength={20}
+        />
+      </label>
+      <label className="mypage__field">
+        <span className="mypage__field-label">학교</span>
+        <Input
+          name="school"
+          value={school}
+          onChange={(e) => setSchool(e.target.value)}
+          placeholder="예: 동국대"
+          maxLength={30}
+        />
+      </label>
+      <label className="mypage__field">
+        <span className="mypage__field-label">학년</span>
+        <Select
+          name="year"
+          value={year}
+          onChange={(e) => setYear(e.target.value)}
+        >
+          {YEAR_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </Select>
+      </label>
+      {error && (
+        <p className="mypage__field-error" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="mypage__form-actions">
+        <Button type="submit" variant="primary" size="sm" loading={saving}>
+          저장
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={onCancel}
+          disabled={saving}
+        >
+          취소
+        </Button>
+      </div>
+    </form>
   );
 }
 
@@ -106,13 +224,44 @@ function ProfileSection({ user }: { user: MeResponse }) {
 /* Preference (LEFT rail, bottom)                                              */
 /* -------------------------------------------------------------------------- */
 
+/** Default weights (matches DEFAULT_WEIGHTS / backend default for unlearned
+ *  users). Treat the user's stored preference as "empty" only when it
+ *  exactly matches this triple — that way custom weights summing to the
+ *  same percentages are still rendered as bars (per R-4 empty-state spec). */
+const DEFAULT_W = { rent: 33, amenity: 33, transit: 34 };
+
 function PreferenceSection({ user }: { user: MeResponse }) {
   const navigate = useNavigate();
   const { w_rent, w_amenity, w_transit } = user.preference;
 
-  const handleRelearn = () => {
-    navigate('/?onboarding=1');
-  };
+  const isDefault =
+    w_rent === DEFAULT_W.rent &&
+    w_amenity === DEFAULT_W.amenity &&
+    w_transit === DEFAULT_W.transit;
+
+  const handleStartLearning = () => navigate('/?onboarding=1');
+  const handleRelearn = () => navigate('/?onboarding=1');
+
+  if (isDefault) {
+    return (
+      <section className="mypage__weights" aria-labelledby="weights-heading">
+        <p className="mono-label" aria-hidden="true">MY WEIGHTS</p>
+        <h2 id="weights-heading" className="mypage__section-heading">
+          내 자취 기준
+        </h2>
+        <div className="mypage__empty">
+          <p className="mypage__empty-text">
+            선호 학습을 시작하면 자동으로 채워져요.
+          </p>
+          <div>
+            <Button variant="primary" size="sm" onClick={handleStartLearning}>
+              선호 학습 시작 →
+            </Button>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="mypage__weights" aria-labelledby="weights-heading">
@@ -148,7 +297,7 @@ function FavoritesSection() {
   // First MAX_COMPARE favorites are selectable for compare-all CTA.
   const compareSlugs = useMemo(
     () => items.slice(0, MAX_COMPARE).map((f) => f.slug),
-    [items]
+    [items],
   );
 
   const handleCompareAll = () => {
@@ -195,9 +344,15 @@ function FavoritesSection() {
       {!isLoading && !isError && items.length === 0 && (
         <div className="mypage__empty">
           <p className="mypage__empty-text">아직 찜한 동네가 없어요.</p>
-          <Link to="/" className="mypage__empty-link">
-            메인 지도에서 동네 둘러보기 →
-          </Link>
+          <div>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => navigate('/')}
+            >
+              메인 지도 →
+            </Button>
+          </div>
         </div>
       )}
 
@@ -208,7 +363,7 @@ function FavoritesSection() {
               key={fav.slug}
               item={fav}
               onOpen={() => navigate(`/dong/${fav.slug}`)}
-              onRemove={() => removeMut.mutate(fav.slug)}
+              onConfirmRemove={() => removeMut.mutate(fav.slug)}
               removing={removeMut.isPending && removeMut.variables === fav.slug}
             />
           ))}
@@ -221,13 +376,20 @@ function FavoritesSection() {
 interface FavoriteRowProps {
   item: FavoriteItem;
   onOpen: () => void;
-  onRemove: () => void;
+  onConfirmRemove: () => void;
   removing: boolean;
 }
 
-function FavoriteRow({ item, onOpen, onRemove, removing }: FavoriteRowProps) {
+function FavoriteRow({
+  item,
+  onOpen,
+  onConfirmRemove,
+  removing,
+}: FavoriteRowProps) {
   const score = Math.round(item.score);
   const variant = score >= 70 ? 'success' : score >= 40 ? 'warning' : 'danger';
+  const [confirming, setConfirming] = useState(false);
+
   return (
     <li className="mypage__fav-row">
       <button
@@ -245,18 +407,46 @@ function FavoriteRow({ item, onOpen, onRemove, removing }: FavoriteRowProps) {
           <span className="mypage__fav-date">{formatDate(item.created_at)}</span>
         </div>
       </button>
-      <button
-        type="button"
-        className="mypage__fav-remove"
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove();
-        }}
-        aria-label={`${item.name} 찜 해제`}
-        disabled={removing}
-      >
-        <span aria-hidden="true">×</span>
-      </button>
+      {confirming ? (
+        <span className="mypage__fav-confirm" role="alertdialog" aria-label="찜 해제 확인">
+          <span className="mypage__fav-confirm-prompt">확실해요?</span>
+          <button
+            type="button"
+            className="mypage__fav-confirm-yes"
+            onClick={(e) => {
+              e.stopPropagation();
+              onConfirmRemove();
+            }}
+            disabled={removing}
+          >
+            예
+          </button>
+          <button
+            type="button"
+            className="mypage__fav-confirm-no"
+            onClick={(e) => {
+              e.stopPropagation();
+              setConfirming(false);
+            }}
+            disabled={removing}
+          >
+            아니요
+          </button>
+        </span>
+      ) : (
+        <button
+          type="button"
+          className="mypage__fav-remove"
+          onClick={(e) => {
+            e.stopPropagation();
+            setConfirming(true);
+          }}
+          aria-label={`${item.name} 찜 해제`}
+          disabled={removing}
+        >
+          × 찜 해제
+        </button>
+      )}
     </li>
   );
 }
@@ -289,10 +479,9 @@ function ReviewsSection() {
         </h2>
       </header>
       <div className="mypage__empty">
-        <p className="mypage__empty-text">아직 작성한 리뷰가 없어요.</p>
-        <span className="mypage__empty-text--muted">
+        <p className="mypage__empty-text">
           동네 상세에서 리뷰를 남겨보세요.
-        </span>
+        </p>
       </div>
     </section>
   );
