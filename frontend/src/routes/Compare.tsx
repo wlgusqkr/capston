@@ -35,7 +35,7 @@
 //   badge anywhere — same fairness rule as cell highlights).
 
 import { useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { Badge, Button } from '@/components/ui';
 import { useCompare, useDongScores } from '@/hooks/useDongs';
@@ -125,18 +125,13 @@ export default function Compare() {
 
   return (
     <div className="compare">
-      <header className="compare__topbar">
-        <div className="compare__topbar-inner">
-          <Link to="/" className="compare__back" aria-label="지도로 돌아가기">
-            <span aria-hidden="true">←</span>
-            <span>지도로</span>
-          </Link>
-          <span className="compare__crumb-sep" aria-hidden="true">/</span>
-          <h1 className="compare__crumb-current">동네 비교</h1>
-        </div>
-      </header>
+      {/* Per-route topbar removed in Stage 3 — global TopNav handles
+       *  back-to-/ via the brand logo and "동네 비교" title via spec
+       *  in TopNav.tsx (D-2 contextual nav). The H1 stays here so
+       *  screen readers landing on the page still get a heading. */}
+      <h1 className="sr-only">동네 비교</h1>
 
-      <main className="compare__main">
+      <main className="compare__main" id="main">
         {slugs.length === 0 && <EmptyState onBack={() => navigate('/')} />}
 
         {slugs.length > 0 && isLoading && (

@@ -44,18 +44,16 @@ export default function MyPage() {
   };
 
   return (
-    <main className="mypage">
-      <header className="mypage__topbar">
-        <div className="mypage__topbar-inner">
-          <Link to="/" className="mypage__back" aria-label="메인 지도로 돌아가기">
-            ← 지도로
-          </Link>
-          <h1 className="mypage__title">마이페이지</h1>
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
-            로그아웃
-          </Button>
-        </div>
-      </header>
+    <main className="mypage" id="main">
+      {/* Per-route topbar removed in Stage 3 — global TopNav handles
+       *  back-to-/ + nickname title (D-2 contextual). The 로그아웃 action
+       *  moves into the page content next to the profile section header. */}
+      <h1 className="sr-only">마이페이지</h1>
+      <div className="mypage__logout-row">
+        <Button variant="ghost" size="sm" onClick={handleLogout}>
+          로그아웃
+        </Button>
+      </div>
 
       <div className="mypage__content">
         <ProfileSection user={user} />

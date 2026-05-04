@@ -1,6 +1,6 @@
 // DongDetail — full detail page (SPEC 6.3).
 // Six sections: Hero, RealEstate, Amenity, Transit, Review, SimilarDongs.
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 import AmenitySection from '@/components/Detail/AmenitySection';
 import HeroSection from '@/components/Detail/HeroSection';
@@ -9,6 +9,7 @@ import ReviewSection from '@/components/Detail/ReviewSection';
 import SimilarDongsSection from '@/components/Detail/SimilarDongsSection';
 import TransitSection from '@/components/Detail/TransitSection';
 import { Button } from '@/components/ui';
+import { usePageTitle } from '@/contexts/PageTitleContext';
 import { useDongDetail } from '@/hooks/useDongs';
 import { DEFAULT_WEIGHTS } from '@/types/api';
 
@@ -23,21 +24,12 @@ export default function DongDetail() {
   const weights = DEFAULT_WEIGHTS;
   const { data, isLoading, isError, error } = useDongDetail(slug, weights);
 
+  // Publish page title to TopNav center zone (R-2 contextual nav).
+  // Until data lands, slug is the fallback in TopNav itself.
+  usePageTitle(data?.name);
+
   return (
     <div className="dong-detail">
-      <header className="dong-detail__topbar">
-        <div className="dong-detail__topbar-inner">
-          <Link to="/" className="dong-detail__back" aria-label="지도로 돌아가기">
-            <span aria-hidden="true">←</span>
-            <span>지도로</span>
-          </Link>
-          <span className="dong-detail__crumb-sep" aria-hidden="true">/</span>
-          <span className="dong-detail__crumb-current">
-            {data?.name ?? slug ?? '동네 상세'}
-          </span>
-        </div>
-      </header>
-
       {isLoading && (
         <div className="dong-detail__status" role="status">
           동네 상세 정보를 불러오는 중…
@@ -63,7 +55,7 @@ export default function DongDetail() {
       )}
 
       {data && (
-        <main className="dong-detail__main">
+        <main className="dong-detail__main" id="main">
           <HeroSection detail={data} />
           <RealEstateSection realEstate={data.real_estate} />
           <AmenitySection amenities={data.amenities} />

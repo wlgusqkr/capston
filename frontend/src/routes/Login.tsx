@@ -55,17 +55,11 @@ export default function Login() {
   };
 
   return (
-    <main className="auth">
+    <main className="auth" id="main">
       <div className="auth__card" role="form" aria-labelledby="login-title">
-        <Link to="/" className="auth__back" aria-label="메인 지도로 돌아가기">
-          ← 지도로
-        </Link>
-
-        <div className="auth__brand" aria-label="슬기로운 자취생활">
-          <span className="auth__brand-mark" aria-hidden="true">슬</span>
-          <span className="auth__brand-text">기로운 자취생활</span>
-        </div>
-
+        {/* In-card brand mark + back link removed in Stage 3 — global TopNav
+         *  handles both (logo → /). Auth-route TopNav variant (D-8) shows
+         *  only logo + 회원가입 → on /login, keeping the auth card focused. */}
         <h1 id="login-title" className="auth__title">로그인</h1>
         <p className="auth__subtitle">
           아이디와 비밀번호로 로그인해주세요.

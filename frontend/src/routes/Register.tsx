@@ -67,17 +67,11 @@ export default function Register() {
   };
 
   return (
-    <main className="auth">
+    <main className="auth" id="main">
       <div className="auth__card" role="form" aria-labelledby="register-title">
-        <Link to="/" className="auth__back" aria-label="메인 지도로 돌아가기">
-          ← 지도로
-        </Link>
-
-        <div className="auth__brand" aria-label="슬기로운 자취생활">
-          <span className="auth__brand-mark" aria-hidden="true">슬</span>
-          <span className="auth__brand-text">기로운 자취생활</span>
-        </div>
-
+        {/* In-card brand mark + back link removed in Stage 3 — global TopNav
+         *  handles both. Auth-route TopNav variant (D-8) shows only logo +
+         *  로그인 → on /register. */}
         <h1 id="register-title" className="auth__title">회원가입</h1>
         <p className="auth__subtitle">
           아이디와 비밀번호만 입력해도 가입할 수 있어요. 나머지는 마이페이지에서

@@ -22,7 +22,9 @@
 .main-map {
   position: relative;
   width: 100vw;
-  height: 100vh;
+  /* Subtract TopNav (56px) so the map doesn't slide under it. TopNav uses
+   * position: sticky so it takes layout space at the top of <body>. */
+  height: calc(100vh - var(--space-14));
   overflow: hidden;
   background: var(--color-bg);
 }
@@ -36,8 +38,8 @@
 
 /* ---------- Floating chrome positioning ---------- */
 
-/* Top-left: Layer pills. Inset 24,80 leaves room for TopNav (Stage 3, 56px).
- * Until TopNav lands, the pill row sits 24px from the viewport top. */
+/* Top-left: Layer pills. Inset 24px from the map's own top edge (TopNav
+ * already reserved its 56px above). */
 .main-map__layer-pills {
   position: absolute;
   top: var(--space-6);

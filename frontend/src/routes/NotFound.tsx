@@ -1,10 +1,16 @@
 // 404 — empty state. DESIGN_SYSTEM.md `empty-state`: center text only,
 // 큰 헤드라인 + 한 줄 설명 + 1개 secondary action. design-audit F-17.
+//
+// Stage 3 (R-2): the explicit "← 메인 지도로 돌아가기" link is preserved
+// because the empty-state pattern explicitly calls for "1개 secondary
+// action". The global TopNav logo also navigates home, so users have two
+// clear paths back. Both lead to the same place.
 import { Link } from 'react-router-dom';
 
 export default function NotFound() {
   return (
     <main
+      id="main"
       style={{
         display: 'flex',
         flexDirection: 'column',

@@ -8,67 +8,9 @@
   color: var(--color-text);
 }
 
-/* ---- Topbar (shares the DongDetail look) -------------------------------- */
-
-.compare__topbar {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.compare__topbar-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: var(--space-3) var(--space-6);
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-/* Back link — editorial Action Blue. */
-.compare__back {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-size: var(--font-body-base-size);
-  color: var(--color-action-blue);
-  text-decoration: none;
-  height: var(--control-height-sm);
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-sm);
-  letter-spacing: var(--letter-spacing-ko);
-  transition: background var(--transition-fast);
-}
-
-.compare__back:hover {
-  background: var(--color-pale-blue);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.compare__back:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
-}
-
-.compare__crumb-sep {
-  color: var(--color-text-subtle);
-}
-
-.compare__crumb-current {
-  font-size: var(--font-body-base-size);
-  color: var(--color-text);
-  font-weight: 400;
-  letter-spacing: var(--letter-spacing-ko);
-  /* Element is an <h1>; reset browser default margins/line-height so visually
-   * it sits in the breadcrumb row identically to the surrounding spans.
-   * design-audit F-13. */
-  margin: 0;
-  line-height: var(--font-body-line);
-  display: inline;
-}
+/* Per-route topbar removed in Stage 3 — global TopNav handles back-to-/
+ * via the brand logo and "동네 비교" title via TopNav.tsx (D-2 contextual).
+ * The H1 still exists in Compare.tsx as sr-only for screen readers. */
 
 /* ---- Main + statuses ----------------------------------------------------- */
 
