@@ -1,0 +1,53 @@
+/* CompareChip — see CompareChip.tsx.
+ *
+ * Mounted as a floating chip top-right. Visible only when basket >= 1.
+ * Position is owned by the MainMap shell (right: 24px, top: 80px below
+ * TopNav-equivalent in R-1). Storyboard Step 5: chip should fade-in
+ * when first appearing, animation owned here.
+ */
+
+.compare-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--font-button-size);
+  font-weight: 500;
+  letter-spacing: var(--letter-spacing-ko);
+  color: var(--color-canvas-white);
+  background: var(--color-near-black);
+  border-color: var(--color-near-black);
+  min-height: var(--control-height-md);
+  /* Storyboard fault-line fix: slide-in from right + fade on first mount. */
+  animation: compare-chip-in var(--transition-base) ease-out;
+}
+
+.compare-chip:hover {
+  background: var(--color-pure-black);
+  border-color: var(--color-pure-black);
+}
+
+.compare-chip:focus-visible {
+  outline: 2px solid var(--color-focus-blue);
+  outline-offset: 2px;
+}
+
+.compare-chip__count {
+  opacity: 0.85;
+}
+
+.compare-chip__arrow {
+  font-size: 14px;
+}
+
+@keyframes compare-chip-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

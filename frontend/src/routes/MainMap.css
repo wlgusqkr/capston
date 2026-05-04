@@ -1,7 +1,26 @@
-/* MainMap layout — full viewport, sidebar + map split. */
+/* MainMap layout — R-1 full-bleed map + progressive-disclosure floating chrome.
+ *
+ * Stage 2b: the .sidebar wrapper is gone. The map fills the viewport and
+ * floating panels live at the corners per the R-1 z-coordinate map.
+ *
+ * Z-coordinate map (1280×720 reference, 1440×900 verified):
+ *   TopNav (Stage 3)        sticky top, full width      z 1000
+ *   Layer pills             top-left,  inset 24,80      z 500
+ *   기준 pill / panel       bottom-left, inset 24,24    z 500 / 510
+ *   Compare chip (≥1)       top-right, inset 24,80      z 500
+ *   TransactionFilters      top-right, inset 24,24      z 480 (existing)
+ *   Legend                  bottom-right, ABOVE zoom    z 400 (Legend.css)
+ *   ViewToggle              bottom-right corner          z 400 (ViewToggle.css)
+ *   Leaflet zoom            top-right (Leaflet default) z 1000 (HeatMap.css)
+ *   Slide-in panels         right edge                  z 600
+ *   Toast / overlay         top-center                  z 500-600
+ *
+ * NB: TopNav doesn't exist yet (Stage 3). Until it lands, the map fills
+ * 100vh and the existing offsets work without TopNav reservation.
+ */
 
 .main-map {
-  display: flex;
+  position: relative;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
@@ -10,11 +29,54 @@
 
 .main-map__map {
   position: relative;
-  flex: 1 1 auto;
-  min-width: 0;
-  min-height: 0;
+  width: 100%;
+  height: 100%;
   background: var(--color-surface-inset);
 }
+
+/* ---------- Floating chrome positioning ---------- */
+
+/* Top-left: Layer pills. Inset 24,80 leaves room for TopNav (Stage 3, 56px).
+ * Until TopNav lands, the pill row sits 24px from the viewport top. */
+.main-map__layer-pills {
+  position: absolute;
+  top: var(--space-6);
+  left: var(--space-6);
+  z-index: 500;
+}
+
+/* Bottom-left: 기준 pill / expanded panel + ephemeral coach-mark.
+ * The wrapper itself is just an anchor; CriteriaPanel renders the pill or
+ * panel depending on its `open` prop. The coach-mark is a sibling with its
+ * own absolute position relative to this wrapper. */
+.main-map__criteria {
+  position: absolute;
+  bottom: var(--space-6);
+  left: var(--space-6);
+  z-index: 500;
+}
+
+/* The coach-mark sits just to the RIGHT of the pill (left edge offset by
+ * the pill's typical width ~140px + 8px). */
+.main-map__criteria .criteria-coach {
+  bottom: 0;
+  left: calc(140px + var(--space-2));
+}
+
+/* Top-right: Compare chip (when basket >= 1). Slightly below the
+ * existing TransactionFilters top-right anchor so they don't overlap.
+ * TransactionFilters lives at top: 16, right: 16 with its own
+ * margin-top: var(--space-16) to clear Leaflet zoom — approx 16+64+~80 of
+ * vertical space taken at top-right. We anchor the chip BELOW the filters
+ * by stacking on the same right edge but further down. */
+.main-map__compare-chip {
+  position: absolute;
+  top: calc(var(--space-4) + var(--space-16) + var(--space-20));
+  right: var(--space-4);
+  z-index: 500;
+}
+
+/* ---------- Inline overlays (loading / error / toast) ---------- */
 
 /* Top-center floating overlay (loading / error notice).
  * Floating map UI exception — uses --shadow-floating per DESIGN_SYSTEM.md. */
@@ -45,8 +107,6 @@
 }
 
 .main-map__toast {
-  /* Sits slightly below the loading/error overlay slot so they can coexist
-   * without visual collision. */
   top: auto;
   bottom: var(--space-6);
   border-color: var(--color-near-black);

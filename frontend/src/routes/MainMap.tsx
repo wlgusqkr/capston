@@ -1,27 +1,40 @@
 // MainMap (`/`) — entry point of the app.
-// Layout per SPEC 6.1:
-//   left fixed sidebar (280px) + right full-screen Leaflet map
-//   bottom-left legend, bottom-right 2D/3D toggle
 //
-// State owned here:
-//   - weights (rent/amenity/transit) — drives the score query
-//   - activeLayer / filters — UI only for step 4 (no behavior yet)
-//   - selectedSlug — drives the slide-in DongPanel (SPEC 6.2)
-//   - compareSlugs — accumulated dongs queued for /compare (SPEC 6.4),
-//                    capped at 3, deduplicated, in insertion order
+// R-1 layout (Stage 2b):
+//   Full-bleed Leaflet map underneath. Floating chrome at the corners:
+//     top-left:     <LayerSwitcher>  (4-tab pill row)
+//     bottom-left:  <CriteriaPanel>  (collapsed pill → expanded card with
+//                                     WeightSliders + FilterControls)
+//                   first-visit ephemeral coach-mark (D-10) anchored beside
+//     top-right:    <TransactionFilters> + <CompareChip> (chip when basket≥1)
+//     bottom-right: <Legend>, <ViewToggle>, Leaflet zoom (stacked)
+//   Right edge (slide-in, mutually exclusive):
+//     <DongPanel>, <TransactionPanel>, <KernelScorePanel>
 //
-// On polygon click we open the right-side DongPanel and pass the matching
-// row's raw axis scores so the panel can render its 점수 구성 bars without
-// a duplicate query.
-import { useEffect, useMemo, useRef, useState } from 'react';
+// State:
+//   - useReducer(panelReducer)   panel coordination + criteria + coach
+//                                (selectedSlug / selectedJibun / kernelPoint
+//                                 + kernelWeights / kernelSchool +
+//                                 criteriaOpen + coachVisible). See
+//                                 ./MainMap.panelReducer.ts for the state
+//                                 machine + invariant comment.
+//   - useState                   non-panel state (weights, activeLayer,
+//                                filters, compareSlugs, mapState, toast,
+//                                heatmapVisible, preferenceOpen, etc.)
+//
+// SPEC 6.1. Mobile is WONTFIX project decision (desktop-only).
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
+import CompareChip from '@/components/Map/CompareChip';
+import CriteriaPanel from '@/components/Map/CriteriaPanel';
 import DongPanel from '@/components/Map/DongPanel';
 import HeatMap from '@/components/Map/HeatMap';
 import KernelScoreLayer from '@/components/Map/KernelScoreLayer';
 import KernelScorePanel from '@/components/Map/KernelScorePanel';
+import LayerSwitcher from '@/components/Map/LayerSwitcher';
+import type { LayerKey } from '@/components/Map/LayerSwitcher';
 import Legend from '@/components/Map/Legend';
-import Sidebar from '@/components/Map/Sidebar';
 import TransactionFilters, {
   buildFilters,
 } from '@/components/Map/TransactionFilters';
@@ -38,7 +51,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAddFavorite } from '@/hooks/useFavorites';
 import { useDongScores } from '@/hooks/useDongs';
 import { useKernelScore } from '@/hooks/useKernelScore';
-import type { LatLng } from '@/hooks/useKernelScore';
 import { useTransactions } from '@/hooks/useTransactions';
 import { putMyPreference } from '@/lib/api';
 import { getAuthErrorMessage } from '@/lib/authErrors';
@@ -49,11 +61,16 @@ import type {
   Weights,
 } from '@/types/api';
 
+import {
+  INITIAL_PANEL_STATE,
+  panelReducer,
+} from './MainMap.panelReducer';
+
 import './MainMap.css';
 
-type LayerKey = 'composite' | 'rent' | 'amenity' | 'transit';
-
 const MAX_COMPARE = 3;
+/** D-10: coach-mark on the 기준 pill auto-dismisses after this delay. */
+const COACH_DISMISS_MS = 4000;
 
 export default function MainMap() {
   const navigate = useNavigate();
@@ -62,9 +79,6 @@ export default function MainMap() {
   const addFavoriteMut = useAddFavorite();
 
   // Initial weights — user's saved prefs once login resolves, default otherwise.
-  // We store in component state (the source of truth for the slider) and
-  // sync from `user.preference` exactly once when it transitions from null
-  // to an authenticated user.
   const [weights, setWeights] = useState<Weights>(DEFAULT_WEIGHTS);
   const hasSyncedFromUserRef = useRef(false);
 
@@ -82,37 +96,44 @@ export default function MainMap() {
   const [rentCapEnabled, setRentCapEnabled] = useState(false);
   const [rentCap, setRentCap] = useState(50);
   const [nearUniversityOnly, setNearUniversityOnly] = useState(false);
-  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [preferenceOpen, setPreferenceOpen] = useState(false);
   const [compareSlugs, setCompareSlugs] = useState<string[]>([]);
   const [heatmapVisible, setHeatmapVisible] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | null>(null);
 
+  // Panel coordination — single source of truth for "which panel is open"
+  // and friends. See ./MainMap.panelReducer.ts.
+  const [panelState, dispatchPanel] = useReducer(
+    panelReducer,
+    INITIAL_PANEL_STATE,
+  );
+  const {
+    selectedSlug,
+    selectedJibun,
+    kernelPoint,
+    kernelWeights,
+    kernelSchool,
+    criteriaOpen,
+    coachVisible,
+  } = panelState;
+
   // ---- Phase 1b: transaction pin layer state ------------------------------
-  // Map state — bbox + zoom — pushed up from TransactionPinLayer (debounced).
   const [mapState, setMapState] = useState<MapState | null>(null);
-  // Filter UI state.
   const [txDealType, setTxDealType] = useState<TransactionDealTypeFilter>('all');
   const [txPeriod, setTxPeriod] = useState<PeriodKey>('6m');
-  // Selected jibun (panel state). null → panel closed.
-  const [selectedJibun, setSelectedJibun] = useState<string | null>(null);
 
-  // ---- Phase 2b: kernel-score (arbitrary point click) state ---------------
-  // Clicked point. Null → kernel panel closed + marker hidden.
-  const [kernelPoint, setKernelPoint] = useState<LatLng | null>(null);
-  // Per-panel weights — start as a copy of the sidebar weights when panel
-  // opens, then evolve independently. The sliders inside the panel let the
-  // user explore "what if" without disturbing the main heatmap.
-  const [kernelWeights, setKernelWeights] = useState<Weights>(DEFAULT_WEIGHTS);
-  // Debounced version sent to the API. State updates are immediate (UI feels
-  // snappy); the network call lags by 300ms (no spam during slider drag).
+  // ---- Phase 2b: kernel-score debounce ------------------------------------
+  // kernelWeights lives in panelReducer (coupled to kernelPoint lifetime).
+  // We still need a debounced mirror sent to the API.
   const [kernelWeightsDebounced, setKernelWeightsDebounced] =
     useState<Weights>(DEFAULT_WEIGHTS);
   const kernelWeightsTimer = useRef<number | null>(null);
-  const [kernelSchool, setKernelSchool] = useState<string>('');
 
-  const txFilters = useMemo(() => buildFilters(txDealType, txPeriod), [txDealType, txPeriod]);
+  const txFilters = useMemo(
+    () => buildFilters(txDealType, txPeriod),
+    [txDealType, txPeriod],
+  );
 
   const txQuery = useTransactions({
     bbox: mapState?.bbox ?? null,
@@ -131,11 +152,11 @@ export default function MainMap() {
   // If filter changes drop the selected jibun from the result set, close.
   useEffect(() => {
     if (selectedJibun && txQuery.data && selectedJibunPins.length === 0) {
-      setSelectedJibun(null);
+      dispatchPanel({ type: 'close_all_right' });
     }
   }, [selectedJibun, txQuery.data, selectedJibunPins.length]);
 
-  // ---- Phase 2b: kernel score query (debounced weights) -------------------
+  // ---- kernel score query (debounced weights) -----------------------------
   const kernelQuery = useKernelScore({
     point: kernelPoint,
     weights: kernelWeightsDebounced,
@@ -158,35 +179,41 @@ export default function MainMap() {
     };
   }, [kernelWeights]);
 
-  // When the kernel panel opens (point becomes non-null after being null),
-  // seed the panel weights from the current sidebar weights — that's the
-  // most intuitive starting point. Compares an isOpen transition.
-  const wasKernelOpenRef = useRef(false);
+  // When the kernel panel opens, the reducer already seeds kernelWeights
+  // from the action payload. Mirror to debounced so the first fetch is
+  // immediate (no 300ms blank).
   useEffect(() => {
-    const isOpen = kernelPoint != null;
-    if (isOpen && !wasKernelOpenRef.current) {
-      setKernelWeights(weights);
-      setKernelWeightsDebounced(weights);
+    if (kernelPoint != null) {
+      setKernelWeightsDebounced(kernelWeights);
     }
-    wasKernelOpenRef.current = isOpen;
-  }, [kernelPoint, weights]);
+    // We intentionally only re-sync on kernelPoint identity change; weight
+    // changes flow through the debounce above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kernelPoint]);
 
   // ?onboarding=1 — auto-open the preference modal (entry from MyPage).
   useEffect(() => {
     if (searchParams.get('onboarding') === '1') {
       setPreferenceOpen(true);
-      // Strip the param so refresh / back doesn't reopen.
       const next = new URLSearchParams(searchParams);
       next.delete('onboarding');
       setSearchParams(next, { replace: true });
     }
   }, [searchParams, setSearchParams]);
 
+  // D-10: auto-dismiss the coach-mark after 4s if untouched.
+  useEffect(() => {
+    if (!coachVisible) return;
+    const timer = window.setTimeout(() => {
+      dispatchPanel({ type: 'dismiss_coach' });
+    }, COACH_DISMISS_MS);
+    return () => window.clearTimeout(timer);
+  }, [coachVisible]);
+
   const { data, isLoading, isError, error } = useDongScores(weights);
 
   /** Raw per-axis scores for the currently selected dong, looked up on the
-   *  /scores list we already have. Avoids a second network call.
-   */
+   *  /scores list we already have. Avoids a second network call. */
   const selectedRawScores = useMemo(() => {
     if (!selectedSlug || !data) return null;
     const row = data.find((d) => d.slug === selectedSlug);
@@ -198,39 +225,38 @@ export default function MainMap() {
     };
   }, [data, selectedSlug]);
 
+  // Tooltip suppression — derived from the reducer state. Memo to keep
+  // TransactionPinLayer stable.
+  const suppressTooltips = useMemo(
+    () =>
+      selectedJibun != null || selectedSlug != null || kernelPoint != null,
+    [selectedJibun, selectedSlug, kernelPoint],
+  );
+
+  /* ---------- Click handlers (dispatch into the reducer) ------------------ */
+
   const handleDongClick = (dong: DongScore) => {
-    setSelectedSlug(dong.slug);
-    // Mutually exclusive with the transaction & kernel panels.
-    setSelectedJibun(null);
-    setKernelPoint(null);
+    dispatchPanel({ type: 'open_dong', slug: dong.slug });
   };
 
-  const handleClosePanel = () => setSelectedSlug(null);
+  const handleClosePanel = () => {
+    dispatchPanel({ type: 'close_all_right' });
+  };
 
   const handlePinClick = (jibunKey: string) => {
-    setSelectedJibun(jibunKey);
-    // Mutually exclusive with the dong & kernel panels.
-    setSelectedSlug(null);
-    setKernelPoint(null);
+    dispatchPanel({ type: 'open_jibun', key: jibunKey });
   };
 
-  /** Empty-map click → kernel score panel (Phase 2b).
-   *  Click priority: pin (zoom 13+) > map background (kernel) > dong polygon.
-   *  - Pin clicks: Leaflet stops propagation by default; useMapEvents.click
-   *    here never fires.
-   *  - Polygon clicks: HeatMap.tsx onEachFeature stops propagation so this
-   *    handler never fires (DongPanel takes over).
-   *  - Empty (tile) clicks: only this handler runs.
-   *  Mutually exclusive with the dong & transaction panels.
-   */
-  const handleKernelPointClick = (latLng: LatLng) => {
-    setKernelPoint(latLng);
-    setSelectedSlug(null);
-    setSelectedJibun(null);
+  const handleKernelPointClick = (latLng: typeof kernelPoint) => {
+    if (latLng == null) return;
+    dispatchPanel({
+      type: 'open_kernel',
+      point: latLng,
+      resetWeightsTo: weights,
+    });
   };
 
   const handleOpenDetail = (slug: string) => {
-    // Detail route arrives in step 6. For now navigate; NotFound will catch it.
     navigate(`/dong/${slug}`);
   };
 
@@ -246,12 +272,11 @@ export default function MainMap() {
     }, 2400);
   };
 
-  // Cleanup toast timer on unmount.
   useEffect(
     () => () => {
       if (toastTimer.current != null) window.clearTimeout(toastTimer.current);
     },
-    []
+    [],
   );
 
   const handleAddCompare = (slug: string) => {
@@ -263,7 +288,7 @@ export default function MainMap() {
       }
       if (prev.length >= MAX_COMPARE) {
         flashToast(
-          `비교 목록은 최대 ${MAX_COMPARE}개까지예요. 비교 화면에서 빼고 다시 추가해주세요.`
+          `비교 목록은 최대 ${MAX_COMPARE}개까지예요. 비교 화면에서 빼고 다시 추가해주세요.`,
         );
         return prev;
       }
@@ -282,7 +307,6 @@ export default function MainMap() {
   const handleFavorite = (slug: string) => {
     if (!user) {
       flashToast('로그인이 필요합니다 — 로그인 페이지로 이동');
-      // Slight delay so the toast renders before the route swap.
       window.setTimeout(() => navigate('/login'), 300);
       return;
     }
@@ -296,12 +320,8 @@ export default function MainMap() {
   };
 
   const handlePreferenceComplete = (next: Weights) => {
-    // Apply learned weights and close the modal. The /scores query refetches
-    // automatically via TanStack Query's queryKey invalidation, and HeatMap's
-    // setStyle transitions colors over --transition-slow (300ms).
     setWeights(next);
     setPreferenceOpen(false);
-    // Persist to backend if logged in. Failures are non-fatal (UX-only feature).
     if (user) {
       void putMyPreference(next).catch(() => {
         // Silent — saving prefs is best-effort.
@@ -311,27 +331,11 @@ export default function MainMap() {
 
   return (
     <div className="main-map">
+      {/* sr-only H1 — visible page title for `/` lives in TopNav center
+       *   when contextual nav lands in Stage 3 (D-2 revised: contextual
+       *   per-route). Until then keep the sr-only heading so screen
+       *   readers have something to land on. */}
       <h1 className="sr-only">서울 동네 점수 지도</h1>
-      <Sidebar
-        weights={weights}
-        onWeightsChange={setWeights}
-        activeLayer={activeLayer}
-        onLayerChange={setActiveLayer}
-        rentCapEnabled={rentCapEnabled}
-        onRentCapToggle={setRentCapEnabled}
-        rentCap={rentCap}
-        onRentCapChange={setRentCap}
-        nearUniversityOnly={nearUniversityOnly}
-        onNearUniversityToggle={setNearUniversityOnly}
-        onOpenPreference={() => setPreferenceOpen(true)}
-        compareCount={compareSlugs.length}
-        onOpenCompare={handleOpenCompare}
-        heatmapVisible={heatmapVisible}
-        onToggleHeatmap={setHeatmapVisible}
-        userName={
-          user ? (user.nickname && user.nickname.trim()) || user.username : null
-        }
-      />
 
       <section className="main-map__map" aria-label="서울 동네 히트맵">
         <HeatMap
@@ -345,13 +349,7 @@ export default function MainMap() {
             selectedJibun={selectedJibun}
             onPinClick={handlePinClick}
             onMapStateChange={setMapState}
-            // Suppress hover tooltips when ANY right-side panel is open so the
-            // preview doesn't compete visually with the panel content.
-            suppressTooltips={
-              selectedJibun != null ||
-              selectedSlug != null ||
-              kernelPoint != null
-            }
+            suppressTooltips={suppressTooltips}
           />
           <KernelScoreLayer
             point={kernelPoint}
@@ -359,12 +357,54 @@ export default function MainMap() {
           />
         </HeatMap>
 
+        {/* ---- Top-left: Layer pills ---- */}
+        <div className="main-map__layer-pills map-floating-panel map-floating-panel--card">
+          <LayerSwitcher
+            activeLayer={activeLayer}
+            onLayerChange={setActiveLayer}
+            heatmapVisible={heatmapVisible}
+            onToggleHeatmap={setHeatmapVisible}
+            className="layer-switcher--floating"
+          />
+        </div>
+
+        {/* ---- Top-right: existing TransactionFilters + CompareChip (when basket ≥ 1) ---- */}
         <TransactionFilters
           dealType={txDealType}
           period={txPeriod}
           onDealTypeChange={setTxDealType}
           onPeriodChange={setTxPeriod}
         />
+        <div className="main-map__compare-chip">
+          <CompareChip count={compareSlugs.length} onClick={handleOpenCompare} />
+        </div>
+
+        {/* ---- Bottom-left: 기준 pill / panel + coach-mark ---- */}
+        <div className="main-map__criteria">
+          <CriteriaPanel
+            open={criteriaOpen}
+            onToggle={() => dispatchPanel({ type: 'toggle_criteria' })}
+            weights={weights}
+            onWeightsChange={setWeights}
+            onOpenPreference={() => setPreferenceOpen(true)}
+            rentCapEnabled={rentCapEnabled}
+            onRentCapToggle={setRentCapEnabled}
+            rentCap={rentCap}
+            onRentCapChange={setRentCap}
+            nearUniversityOnly={nearUniversityOnly}
+            onNearUniversityToggle={setNearUniversityOnly}
+          />
+          {coachVisible && !criteriaOpen && (
+            <span
+              className="criteria-coach"
+              role="status"
+              aria-live="polite"
+              data-testid="criteria-coach"
+            >
+              ← 가중치 조절
+            </span>
+          )}
+        </div>
 
         {showZoomHint && (
           <p className="tx-zoom-hint mono-label" role="status">
@@ -401,9 +441,11 @@ export default function MainMap() {
           </div>
         )}
 
+        {/* ---- Bottom-right: Legend + ViewToggle (Leaflet zoom is at top-right by default) ---- */}
         <Legend />
         <ViewToggle />
 
+        {/* ---- Right slide-in panels (mutually exclusive via reducer) ---- */}
         <DongPanel
           slug={selectedSlug}
           weights={weights}
@@ -418,7 +460,7 @@ export default function MainMap() {
           jibunKey={selectedJibun}
           pins={selectedJibunPins}
           hasMore={txQuery.data?.has_more ?? false}
-          onClose={() => setSelectedJibun(null)}
+          onClose={handleClosePanel}
         />
 
         <KernelScorePanel
@@ -428,10 +470,14 @@ export default function MainMap() {
           isError={kernelQuery.isError}
           isFetching={kernelQuery.isFetching}
           weights={kernelWeights}
-          onWeightsChange={setKernelWeights}
+          onWeightsChange={(next) =>
+            dispatchPanel({ type: 'set_kernel_weights', weights: next })
+          }
           school={kernelSchool}
-          onSchoolChange={setKernelSchool}
-          onClose={() => setKernelPoint(null)}
+          onSchoolChange={(next) =>
+            dispatchPanel({ type: 'set_kernel_school', school: next })
+          }
+          onClose={handleClosePanel}
         />
       </section>
 

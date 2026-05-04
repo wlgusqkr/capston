@@ -1,10 +1,13 @@
-/* Legend — small floating chip in the bottom-left of the map.
+/* Legend — small floating chip in the bottom-right of the map.
+ * R-1 Stage 2b: moved from bottom-LEFT (where 기준 panel now lives) to
+ * bottom-RIGHT, sits ABOVE the ViewToggle in the corner stack.
  * Floating map UI exception — uses --shadow-floating (DESIGN_SYSTEM.md). */
 
 .legend {
   position: absolute;
-  left: var(--space-4);
-  bottom: var(--space-4);
+  right: var(--space-4);
+  /* Stack above ViewToggle (16px corner inset + ~32px tall + 8px gap). */
+  bottom: calc(var(--space-4) + 32px + var(--space-2));
   display: flex;
   align-items: center;
   gap: var(--space-2);
