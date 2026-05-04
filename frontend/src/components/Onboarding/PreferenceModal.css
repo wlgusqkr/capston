@@ -203,17 +203,19 @@
   align-items: center;
 }
 
-/* "이게 더 좋아요" CTA-styled label inside the card button — Near-Black pill. */
+/* "이게 더 좋아요" CTA-styled label inside the card button — Near-Black, subtle radius.
+ * Per DESIGN_SYSTEM.md and Button.css FINDING-105: primary CTAs use --radius-md (8px),
+ * NOT --radius-pill. This was the only place in the app that violated that retired rule. */
 .pref-modal__card-cta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: var(--control-height-md);
+  min-height: var(--control-height-cta);
   padding: 0 var(--space-4);
   margin-top: var(--space-2);
   background-color: var(--color-near-black);
   color: var(--color-canvas-white);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-md);
   font-size: var(--font-button-size);
   font-weight: var(--font-button-weight);
   letter-spacing: var(--letter-spacing-ko);
