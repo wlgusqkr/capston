@@ -130,9 +130,12 @@ export default function DongDetail() {
         )}
 
         {/* D-3 scroll-sticky pill rail — appears after the hero leaves
-         *  the viewport. Animates via opacity/transform; aria-hidden when
-         *  the hero is visible so screen readers don't see duplicate
-         *  actions while the hero's own group is still on screen. */}
+         *  the viewport. Animates via opacity/transform.
+         *  When hero is visible: inert + aria-hidden so the rail's three
+         *  buttons are NOT in keyboard tab order (post-F-20 pattern). The
+         *  hero's own button group is the active action surface in that
+         *  state. Cross-model audit (codex + subagent) flagged the prior
+         *  aria-hidden-only treatment as a focus-trap leak. */}
         {data && (
           <div
             className={`dong-detail__scroll-rail${
@@ -140,6 +143,8 @@ export default function DongDetail() {
             }`}
             aria-label="동네 액션"
             aria-hidden={heroVisible}
+            // @ts-expect-error — `inert` lands as a boolean attr but React typed it later.
+            inert={heroVisible ? '' : undefined}
           >
             <Button variant="secondary" size="sm" onClick={handleAddCompare}>
               비교에 추가
