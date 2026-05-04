@@ -179,7 +179,10 @@ function EmptyState({ onBack }: { onBack: () => void }) {
         메인 지도에서 동네를 클릭한 뒤 <strong>비교에 추가</strong> 버튼을
         누르면 이곳에 나란히 보여드릴게요.
       </p>
-      <Button variant="primary" size="md" onClick={onBack}>
+      {/* Secondary button per P-6 — empty state should match the rest of
+       *  the app's secondary-action vocabulary; primary CTAs are reserved
+       *  for the user's actual workflow goal (adding to compare). */}
+      <Button variant="secondary" size="md" onClick={onBack}>
         메인 지도로 가기
       </Button>
     </div>
