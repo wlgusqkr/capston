@@ -87,85 +87,9 @@
   text-transform: uppercase;
 }
 
-/* Layer tabs — sit on Soft Stone inset, single-row pill toggle. */
-.sidebar__tabs {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-1);
-  background: var(--color-surface-inset);
-  padding: var(--space-1);
-  border-radius: var(--radius-xl);
-}
-
-.sidebar__tab {
-  appearance: none;
-  background: transparent;
-  border: 0;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-pill);
-  font-family: inherit;
-  font-size: var(--font-caption-base-size);
-  font-weight: 400;
-  letter-spacing: var(--letter-spacing-ko);
-  color: var(--color-text-muted);
-  cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast);
-}
-
-.sidebar__tab:hover {
-  color: var(--color-text);
-}
-
-/* Active tab — Near-Black filled pill (matches button-pill-filled spec). */
-.sidebar__tab--active {
-  background: var(--color-near-black);
-  color: var(--color-canvas-white);
-  font-weight: 500;
-}
-
-.sidebar__sliders {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.sidebar__check {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--font-caption-base-size);
-  color: var(--color-text);
-  cursor: pointer;
-}
-
-.sidebar__check input[type='checkbox'] {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--color-near-black);
-  cursor: pointer;
-}
-
-.sidebar__filter-block {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding-left: var(--space-1);
-}
-
-/* "보증금 환산 포함" 등 슬라이더 보조 설명 — 작은 mono. */
-.sidebar__filter-hint {
-  margin: 0;
-  color: var(--color-text-subtle);
-  font-size: var(--font-mono-label-size);
-}
-
-.sidebar__compare-hint {
-  margin: 0;
-  font-size: var(--font-micro-size);
-  color: var(--color-text-muted);
-  letter-spacing: var(--letter-spacing-ko);
-  line-height: var(--font-caption-base-line);
-}
+/* Layer tabs / sliders / checkboxes / filter block / compare hint
+ * moved to LayerSwitcher.css / WeightSliders.css / FilterControls.css /
+ * CompareBlock.css respectively (Stage 2a decomposition). */
 
 /* User area inside the sidebar header (logged in: nickname · 마이페이지 / out: 로그인). */
 .sidebar__user {

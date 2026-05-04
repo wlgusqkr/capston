@@ -1,27 +1,26 @@
 // Left sidebar of the main map (SPEC 6.1).
-//   1. Header — logo placeholder + search input (UI only for step 4)
-//   2. Layer tabs — 종합 / 전월세 / 생활시설 / 교통 (visual only)
-//   3. Weight sliders — three sliders that always sum to 100
-//   4. CTA — "5번 비교로 자동 추천" (alerts in step 4, real flow in step 7)
-//   5. Filters — UI only for step 4
-import { useId } from 'react';
+//
+// Stage 2a decomposition: this is now a thin shell. The four portable
+// pieces live in their own files and will be reused by R-1 floating chrome
+// (Stage 2b):
+//   - <LayerSwitcher>   layer tabs + heatmap toggle
+//   - <WeightSliders>   3 sliders + sum + 자동 추천 CTA
+//   - <CompareBlock>    compare basket hint + secondary CTA
+//   - <FilterControls>  university near-only + 환산 월세 상한
+//
+// Stage 2b removes this Sidebar entirely (R-1 floating chrome takes over).
 import { Link } from 'react-router-dom';
 
-import { Button, Slider } from '@/components/ui';
-import { rebalanceWeights } from '@/lib/weights';
+import CompareBlock from './CompareBlock';
+import FilterControls from './FilterControls';
+import LayerSwitcher from './LayerSwitcher';
+import WeightSliders from './WeightSliders';
+import type { LayerKey } from './LayerSwitcher';
 import type { Weights } from '@/types/api';
-import type { WeightKey } from '@/lib/weights';
 
 import './Sidebar.css';
 
-const LAYERS = [
-  { key: 'composite', label: '종합' },
-  { key: 'rent', label: '전월세' },
-  { key: 'amenity', label: '생활시설' },
-  { key: 'transit', label: '교통' },
-] as const;
-
-type LayerKey = (typeof LAYERS)[number]['key'];
+export type { LayerKey };
 
 export interface SidebarProps {
   weights: Weights;
@@ -66,13 +65,6 @@ export default function Sidebar({
   onToggleHeatmap,
   userName,
 }: SidebarProps) {
-  const universityCheckId = useId();
-  const rentCapCheckId = useId();
-
-  const handleWeight = (key: WeightKey) => (next: number) => {
-    onWeightsChange(rebalanceWeights(weights, key, next));
-  };
-
   return (
     <aside className="sidebar" aria-label="메인 지도 사이드바">
       <header className="sidebar__header">
@@ -80,9 +72,6 @@ export default function Sidebar({
           <span className="sidebar__logo-mark" aria-hidden="true">슬</span>
           <span className="sidebar__logo-text">기로운 자취생활</span>
         </div>
-        {/* Search input intentionally hidden until /api/dongs/search lands
-         *  (step 5/6). Showing a disabled box reads as "broken feature" in
-         *  demos — bundle quick-wins FINDING-111. */}
         <div className="sidebar__user">
           {userName ? (
             <Link to="/mypage" className="sidebar__user-link">
@@ -100,124 +89,41 @@ export default function Sidebar({
 
       <section className="sidebar__section" aria-label="레이어">
         <div className="sidebar__section-title" aria-hidden="true">레이어</div>
-        <div className="sidebar__tabs" role="tablist">
-          {LAYERS.map((layer) => {
-            const selected = layer.key === activeLayer;
-            return (
-              <button
-                key={layer.key}
-                type="button"
-                role="tab"
-                aria-selected={selected}
-                className={
-                  selected ? 'sidebar__tab sidebar__tab--active' : 'sidebar__tab'
-                }
-                onClick={() => onLayerChange(layer.key)}
-              >
-                {layer.label}
-              </button>
-            );
-          })}
-        </div>
-        <label className="sidebar__check sidebar__heatmap-toggle">
-          <input
-            type="checkbox"
-            checked={heatmapVisible}
-            onChange={(e) => onToggleHeatmap(e.target.checked)}
-          />
-          <span>히트맵 표시</span>
-        </label>
+        <LayerSwitcher
+          activeLayer={activeLayer}
+          onLayerChange={onLayerChange}
+          heatmapVisible={heatmapVisible}
+          onToggleHeatmap={onToggleHeatmap}
+        />
       </section>
 
       <section className="sidebar__section" aria-label="가중치">
-        <div className="sidebar__section-head">
-          <div className="sidebar__section-title" aria-hidden="true">가중치</div>
-          <span className="sidebar__sum tabular">
-            합 {weights.rent + weights.amenity + weights.transit}
-          </span>
-        </div>
-        <div className="sidebar__sliders">
-          <Slider
-            label="전월세"
-            value={weights.rent}
-            onChange={handleWeight('rent')}
-            valueText={`${weights.rent}%`}
-          />
-          <Slider
-            label="생활시설"
-            value={weights.amenity}
-            onChange={handleWeight('amenity')}
-            valueText={`${weights.amenity}%`}
-          />
-          <Slider
-            label="교통"
-            value={weights.transit}
-            onChange={handleWeight('transit')}
-            valueText={`${weights.transit}%`}
-          />
-        </div>
-        <Button variant="primary" fullWidth onClick={onOpenPreference}>
-          5번 비교로 자동 추천 →
-        </Button>
+        <div className="sidebar__section-title" aria-hidden="true">가중치</div>
+        <WeightSliders
+          weights={weights}
+          onWeightsChange={onWeightsChange}
+          onOpenPreference={onOpenPreference}
+        />
       </section>
 
       <section className="sidebar__section" aria-label="비교 목록">
         <div className="sidebar__section-title" aria-hidden="true">비교 목록</div>
-        <p className="sidebar__compare-hint">
-          {compareCount === 0
-            ? '동네 패널에서 "비교에 추가"를 누르세요.'
-            : `현재 ${compareCount}/3개 담겼어요.`}
-        </p>
-        <Button
-          variant="secondary"
-          fullWidth
-          onClick={onOpenCompare}
-          disabled={compareCount === 0}
-        >
-          비교 보기 ({compareCount})
-        </Button>
+        <CompareBlock
+          compareCount={compareCount}
+          onOpenCompare={onOpenCompare}
+        />
       </section>
 
       <section className="sidebar__section" aria-label="필터">
         <div className="sidebar__section-title" aria-hidden="true">필터</div>
-
-        <label className="sidebar__check" htmlFor={universityCheckId}>
-          <input
-            id={universityCheckId}
-            type="checkbox"
-            checked={nearUniversityOnly}
-            onChange={(e) => onNearUniversityToggle(e.target.checked)}
-          />
-          <span>대학교 근처만</span>
-        </label>
-
-        <div className="sidebar__filter-block">
-          <label className="sidebar__check" htmlFor={rentCapCheckId}>
-            <input
-              id={rentCapCheckId}
-              type="checkbox"
-              checked={rentCapEnabled}
-              onChange={(e) => onRentCapToggle(e.target.checked)}
-            />
-            {/* "환산 월세" — 보증금을 0.005/월로 환산해 합산한 값.
-                전월세 score 자체가 환산값 기반이므로 라벨만 정직하게 표기. */}
-            <span>환산 월세 상한</span>
-          </label>
-          <Slider
-            min={20}
-            max={150}
-            step={5}
-            value={rentCap}
-            onChange={onRentCapChange}
-            valueText={`${rentCap}만원 이하`}
-            disabled={!rentCapEnabled}
-            hideHeader={false}
-            label={null}
-          />
-          <p className="sidebar__filter-hint mono-label">
-            보증금 환산 포함 (0.005/월)
-          </p>
-        </div>
+        <FilterControls
+          rentCapEnabled={rentCapEnabled}
+          onRentCapToggle={onRentCapToggle}
+          rentCap={rentCap}
+          onRentCapChange={onRentCapChange}
+          nearUniversityOnly={nearUniversityOnly}
+          onNearUniversityToggle={onNearUniversityToggle}
+        />
       </section>
 
       <footer className="sidebar__footer" aria-label="데이터 출처">

@@ -1,0 +1,30 @@
+/* WeightSliders — see WeightSliders.tsx.
+ *
+ * Three sliders that rebalance to sum=100, plus a sum readout and the
+ * "5번 비교로 자동 추천 →" primary CTA.
+ */
+
+.weight-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.weight-sliders__sum-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.weight-sliders__sum {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-mono-label-size);
+  letter-spacing: var(--font-mono-label-tracking);
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+}
+
+.weight-sliders__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
