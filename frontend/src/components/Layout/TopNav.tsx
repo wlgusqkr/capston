@@ -20,12 +20,19 @@
 // is the URL slug; on error, also slug. Avoids TopNav fetching dong data
 // independently (which would break React Query dedup if weights differ).
 
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { usePageTitleValue } from '@/contexts/PageTitleContext';
 
 import './TopNav.css';
+
+/** Extract the slug from /dong/:slug. TopNav is rendered ABOVE <Routes>
+ *  so useParams() returns {} — we parse the pathname ourselves. */
+function dongSlugFromPath(pathname: string): string | undefined {
+  const match = pathname.match(/^\/dong\/([^/]+)/);
+  return match?.[1];
+}
 
 type AuthVariant = 'auth-login' | 'auth-register' | 'default';
 
@@ -62,11 +69,11 @@ function specForPath(pathname: string): RouteSpec {
 
 export default function TopNav() {
   const location = useLocation();
-  const params = useParams();
   const { user } = useAuth();
   const publishedTitle = usePageTitleValue();
 
   const spec = specForPath(location.pathname);
+  const dongSlug = dongSlugFromPath(location.pathname);
 
   return (
     <header className="topnav" role="banner">
@@ -90,7 +97,7 @@ export default function TopNav() {
           )}
           {spec.center.kind === 'dongDetail' && (
             <span className="topnav__page-title">
-              {publishedTitle ?? params.slug ?? ''}
+              {publishedTitle ?? dongSlug ?? ''}
             </span>
           )}
           {spec.center.kind === 'mypage' && (
