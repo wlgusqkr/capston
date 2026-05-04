@@ -36,6 +36,11 @@ export interface ModalProps {
   title?: ReactNode;
   /** aria-label fallback when `title` is not a string (or omitted). */
   ariaLabel?: string;
+  /** ID of an element rendered inside `children` whose text labels the modal.
+   *  Use this when the visible heading lives in the body (not the header), so
+   *  screen readers announce the actual heading instead of an alternate label.
+   *  Takes precedence over both `title` and `ariaLabel` when set. */
+  ariaLabelledBy?: string;
   /** Card max-width in px. Default 600. */
   maxWidth?: number;
   /** Close on backdrop click. Default true. */
@@ -62,6 +67,7 @@ function Modal({
   onClose,
   title,
   ariaLabel,
+  ariaLabelledBy,
   maxWidth = 600,
   dismissOnBackdrop = true,
   dismissOnEsc = true,
@@ -136,8 +142,11 @@ function Modal({
   if (!open) return null;
   if (typeof document === 'undefined') return null; // SSR safety
 
+  // Caller-provided id wins over the auto-rendered title (so a body-level <h2>
+  // can label the dialog), which in turn wins over an explicit aria-label.
   const labelledBy =
-    typeof title === 'string' && title.length > 0 ? 'ui-modal-title' : undefined;
+    ariaLabelledBy ??
+    (typeof title === 'string' && title.length > 0 ? 'ui-modal-title' : undefined);
   const computedAriaLabel =
     !labelledBy && (ariaLabel ?? (typeof title === 'string' ? title : undefined));
 

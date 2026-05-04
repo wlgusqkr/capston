@@ -311,6 +311,10 @@ export default function PreferenceModal({
       open={open}
       onClose={onClose}
       ariaLabel={ariaLabel}
+      // When the comparison view is shown, the visible <h2> "어디가 더 끌리시나요?"
+      // is the real heading — let the screen reader announce it instead of a
+      // synthetic label. design-audit F-16.
+      ariaLabelledBy={showingPair ? 'pref-modal-question' : undefined}
       maxWidth={600}
       hideCloseButton
     >
@@ -351,7 +355,9 @@ export default function PreferenceModal({
         {/* Title + subtitle (only while comparing). */}
         {showingPair && (
           <div className="pref-modal__heading">
-            <h2 className="pref-modal__question">어디가 더 끌리시나요?</h2>
+            <h2 id="pref-modal-question" className="pref-modal__question">
+              어디가 더 끌리시나요?
+            </h2>
             <p className="pref-modal__sub">실제 데이터 기반 비교 · 정답은 없어요</p>
           </div>
         )}
