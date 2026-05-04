@@ -319,19 +319,24 @@
   --space-30: 120px;
 
   /* =========================================================================
-   * RADIUS
-   * Mapping rule (back-compat priority):
-   *   --radius-sm legacy was 6px → kept (8px) close to legacy intent
-   *   --radius-md legacy was 8px → KEPT at 8px (do NOT change to 16px to avoid
-   *       breaking Button/Input layouts). New 16px lives at --radius-card.
-   *   --radius-lg legacy was 12px → kept at 12px to avoid card layout drift;
-   *       the new system 22px lives at --radius-hero.
+   * RADIUS (post-D-11 reconciled — see .claude/DESIGN_SYSTEM.md §Shapes)
+   *   --radius-sm  / --radius-md  8px subtle  — CTA, modal, panel, control
+   *   --radius-card                16px       — Card primitive, data blocks
+   *   --radius-hero                22px       — hero photo, large media
+   *   --radius-xl                  30px       — filter pill outline
+   *   --radius-pill                32px       — large filter chip (filled)
+   *   --radius-full                9999px     — round status dots
+   *
+   * --radius-md kept as an alias of --radius-sm — both 8px, both used by
+   * Button/Input/Modal. Splitting to give component CSS a more semantic
+   * "control surface" token name without forcing a sweep.
+   * The legacy --radius-lg (12px) was removed in Stage 5 (P-5) — verified
+   * zero consumers via grep.
    * ====================================================================== */
   --radius-xs:   4px;     /* legend, 표 셀, 작은 썸네일 */
-  --radius-sm:   8px;     /* 표준 카드, 버튼, 인풋 (also covers legacy radius-sm/md) */
-  --radius-md:   8px;     /* legacy alias — same as sm in new system */
-  --radius-lg:   12px;    /* legacy card radius (preserved) */
-  --radius-card: 16px;    /* DESIGN_SYSTEM "md" — 브리핑 데이터 블록, 동네 요약 */
+  --radius-sm:   8px;     /* 표준 카드, 버튼, 인풋 — control surface */
+  --radius-md:   8px;     /* alias of --radius-sm; CTA / modal / panel */
+  --radius-card: 16px;    /* 데이터 블록, 동네 요약 카드 */
   --radius-hero: 22px;    /* hero 사진 카드, 대형 미디어 */
   --radius-xl:   30px;    /* 필터 pill, 카테고리 토글 outline */
   --radius-pill: 32px;    /* 1차 CTA, 큰 필터 칩 (filled) */
