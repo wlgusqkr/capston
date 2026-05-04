@@ -170,14 +170,17 @@
 | Token | Value | 용도 |
 |---|--:|---|
 | `xs` | 4px | 지도 legend, 거래표 셀, 작은 썸네일 |
-| `sm` | 8px | 표준 카드, score card, 작은 미디어 |
-| `md` | 16px | 브리핑 데이터 블록, 동네 요약 |
-| `lg` | 22px | hero 사진 카드, 대형 미디어 |
+| `sm` | 8px | 표준 카드, 인풋, 1차 CTA (subtle) |
+| `md` | 8px | `sm`의 별칭 — `button-primary`, modal, panel 등 1차 surface는 모두 여기로 통일 |
+| `card` | 16px | 브리핑 데이터 블록, 동네 요약, `<Card>` 프리미티브 |
+| `hero` | 22px | hero 사진 카드, 대형 미디어 |
 | `xl` | 30px | 필터 pill (`원룸/오피스텔`), 카테고리 토글 |
 | `pill` | 32px | 큰 필터 칩(`button-pill-filled`), brand mark, 일부 micro-surface 한정 |
 | `full` | 9999px | 라운드 상태 도트, full-pill 컨트롤 |
 
-> **Cohere-inspired subtle radius** — 1차 CTA(`button-primary`)와 카드/인풋/모달 등 주요 surface는 `sm`(8px) ~ `md`(16px)로 통일한다. `pill`/`full` 같은 둥근 형태는 brand mark, badge, filter chip 같은 micro-surface에서만 쓴다. (큰 표면에 pill을 쓰면 SaaS 템플릿 느낌이 나고 분석 도구의 차분함이 깨진다.)
+> **Cohere-inspired subtle radius** — 1차 CTA(`button-primary`)와 인풋/모달 등 control surface는 `sm`/`md`(8px)로 통일한다. 데이터 블록·동네 요약 카드는 `card`(16px). hero 미디어는 `hero`(22px). `pill`/`full` 같은 둥근 형태는 brand mark, badge, filter chip 같은 micro-surface에서만. (큰 표면에 pill을 쓰면 SaaS 템플릿 느낌이 나고 분석 도구의 차분함이 깨진다.)
+>
+> **`md` vs `card` 정리 (post-D-11):** 이전 표기는 `md = 16px` 라고 적혀 있어서 `button-primary` 8px 정의와 모순됐다. 이제 `md` 는 8px (control surface), `card` 가 16px (데이터 블록) 으로 분리. 코드는 `--radius-md` (8px) 와 `--radius-card` (16px) 두 토큰으로 이미 구현되어 있음.
 
 ### Map-Specific Shapes
 
