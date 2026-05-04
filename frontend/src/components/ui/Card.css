@@ -10,14 +10,16 @@
  * Drop-shadows are NOT used. Depth comes from surface alternation (white ↔
  * dark band) handled at the page layout level, not inside cards.
  *
- * For brief/data blocks that need a 16px radius, prefer wrapping in your
- * own component that uses `--radius-card`. We keep `Card` at `--radius-lg`
- * (12px) to avoid breaking existing layouts.
+ * Radius: --radius-card (16px) per DESIGN_SYSTEM.md §Shapes & Radii.
+ * Cards are "데이터 블록, 동네 요약" surfaces and use md=16px. The legacy
+ * 12px (--radius-lg) was a transitional value and disagreed with page-local
+ * cards (Auth, KernelScorePanel, Compare table-wrap) that already opted into
+ * --radius-card directly. See design-audit FINDING F-22.
  */
 
 .ui-card {
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card);
   background-color: var(--color-surface);
   /* No shadow — system uses surface contrast, not elevation */
 }
