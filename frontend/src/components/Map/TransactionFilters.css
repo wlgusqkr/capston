@@ -22,7 +22,7 @@
   /* Move below the leaflet zoom control which lives at top-right (40px tall +
    * its top inset). 64px = 40 + 16 + 8 of breathing space. */
   margin-top: var(--space-16);
-  min-width: 220px;
+  min-width: var(--tx-filter-min-w);
 }
 
 .tx-filters__title {

@@ -53,8 +53,8 @@
 }
 
 .hero__map-card {
-  width: 280px;
-  height: 280px;
+  width: var(--hero-map-side);
+  height: var(--hero-map-side);
   overflow: hidden;
   border-radius: var(--radius-hero);
 }

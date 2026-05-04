@@ -28,8 +28,8 @@
 
 .legend__bar {
   display: flex;
-  width: 144px;
-  height: 8px;
+  width: var(--legend-bar-w);
+  height: var(--legend-bar-h);
   border-radius: var(--radius-full);
   overflow: hidden;
 }

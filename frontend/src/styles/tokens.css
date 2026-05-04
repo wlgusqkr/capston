@@ -359,6 +359,18 @@
   --badge-height:       22px;
 
   /* =========================================================================
+   * MAP / FLOATING-COMPONENT LAYOUT TOKENS (P-4)
+   * Sizes pinned by Leaflet defaults or by the DS map UI spec. Not part of
+   * the spacing scale because they aren't multiples of 8 — they're calibrated
+   * to map controls and visual chrome.
+   * ====================================================================== */
+  --map-control-size:   40px;     /* Leaflet zoom +/-, view toggle pill */
+  --legend-bar-w:       144px;    /* Legend gradient bar width */
+  --legend-bar-h:       8px;      /* Legend gradient bar height */
+  --hero-map-side:      280px;    /* Detail-page hero mini-map (square) */
+  --tx-filter-min-w:    220px;    /* TransactionFilters dropdown min-width */
+
+  /* =========================================================================
    * TRANSITION / Z-INDEX
    * ====================================================================== */
   --transition-fast: 120ms ease-out;
