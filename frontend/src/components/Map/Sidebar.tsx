@@ -99,7 +99,7 @@ export default function Sidebar({
       </header>
 
       <section className="sidebar__section" aria-label="레이어">
-        <h2 className="sidebar__section-title">레이어</h2>
+        <div className="sidebar__section-title" aria-hidden="true">레이어</div>
         <div className="sidebar__tabs" role="tablist">
           {LAYERS.map((layer) => {
             const selected = layer.key === activeLayer;
@@ -131,7 +131,7 @@ export default function Sidebar({
 
       <section className="sidebar__section" aria-label="가중치">
         <div className="sidebar__section-head">
-          <h2 className="sidebar__section-title">가중치</h2>
+          <div className="sidebar__section-title" aria-hidden="true">가중치</div>
           <span className="sidebar__sum tabular">
             합 {weights.rent + weights.amenity + weights.transit}
           </span>
@@ -162,7 +162,7 @@ export default function Sidebar({
       </section>
 
       <section className="sidebar__section" aria-label="비교 목록">
-        <h2 className="sidebar__section-title">비교 목록</h2>
+        <div className="sidebar__section-title" aria-hidden="true">비교 목록</div>
         <p className="sidebar__compare-hint">
           {compareCount === 0
             ? '동네 패널에서 "비교에 추가"를 누르세요.'
@@ -179,7 +179,7 @@ export default function Sidebar({
       </section>
 
       <section className="sidebar__section" aria-label="필터">
-        <h2 className="sidebar__section-title">필터</h2>
+        <div className="sidebar__section-title" aria-hidden="true">필터</div>
 
         <label className="sidebar__check" htmlFor={universityCheckId}>
           <input
