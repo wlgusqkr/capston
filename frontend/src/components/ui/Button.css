@@ -108,6 +108,13 @@
   height: auto;
 }
 
+/* secondary + full block reads as a primary action surface in row contexts
+ * (e.g. "비교 보기 (N)" in the sidebar). Enforce 44px touch target so it isn't
+ * a 22px-tall hit area. design-audit F-04. */
+.ui-button--secondary.ui-button--full {
+  min-height: var(--control-height-cta);
+}
+
 .ui-button--secondary:hover:not(:disabled) {
   color: var(--color-action-blue);
 }
