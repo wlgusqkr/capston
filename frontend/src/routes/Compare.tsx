@@ -132,7 +132,7 @@ export default function Compare() {
             <span>지도로</span>
           </Link>
           <span className="compare__crumb-sep" aria-hidden="true">/</span>
-          <span className="compare__crumb-current">동네 비교</span>
+          <h1 className="compare__crumb-current">동네 비교</h1>
         </div>
       </header>
 
