@@ -167,55 +167,13 @@
 }
 
 /* ---------- Breakdown bars ---------- */
+/* Bars themselves render via the shared <MetricBar> primitive (R-5).
+ * Only the wrapper layout stays here. */
 .kernel-panel__bars {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
-
-.kernel-panel__bar {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.kernel-panel__bar-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  font-size: var(--font-caption-size);
-  letter-spacing: var(--letter-spacing-ko);
-}
-
-.kernel-panel__bar-label {
-  color: var(--color-text-muted);
-}
-
-.kernel-panel__bar-value {
-  color: var(--color-text);
-  font-weight: 500;
-}
-
-.kernel-panel__bar-track {
-  width: 100%;
-  height: var(--space-2);
-  background-color: var(--color-surface-inset);
-  border-radius: var(--radius-full);
-  overflow: hidden;
-}
-
-.kernel-panel__bar-fill {
-  display: block;
-  height: 100%;
-  border-radius: var(--radius-full);
-  transition: width var(--transition-base), background-color var(--transition-base);
-}
-
-.kernel-panel__bar-fill--q1 { background-color: var(--heatmap-1); }
-.kernel-panel__bar-fill--q2 { background-color: var(--heatmap-2); }
-.kernel-panel__bar-fill--q3 { background-color: var(--heatmap-3); }
-.kernel-panel__bar-fill--q4 { background-color: var(--heatmap-4); }
-.kernel-panel__bar-fill--q5 { background-color: var(--heatmap-5); }
 
 /* ---------- Weights ---------- */
 .kernel-panel__weight-list {

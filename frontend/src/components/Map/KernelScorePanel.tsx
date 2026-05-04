@@ -13,7 +13,7 @@
 // ESC closes the panel.
 import { useMemo } from 'react';
 
-import { Score, Select } from '@/components/ui';
+import { MetricBar, Score, Select } from '@/components/ui';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { KERNEL_SCHOOL_OPTIONS } from '@/types/api';
 import type {
@@ -241,46 +241,12 @@ function BreakdownSection({
     <section className="kernel-panel__section" aria-label="점수 구성">
       <h3 className="kernel-panel__section-title">점수 구성</h3>
       <div className="kernel-panel__bars">
-        <BreakdownBar label="전월세" value={breakdown.rent} />
-        <BreakdownBar label="생활시설" value={breakdown.amenity} />
-        <BreakdownBar label="교통" value={breakdown.transit} />
+        <MetricBar label="전월세" value={breakdown.rent} tone="score" />
+        <MetricBar label="생활시설" value={breakdown.amenity} tone="score" />
+        <MetricBar label="교통" value={breakdown.transit} tone="score" />
       </div>
     </section>
   );
-}
-
-function BreakdownBar({ label, value }: { label: string; value: number }) {
-  const clamped = Math.max(0, Math.min(100, value));
-  const bucket = bucketOf(clamped);
-  return (
-    <div className="kernel-panel__bar">
-      <div className="kernel-panel__bar-row">
-        <span className="kernel-panel__bar-label">{label}</span>
-        <span className="kernel-panel__bar-value tabular">{Math.round(clamped)}</span>
-      </div>
-      <div
-        className="kernel-panel__bar-track"
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(clamped)}
-        aria-label={`${label} 점수`}
-      >
-        <span
-          className={`kernel-panel__bar-fill kernel-panel__bar-fill--${bucket}`}
-          style={{ width: `${clamped}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function bucketOf(score: number): 'q1' | 'q2' | 'q3' | 'q4' | 'q5' {
-  if (score < 20) return 'q1';
-  if (score < 40) return 'q2';
-  if (score < 60) return 'q3';
-  if (score < 80) return 'q4';
-  return 'q5';
 }
 
 /* -------------------------------------------------------------------------- */

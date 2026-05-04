@@ -231,55 +231,13 @@
 }
 
 /* ---- 2. Preference bars ------------------------------------------------- */
+/* Bars themselves render via the shared <MetricBar tone="weight"> primitive (R-5).
+ * Only the wrapper layout stays here. */
 
 .mypage__bars {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-}
-
-.mypage__bar {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.mypage__bar-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  font-size: var(--font-caption-size);
-  letter-spacing: var(--letter-spacing-ko);
-}
-
-.mypage__bar-label {
-  color: var(--color-text-muted);
-}
-
-.mypage__bar-value {
-  color: var(--color-text);
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  font-family: var(--font-family-mono);
-  font-size: var(--font-mono-label-size);
-  letter-spacing: var(--font-mono-label-tracking);
-}
-
-.mypage__bar-track {
-  height: 8px;
-  background: var(--color-surface-inset);
-  border-radius: var(--radius-full);
-  overflow: hidden;
-  position: relative;
-}
-
-.mypage__bar-fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  height: 100%;
-  background: var(--color-near-black);
-  border-radius: var(--radius-full);
-  transition: width var(--transition-slow);
 }
 
 /* ---- 3. Favorites list -------------------------------------------------- */

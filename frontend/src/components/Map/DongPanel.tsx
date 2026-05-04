@@ -23,7 +23,7 @@
 // Keyboard:
 //   ESC closes the panel (only when open and the user is not typing in an
 //   input — the panel does not contain any inputs in this iteration).
-import { Badge, Button, Card, Score } from '@/components/ui';
+import { Badge, Button, Card, MetricBar, Score } from '@/components/ui';
 import { useDongSummary } from '@/hooks/useDongs';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import type {
@@ -276,59 +276,15 @@ function ScoreBreakdown({ rawScores }: ScoreBreakdownProps) {
       <h3 className="dong-panel__section-title">점수 구성</h3>
       {rawScores ? (
         <div className="dong-panel__bars">
-          <ScoreBar label="교통" value={rawScores.transit} />
-          <ScoreBar label="전월세" value={rawScores.rent} />
-          <ScoreBar label="생활시설" value={rawScores.amenity} />
+          <MetricBar label="교통" value={rawScores.transit} tone="score" />
+          <MetricBar label="전월세" value={rawScores.rent} tone="score" />
+          <MetricBar label="생활시설" value={rawScores.amenity} tone="score" />
         </div>
       ) : (
         <p className="dong-panel__bars-empty">점수 정보를 준비 중입니다.</p>
       )}
     </section>
   );
-}
-
-interface ScoreBarProps {
-  label: string;
-  value: number; // 0~100
-}
-
-/** A small horizontal bar that picks its color band from the score value
- *  using the same 5-stop quintile buckets as the heatmap
- *  (tokens.css --heatmap-1..5).
- */
-function ScoreBar({ label, value }: ScoreBarProps) {
-  const clamped = Math.max(0, Math.min(100, value));
-  const bucket = pickBucket(clamped);
-  return (
-    <div className="dong-panel__bar">
-      <div className="dong-panel__bar-row">
-        <span className="dong-panel__bar-label">{label}</span>
-        <span className="dong-panel__bar-value tabular">{Math.round(clamped)}</span>
-      </div>
-      <div
-        className="dong-panel__bar-track"
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(clamped)}
-        aria-label={`${label} 점수`}
-      >
-        <span
-          className={`dong-panel__bar-fill dong-panel__bar-fill--${bucket}`}
-          style={{ width: `${clamped}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function pickBucket(score: number): 'q1' | 'q2' | 'q3' | 'q4' | 'q5' {
-  // Mirrors scoreToHeatmapBucket in src/lib/colors.ts (5-stop quintiles).
-  if (score < 20) return 'q1';
-  if (score < 40) return 'q2';
-  if (score < 60) return 'q3';
-  if (score < 80) return 'q4';
-  return 'q5';
 }
 
 /* -------------------------------------------------------------------------- */

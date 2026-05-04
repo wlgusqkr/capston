@@ -232,6 +232,9 @@
 }
 
 /* ---------- Section 3: Score bars ---------- */
+/* Bars themselves now render via the shared <MetricBar> primitive (R-5).
+ * The wrapper layout (.dong-panel__bars) and the empty placeholder text
+ * (.dong-panel__bars-empty) stay here since they're panel-local layout. */
 .dong-panel__bars {
   display: flex;
   flex-direction: column;
@@ -243,64 +246,6 @@
   font-size: var(--font-caption-size);
   color: var(--color-text-muted);
   letter-spacing: var(--letter-spacing-ko);
-}
-
-.dong-panel__bar {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.dong-panel__bar-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  font-size: var(--font-caption-size);
-  letter-spacing: var(--letter-spacing-ko);
-}
-
-.dong-panel__bar-label {
-  color: var(--color-text-muted);
-}
-
-.dong-panel__bar-value {
-  color: var(--color-text);
-  font-weight: 500;
-}
-
-.dong-panel__bar-track {
-  width: 100%;
-  height: var(--space-2);
-  background-color: var(--color-surface-inset);
-  border-radius: var(--radius-full);
-  overflow: hidden;
-}
-
-.dong-panel__bar-fill {
-  display: block;
-  height: 100%;
-  border-radius: var(--radius-full);
-  transition: width var(--transition-base), background-color var(--transition-base);
-}
-
-.dong-panel__bar-fill--q1 {
-  background-color: var(--heatmap-1);
-}
-
-.dong-panel__bar-fill--q2 {
-  background-color: var(--heatmap-2);
-}
-
-.dong-panel__bar-fill--q3 {
-  background-color: var(--heatmap-3);
-}
-
-.dong-panel__bar-fill--q4 {
-  background-color: var(--heatmap-4);
-}
-
-.dong-panel__bar-fill--q5 {
-  background-color: var(--heatmap-5);
 }
 
 /* ---------- Footer (CTA) ---------- */

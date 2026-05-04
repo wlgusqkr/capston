@@ -10,7 +10,7 @@
 import { useMemo } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 
-import { Badge, Button, Card } from '@/components/ui';
+import { Badge, Button, Card, MetricBar } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFavorites, useRemoveFavorite } from '@/hooks/useFavorites';
 import type { FavoriteItem, MeResponse } from '@/types/api';
@@ -132,36 +132,11 @@ function PreferenceSection({ user }: { user: MeResponse }) {
         </button>
       </div>
       <div className="mypage__bars">
-        <WeightBar label="통학" value={w_transit} />
-        <WeightBar label="주거비" value={w_rent} />
-        <WeightBar label="생활시설" value={w_amenity} />
+        <MetricBar label="통학" value={w_transit} tone="weight" unit="%" />
+        <MetricBar label="주거비" value={w_rent} tone="weight" unit="%" />
+        <MetricBar label="생활시설" value={w_amenity} tone="weight" unit="%" />
       </div>
     </Card>
-  );
-}
-
-function WeightBar({ label, value }: { label: string; value: number }) {
-  const clamped = Math.max(0, Math.min(100, value));
-  return (
-    <div className="mypage__bar">
-      <div className="mypage__bar-row">
-        <span className="mypage__bar-label">{label}</span>
-        <span className="mypage__bar-value tabular">{Math.round(clamped)}%</span>
-      </div>
-      <div
-        className="mypage__bar-track"
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(clamped)}
-        aria-label={`${label} 가중치`}
-      >
-        <span
-          className="mypage__bar-fill"
-          style={{ width: `${clamped}%` }}
-        />
-      </div>
-    </div>
   );
 }
 

@@ -30,6 +30,9 @@ export type { SelectProps } from './Select';
 export { default as Slider } from './Slider';
 export type { SliderProps } from './Slider';
 
+export { default as MetricBar } from './MetricBar';
+export type { MetricBarProps } from './MetricBar';
+
 export { default as Modal } from './Modal';
 export type { ModalProps } from './Modal';
 
