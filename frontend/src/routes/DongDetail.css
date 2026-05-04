@@ -113,7 +113,9 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-floating);
+  /* No shadow per DS: --shadow-floating is map UI only (F-26 precedent).
+   * 1px border + opaque white surface is enough separation from scrolled
+   * content. If demo QA finds it weak, revisit. */
   opacity: 0;
   transform: translateY(8px);
   pointer-events: none;
