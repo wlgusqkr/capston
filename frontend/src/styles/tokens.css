@@ -30,19 +30,17 @@
 
   /* Primary surfaces */
   --color-canvas-white: #ffffff;
-  --color-near-black:   #17171c;   /* 1차 CTA, 다크 지도 컨트롤, footer */
-  --color-pure-black:   #000000;   /* announcement bar, 최고 대비 */
-  --color-deep-forest:  #003c33;   /* 지도 hero band, "find your neighborhood" */
-  --color-dark-navy:    #071829;   /* 브리핑 hero panel, 거래 분석 */
+  --color-primary-green:#059669;   /* 메인 포인트 컬러 (CTA, 강조) */
+  --color-green-wash:   #ECFDF5;   /* 그린 계열 배경 */
+  --color-near-black:   #4C4C4C;   /* 다크 액센트 (브라운/그레이 계열) */
+  --color-deep-forest:  #003c33;   /* 히트맵 최고점 */
 
-  /* Warm neutrals */
-  --color-soft-stone:   #eeece7;   /* score card, 동네 요약 */
-  --color-pale-green:   #edfce9;   /* "what we measure" capability 섹션 */
-  --color-pale-blue:    #f1f5ff;   /* POI 인트로, 온보딩 힌트 */
+  /* Neutrals (gray scale) */
+  --color-gray-mid:     #A1A1AA;   /* 비활성, 보조 텍스트 */
+  --color-gray-light:   #D4D4D8;   /* 미묘한 명도 대비용 */
 
-  /* Editorial accents — never as CTA fill */
+  /* Editorial accents */
   --color-coral:        #ff7759;   /* 동네 카테고리 칩, warm marker */
-  --color-soft-coral:   #ffad9b;   /* pale 칩 보더 */
   --color-action-blue:  #1863dc;   /* 에디토리얼 링크 */
 
   /* Text & rules */
@@ -51,6 +49,13 @@
   --color-muted-slate:  #93939f;   /* 메타데이터, 카운트 */
   --color-hairline:     #d9d9dd;   /* 기본 디바이더, row rule */
   --color-border-light: #e5e7eb;   /* 폼 보더 */
+
+  /* Legacy aliases — 이전 토큰 이름을 새 값으로 매핑 */
+  --color-pure-black:   var(--color-near-black);    /* was #000000 */
+  --color-soft-stone:   #F4F4F5;                    /* was #eeece7 → 밝은 회색 */
+  --color-pale-green:   var(--color-green-wash);     /* was #edfce9 */
+  --color-pale-blue:    var(--color-green-wash);     /* was #f1f5ff → 그린 워시 */
+  --color-soft-coral:   #ffad9b;                     /* pale 칩 보더 */
 
   /* Semantic accents */
   --color-focus-blue:        #4c6ee6;  /* 키보드 포커스 링 */
@@ -75,42 +80,36 @@
    * ====================================================================== */
   --color-bg:               var(--color-canvas-white);
   --color-surface:          var(--color-canvas-white);
-  --color-surface-inset:    var(--color-soft-stone);
+  --color-surface-inset:    #F4F4F5;     /* 밝은 회색 — 인셋 배경 */
 
-  --color-primary:          var(--color-near-black);
-  --color-primary-hover:    var(--color-pure-black);
-  --color-primary-soft:     var(--color-soft-stone);
+  --color-primary:          var(--color-primary-green);
+  --color-primary-hover:    #047857;     /* 짙은 그린 hover */
+  --color-primary-soft:     var(--color-green-wash);
 
   --color-secondary:        var(--color-coral);
-  --color-secondary-hover:  #ff5a3a;     /* slightly darker coral, chip-only */
-  --color-secondary-soft:   #fff1ec;     /* very pale coral wash */
+  --color-secondary-hover:  #ff5a3a;
+  --color-secondary-soft:   #fff1ec;
 
   --color-text:             var(--color-ink);
   --color-text-muted:       var(--color-slate);
-  /* design-audit F-19: muted-slate (#93939f) is 3.04:1 on white — fails WCAG AA
-   * for normal text (4.5:1 required). Most --color-text-subtle consumers render at
-   * 12-14px (captions, table meta, source labels), so route to slate (4.47:1) which
-   * sits at the AA threshold while preserving the muted feel. The raw muted-slate
-   * token still exists for input placeholder and Badge/Score where the visual is
-   * intentionally tertiary and the size is large enough to qualify as "large text". */
   --color-text-subtle:      var(--color-slate);
   --color-text-on-primary:  var(--color-canvas-white);
 
   --color-border:           var(--color-border-light);
   --color-border-strong:    var(--color-hairline);
 
-  --color-focus-ring:       rgba(76, 110, 230, 0.40);   /* Focus Blue 40% */
-  --color-backdrop:         rgba(23, 23, 28, 0.55);     /* Near-Black 55% */
+  --color-focus-ring:       rgba(5, 150, 105, 0.40);    /* Primary Green 40% */
+  --color-backdrop:         rgba(76, 76, 76, 0.55);     /* Near-Black 55% */
 
   /* =========================================================================
    * COLOR — Legacy gray scale (kept as aliases for back-compat)
    * Several feature CSS files still reference --color-gray-*. Map them to
    * the closest new system value rather than removing the names.
    * ====================================================================== */
-  --color-gray-50:  var(--color-soft-stone);    /* warm panel inset */
-  --color-gray-100: #f1efe8;                    /* legacy chip/header bg */
+  --color-gray-50:  #F4F4F5;                    /* 인셋 배경 */
+  --color-gray-100: #E4E4E7;                    /* chip/header bg */
   --color-gray-200: var(--color-hairline);      /* control border */
-  --color-gray-400: var(--color-muted-slate);   /* placeholder/subtle */
+  --color-gray-400: var(--color-gray-mid);      /* placeholder/subtle */
   --color-gray-600: var(--color-slate);         /* muted body */
   --color-gray-900: var(--color-ink);           /* body */
 
@@ -122,15 +121,15 @@
    * Info:    Action Blue.
    * ====================================================================== */
   --color-success:        #1f7a5e;
-  --color-success-soft:   var(--color-pale-green);
+  --color-success-soft:   var(--color-green-wash);
   --color-warning:        var(--color-coral);
   --color-warning-soft:   #fff1ec;
   --color-danger:         var(--color-error-red);
   --color-danger-soft:    #fbe5e5;
   --color-info:           var(--color-action-blue);
-  --color-info-soft:      var(--color-pale-blue);
+  --color-info-soft:      #F4F4F5;
   --color-neutral:        var(--color-slate);
-  --color-neutral-soft:   var(--color-soft-stone);
+  --color-neutral-soft:   #F4F4F5;
 
   /* =========================================================================
    * COLOR — Heatmap (5-stop, Pale Green Wash → Deep Forest)
@@ -169,7 +168,8 @@
     'ui-sans-serif', system-ui, sans-serif;
 
   --font-family-mono:
-    'JetBrains Mono', 'D2Coding', 'Consolas', 'Menlo', 'Courier New', monospace;
+    'Pretendard', 'Pretendard Variable', -apple-system, BlinkMacSystemFont,
+    'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
 
   /* =========================================================================
    * TYPOGRAPHY — New 12-step scale (per DESIGN_SYSTEM.md)
@@ -180,37 +180,37 @@
   /* Hero Display — landing only */
   --font-hero-display-size: 80px;
   --font-hero-display-line: 1.00;
-  --font-hero-display-weight: 400;
+  --font-hero-display-weight: 700;
   --font-hero-display-tracking: -1.6px;
 
   /* Page Display — 브리핑 페이지 상단, 탐색 모드 진입 */
   --font-page-display-size: 60px;
   --font-page-display-line: 1.00;
-  --font-page-display-weight: 400;
+  --font-page-display-weight: 700;
   --font-page-display-tracking: -1.2px;
 
   /* Section Display — 주요 섹션 헤딩 (e.g., "평균 전월세") */
   --font-section-display-size: 48px;
   --font-section-display-line: 1.05;
-  --font-section-display-weight: 400;
+  --font-section-display-weight: 600;
   --font-section-display-tracking: -0.96px;
 
   /* Section Heading — CTA 블록, 비교 섹션 */
   --font-section-heading-size: 36px;
   --font-section-heading-line: 1.15;
-  --font-section-heading-weight: 400;
+  --font-section-heading-weight: 600;
   --font-section-heading-tracking: -0.36px;
 
   /* Card Heading — score card, 동네 요약 타이틀 */
   --font-card-heading-size: 28px;
   --font-card-heading-line: 1.20;
-  --font-card-heading-weight: 400;
+  --font-card-heading-weight: 600;
   --font-card-heading-tracking: -0.28px;
 
   /* Feature Heading — POI 카테고리 헤더, 표 섹션 타이틀 */
   --font-feature-heading-size: 22px;
   --font-feature-heading-line: 1.30;
-  --font-feature-heading-weight: 400;
+  --font-feature-heading-weight: 600;
   --font-feature-heading-tracking: 0;
 
   /* Body Large — 리드 단락, 브리핑 요약 */
@@ -228,7 +228,7 @@
   /* Button — CTA 라벨 (one of two places weight 500 is allowed) */
   --font-button-size: 14px;
   --font-button-line: 1.40;
-  --font-button-weight: 500;
+  --font-button-weight: 600;
   --font-button-tracking: 0;
 
   /* Caption — 메타, "거래 5건", 날짜 */
@@ -252,7 +252,7 @@
   /* Data Display — score card 핵심 KPI 숫자 (e.g., "55만원") */
   --font-data-display-size: 48px;
   --font-data-display-line: 1.00;
-  --font-data-display-weight: 400;
+  --font-data-display-weight: 600;
   --font-data-display-tracking: -0.48px;
 
   /* =========================================================================

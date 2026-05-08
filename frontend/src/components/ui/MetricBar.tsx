@@ -40,13 +40,13 @@ export interface MetricBarProps {
   ariaLabel?: string;
 }
 
-/** Map a 0–100 score to one of the 5 heatmap buckets (q1..q5). */
-function scoreToBucket(value: number): 'q1' | 'q2' | 'q3' | 'q4' | 'q5' {
-  if (value < 20) return 'q1';
-  if (value < 40) return 'q2';
-  if (value < 60) return 'q3';
-  if (value < 80) return 'q4';
-  return 'q5';
+/** Map a 0–100 score to a color: low=red, mid=green, high=blue. */
+function scoreToColor(value: number): string {
+  if (value < 25) return '#e53e3e';       // red
+  if (value < 45) return '#ed8936';       // orange
+  if (value < 65) return '#38a169';       // green
+  if (value < 85) return '#3182ce';       // blue
+  return '#2b6cb0';                       // deep blue
 }
 
 function MetricBar({
@@ -61,8 +61,7 @@ function MetricBar({
     : 0;
   const rounded = Math.round(clamped);
   const display = unit ? `${rounded}${unit}` : `${rounded}`;
-  const fillClass =
-    tone === 'score' ? `ui-metric-bar__fill--${scoreToBucket(clamped)}` : '';
+  const fillColor = tone === 'score' ? scoreToColor(clamped) : undefined;
   const computedAria =
     ariaLabel ?? `${label} ${tone === 'weight' ? '가중치' : '점수'}`;
 
@@ -81,8 +80,11 @@ function MetricBar({
         aria-label={computedAria}
       >
         <span
-          className={`ui-metric-bar__fill ui-metric-bar__fill--${tone} ${fillClass}`}
-          style={{ width: `${clamped}%` }}
+          className={`ui-metric-bar__fill ui-metric-bar__fill--${tone}`}
+          style={{
+            width: `${clamped}%`,
+            ...(fillColor ? { backgroundColor: fillColor } : {}),
+          }}
         />
       </div>
     </div>

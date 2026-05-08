@@ -22,7 +22,7 @@
   left: var(--space-3);
   top: var(--space-1);
   padding: var(--space-1) var(--space-3);
-  background: var(--color-near-black);
+  background: var(--color-primary);
   color: var(--color-canvas-white);
   border-radius: var(--radius-sm);
   font-size: var(--font-caption-base-size);
@@ -71,21 +71,11 @@
   border-radius: var(--radius-sm);
 }
 
-.topnav__brand-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  /* Brand mark = control-height-sm (32px) — matches the height vocabulary
-   * used by ui-button--sm and slide-in panel close buttons. */
+.topnav__brand-icon {
   width: var(--control-height-sm);
   height: var(--control-height-sm);
-  background: var(--color-near-black);
-  color: var(--color-canvas-white);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-family-base);
-  font-size: 16px;
-  font-weight: 500;
   flex-shrink: 0;
+  object-fit: contain;
 }
 
 .topnav__brand-text {
@@ -136,7 +126,7 @@
 }
 
 .topnav__action:hover {
-  background: var(--color-pale-blue);
+  background: var(--color-green-wash);
   color: var(--color-near-black);
 }
 

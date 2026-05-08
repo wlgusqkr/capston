@@ -24,6 +24,7 @@ import { Link, useLocation } from 'react-router-dom';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { usePageTitleValue } from '@/contexts/PageTitleContext';
+import iconSvg from '@/assets/icon.svg';
 
 import './TopNav.css';
 
@@ -84,10 +85,8 @@ export default function TopNav() {
       <div className="topnav__inner">
         {/* ---- Left: brand mark + wordmark, click → / ---- */}
         <Link to="/" className="topnav__brand" aria-label="홈으로">
-          <span className="topnav__brand-mark" aria-hidden="true">
-            슬
-          </span>
-          <span className="topnav__brand-text">기로운 자취생활</span>
+          <img src={iconSvg} alt="" className="topnav__brand-icon" aria-hidden="true" />
+          <span className="topnav__brand-text">슬기로운 자취생활</span>
         </Link>
 
         {/* ---- Center: contextual page identity ---- */}

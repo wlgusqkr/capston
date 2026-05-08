@@ -15,6 +15,7 @@ import { Route, Routes } from 'react-router-dom';
 import TopNav from './components/Layout/TopNav';
 import { PageTitleProvider } from './contexts/PageTitleContext';
 import Compare from './routes/Compare';
+import DesignSystem from './routes/DesignSystem';
 import DongDetail from './routes/DongDetail';
 import Login from './routes/Login';
 import MainMap from './routes/MainMap';
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/mypage" element={<MyPage />} />
+        <Route path="/design-system" element={<DesignSystem />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </PageTitleProvider>

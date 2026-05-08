@@ -42,7 +42,10 @@
 
 .ui-button:disabled {
   cursor: not-allowed;
-  opacity: 0.5;
+  opacity: 1;
+  background-color: #A1A1AA;
+  color: var(--color-canvas-white);
+  border-color: #A1A1AA;
 }
 
 /* ---------- Sizes ---------- */
@@ -72,9 +75,9 @@
  * 32px pill read as bubbly on tall (44-48px) CTAs and clashed with subtler
  * radii used on dong detail / compare. See deep-audit FINDING-105. */
 .ui-button--primary {
-  background-color: var(--color-near-black);
+  background-color: var(--color-primary);
   color: var(--color-canvas-white);
-  border-color: var(--color-near-black);
+  border-color: var(--color-primary);
   border-radius: var(--radius-md);
   /* Mobile hit target: ensure 44px min height regardless of size choice */
   min-height: var(--control-height-cta);
@@ -83,8 +86,8 @@
 }
 
 .ui-button--primary:hover:not(:disabled) {
-  background-color: var(--color-pure-black);
-  border-color: var(--color-pure-black);
+  background-color: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
 }
 
 /* If caller insists on small primary, allow it to compress below 44px on
@@ -123,25 +126,25 @@
 .ui-button--outline {
   background: transparent;
   color: var(--color-ink);
-  border-color: var(--color-near-black);
+  border-color: var(--color-primary);
   border-radius: var(--radius-xl);
 }
 
 .ui-button--outline:hover:not(:disabled) {
-  background-color: var(--color-soft-stone);
+  background-color: var(--color-green-wash);
 }
 
-/* filled — outline's active state. Near-Black fill + white text. */
+/* filled — outline's active state. Green fill + white text. */
 .ui-button--filled {
-  background-color: var(--color-near-black);
+  background-color: var(--color-primary);
   color: var(--color-canvas-white);
-  border-color: var(--color-near-black);
+  border-color: var(--color-primary);
   border-radius: var(--radius-xl);
 }
 
 .ui-button--filled:hover:not(:disabled) {
-  background-color: var(--color-pure-black);
-  border-color: var(--color-pure-black);
+  background-color: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
 }
 
 /* ghost — legacy alias of secondary (no underline). New code: use secondary. */
@@ -153,8 +156,8 @@
 }
 
 .ui-button--ghost:hover:not(:disabled) {
-  background-color: var(--color-soft-stone);
-  color: var(--color-near-black);
+  background-color: var(--color-green-wash);
+  color: var(--color-primary);
 }
 
 /* ---------- Icon slot ---------- */

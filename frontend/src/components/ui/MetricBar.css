@@ -20,7 +20,7 @@
 }
 
 .ui-metric-bar__label {
-  color: var(--color-text-muted);
+  color: var(--color-ink);
 }
 
 .ui-metric-bar__value {
@@ -30,7 +30,7 @@
 
 .ui-metric-bar__track {
   width: 100%;
-  height: var(--space-2); /* 8px */
+  height: var(--space-4); /* 16px */
   background-color: var(--color-surface-inset);
   border-radius: var(--radius-full);
   overflow: hidden;
@@ -44,22 +44,8 @@
   transition: width var(--transition-base), background-color var(--transition-base);
 }
 
-/* Tone: score → heatmap quintile bucket */
-.ui-metric-bar__fill--q1 {
-  background-color: var(--heatmap-1);
-}
-.ui-metric-bar__fill--q2 {
-  background-color: var(--heatmap-2);
-}
-.ui-metric-bar__fill--q3 {
-  background-color: var(--heatmap-3);
-}
-.ui-metric-bar__fill--q4 {
-  background-color: var(--heatmap-4);
-}
-.ui-metric-bar__fill--q5 {
-  background-color: var(--heatmap-5);
-}
+/* Tone: score → color set inline by scoreToColor() in MetricBar.tsx */
+/* (low=red, mid=green, high=blue) */
 
 /* Tone: weight → solid near-black (no signal in color, only proportion) */
 .ui-metric-bar__fill--weight {
