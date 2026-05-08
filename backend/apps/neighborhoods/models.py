@@ -21,7 +21,8 @@ class Dong(models.Model):
     gu = models.CharField(max_length=50, help_text="구 이름 (예: '중구')")
     code = models.CharField(
         max_length=10,
-        help_text="행정동 코드 (행안부, 8~10자리)",
+        unique=True,
+        help_text="행정동 코드 (행안부, 8~10자리). RDS adong_code와 동일.",
     )
 
     # 공간 데이터 (PostGIS)

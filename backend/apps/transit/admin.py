@@ -2,7 +2,13 @@
 
 from django.contrib import admin
 
-from .models import BusStop, NearestSubway, SubwayStation
+from .models import (
+    BusCongestion,
+    BusStop,
+    NearestSubway,
+    SubwayCongestion,
+    SubwayStation,
+)
 
 
 @admin.register(SubwayStation)
@@ -31,3 +37,22 @@ class NearestSubwayAdmin(admin.ModelAdmin):
     search_fields = ("dong__name", "dong__gu", "station__name")
     list_select_related = ("dong", "station")
     list_per_page = 100
+
+
+@admin.register(SubwayCongestion)
+class SubwayCongestionAdmin(admin.ModelAdmin):
+    list_display = ("station", "day_type", "direction", "express_yn", "time", "congestion")
+    list_filter = ("day_type", "direction", "express_yn")
+    search_fields = ("station__name", "station__line")
+    list_select_related = ("station",)
+    list_per_page = 100
+
+
+@admin.register(BusCongestion)
+class BusCongestionAdmin(admin.ModelAdmin):
+    list_display = ("bus_stop", "date", "time", "congestion")
+    list_filter = ("date",)
+    search_fields = ("bus_stop__name", "bus_stop__arsId")
+    list_select_related = ("bus_stop",)
+    list_per_page = 100
+    date_hierarchy = "date"
