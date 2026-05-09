@@ -1,4 +1,4 @@
-name: Deploy to VM
+name: Deploy to homeserver
 
 on:
   push:
@@ -6,50 +6,58 @@ on:
     paths:
       - "backend/**"
       - "frontend/**"
-      - "deploy/**"
       - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
 concurrency:
-  group: deploy-vm
+  group: deploy-homeserver
   cancel-in-progress: false
 
 jobs:
   deploy:
-    name: SSH deploy (backend + frontend)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, homeserver]
     timeout-minutes: 20
 
+    env:
+      REPO_DIR: /Users/parkparkjihyeon/homeserver/services/slgi/repo/capston
+      SLGI_DIR: /Users/parkparkjihyeon/homeserver/services/slgi
+
     steps:
-      - name: Load SSH key
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Add VM to known_hosts
+      - name: Sync repo on host
         run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
-
-      - name: Run deploy on VM
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-        run: |
-          ssh "${SSH_USER}@${SSH_HOST}" bash <<'REMOTE'
-          set -euo pipefail
-          cd ~/slgi
+          cd "$REPO_DIR"
           git fetch --all --prune
           git reset --hard origin/main
-          bash deploy/deploy.sh
-          REMOTE
 
-      - name: Smoke test (backend healthcheck)
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
+      - name: Build frontend (atomic swap into $SLGI_DIR/dist)
+        run: |
+          cd "$REPO_DIR/frontend"
+          docker run --rm -v "$PWD:/app" -w /app node:22-alpine \
+            sh -c "npm ci --no-audit --no-fund && npm run build"
+          rm -rf "$SLGI_DIR/dist.new"
+          cp -r dist "$SLGI_DIR/dist.new"
+          rm -rf "$SLGI_DIR/dist"
+          mv "$SLGI_DIR/dist.new" "$SLGI_DIR/dist"
+
+      - name: Build backend image
+        run: |
+          cd "$SLGI_DIR"
+          docker compose build
+
+      - name: Run migrations (fail fast, do not touch live container)
+        run: |
+          cd "$SLGI_DIR"
+          docker compose run --rm backend python manage.py migrate --noinput
+
+      - name: Restart backend
+        run: |
+          cd "$SLGI_DIR"
+          docker compose up -d
+
+      - name: Smoke test (backend schema via caddy)
         run: |
           for i in 1 2 3 4 5; do
-            if curl -fsS --max-time 5 "http://${SSH_HOST}/api/schema/" > /dev/null; then
+            if docker exec caddy wget -q -O- http://slgi-backend:8000/api/schema/ > /dev/null; then
               echo "Backend OK"
               exit 0
             fi
