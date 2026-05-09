@@ -11,9 +11,9 @@ detail_dummy 의 helper 를 그대로 재사용.
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import date
+from datetime import date, timedelta
 
-from django.db.models import Avg, Count, F, Value
+from django.db.models import Avg, Count, F, Min, Value
 
 from apps.amenities.models import Amenity
 from apps.realestate.models import RentDeal
@@ -39,6 +39,19 @@ from .summary import generate_summary
 # RentDeal.deal_type (영문 5종) → monthly_trend 차트 키.
 # apt 는 차트 시리즈에 미포함이라 누락 — 응답에 키가 없어도 프론트는 무시.
 TREND_KEYS = ("villa", "dagagu", "danok", "officetel")
+
+# 자취 시장 필터 — 아파트는 매매성/가족 시장이라 자취 시세 감 잡기엔 노이즈.
+# deposit 5억(=50000만원) 초과는 매매성 임대로 보고 제외.
+STUDIO_DEAL_TYPES = ("villa", "dagagu", "danok", "officetel")
+STUDIO_DEPOSIT_CAP = 50000  # 만원 단위 (= 5억)
+
+# 유형 라벨 매핑 (영문 enum → 한글). 차트 라벨에 사용.
+DEAL_TYPE_LABEL: dict[str, str] = {
+    "villa": "연립다세대",
+    "dagagu": "다가구",
+    "danok": "단독",
+    "officetel": "오피스텔",
+}
 
 # Amenity 11종 → SPEC 6.3 화면 8 카테고리 (한글 라벨).
 # 병원·약국 은 hospital + pharmacy 합산. park/etc 는 화면 미노출.
@@ -124,22 +137,78 @@ def _real_real_estate(dong: Dong, today: date) -> dict:
             avg = 0.0  # 데이터 부족 — 프론트가 0이면 회색 처리
         deposit_band_avg.append({"band": label, "avg_monthly_rent": avg})
 
-    # ---- 3) 최근 실거래 5건 ----
+    # ---- 3) 자취 거래 베이스 쿼리셋 (apt 제외, 보증금 5억 이하, 최근 6개월) ----
+    studio_qs = RentDeal.objects.filter(
+        dong_id=dong.id,
+        deal_type__in=STUDIO_DEAL_TYPES,
+        deposit__lte=STUDIO_DEPOSIT_CAP,
+    )
+    studio_recent_qs = studio_qs.filter(deal_date__gte=start)
+
+    # ---- 3a) KPI 4종 (자취 시장 한눈에) ----
+    converted_expr = F("monthly_rent") + F("deposit") * Value(0.005)
+    kpi_agg = studio_recent_qs.aggregate(
+        avg_rent=Avg(converted_expr),
+        min_deposit=Min("deposit"),
+        avg_area=Avg("area_m2"),
+        n=Count("id"),
+    )
+    studio_kpi = {
+        "avg_converted_rent": int(round(float(kpi_agg["avg_rent"]))) if kpi_agg["avg_rent"] is not None else None,
+        "min_deposit": int(kpi_agg["min_deposit"]) if kpi_agg["min_deposit"] is not None else None,
+        "avg_area_m2": _round1(float(kpi_agg["avg_area"])) if kpi_agg["avg_area"] is not None else None,
+        "recent_count": int(kpi_agg["n"]),
+    }
+
+    # ---- 3b) 유형별 평균 환산월세 (가로 막대 차트용) ----
+    type_avg_rows = list(
+        studio_recent_qs.values("deal_type")
+        .annotate(avg_converted=Avg(converted_expr), n=Count("id"))
+    )
+    type_avg_map = {r["deal_type"]: r for r in type_avg_rows}
+    type_avg = []
+    for key in STUDIO_DEAL_TYPES:
+        rec = type_avg_map.get(key)
+        if rec and rec["n"] >= 3:
+            type_avg.append({
+                "deal_type": key,
+                "label": DEAL_TYPE_LABEL[key],
+                "avg_converted_rent": int(round(float(rec["avg_converted"]))),
+                "count": rec["n"],
+            })
+        else:
+            # 거래 부족 — null 로 표시 (프론트 회색 처리)
+            type_avg.append({
+                "deal_type": key,
+                "label": DEAL_TYPE_LABEL[key],
+                "avg_converted_rent": None,
+                "count": rec["n"] if rec else 0,
+            })
+
+    # ---- 3c) 면적-환산월세 산점도 (최근 6개월 자취 거래 sample 200건) ----
+    # ORDER BY '?' 는 비싸서 최근 200건으로 단순화. 표본이 시점 편향되지만
+    # 6개월 윈도우라 시즌성 영향 작음.
+    scatter_rows = (
+        studio_recent_qs.order_by("-deal_date")
+        .values("deal_type", "area_m2", "monthly_rent", "deposit")[:200]
+    )
+    scatter = []
+    for r in scatter_rows:
+        converted = int(round(float(r["monthly_rent"]) + float(r["deposit"]) * 0.005))
+        scatter.append({
+            "deal_type": r["deal_type"],
+            "area_m2": _round1(float(r["area_m2"])),
+            "converted_rent": converted,
+        })
+
+    # ---- 3d) 최근 자취 거래 5건 (apt 제외) ----
     recent_qs = (
-        RentDeal.objects.filter(dong_id=dong.id)
-        .order_by("-deal_date", "-id")
+        studio_qs.order_by("-deal_date", "-id")
         .values("deal_date", "housing_type", "deal_type", "area_m2", "deposit", "monthly_rent")[:5]
     )
     recent_deals = []
     for r in recent_qs:
-        # type 라벨: housing_type(한글 raw) 우선, 없으면 deal_type 매핑
-        type_label = r["housing_type"] or {
-            "apt": "아파트",
-            "officetel": "오피스텔",
-            "villa": "연립다세대",
-            "dagagu": "다가구",
-            "danok": "단독",
-        }.get(r["deal_type"], r["deal_type"])
+        type_label = r["housing_type"] or DEAL_TYPE_LABEL.get(r["deal_type"], r["deal_type"])
         recent_deals.append({
             "date": r["deal_date"].isoformat(),
             "type": type_label,
@@ -152,6 +221,9 @@ def _real_real_estate(dong: Dong, today: date) -> dict:
         "monthly_trend": monthly_trend,
         "deposit_band_avg": deposit_band_avg,
         "recent_deals": recent_deals,
+        "studio_kpi": studio_kpi,
+        "type_avg": type_avg,
+        "scatter": scatter,
     }
 
 

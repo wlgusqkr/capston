@@ -116,13 +116,40 @@ export interface DongDetail {
     recent_deals: Array<{
       /** 'YYYY-MM-DD'. */
       date: string;
-      /** '연립다세대' | '단독다가구' | '오피스텔'. */
+      /** RentDeal.housing_type 한글 raw — 다세대/연립/연립다세대/다가구/단독/오피스텔. */
       type: string;
       area_m2: number;
       /** 만원. */
       deposit: number;
       /** 만원. */
       monthly_rent: number;
+    }>;
+    /** 자취 시장 KPI — apt 제외, 보증금 5억 이하, 최근 6개월 자취 거래 기준. */
+    studio_kpi: {
+      /** 평균 환산월세 (만원, 정수). 거래 0건이면 null. */
+      avg_converted_rent: number | null;
+      /** 최저 보증금 (만원). null = 거래 없음. */
+      min_deposit: number | null;
+      /** 평균 면적 (m², 1 decimal). null = 거래 없음. */
+      avg_area_m2: number | null;
+      /** 최근 6개월 자취 거래 건수. */
+      recent_count: number;
+    };
+    /** 유형별 평균 환산월세 (자취 4종, villa/dagagu/danok/officetel 순). */
+    type_avg: Array<{
+      deal_type: 'villa' | 'dagagu' | 'danok' | 'officetel';
+      /** 한글 라벨 — '연립다세대'·'다가구'·'단독'·'오피스텔'. */
+      label: string;
+      /** 평균 환산월세 (만원). 거래 3건 미만이면 null (회색 처리). */
+      avg_converted_rent: number | null;
+      /** 해당 유형 거래 건수 (최근 6개월, 자취 필터). */
+      count: number;
+    }>;
+    /** 면적-환산월세 산점도 — 최근 6개월 자취 거래 최대 200건. */
+    scatter: Array<{
+      deal_type: 'villa' | 'dagagu' | 'danok' | 'officetel';
+      area_m2: number;
+      converted_rent: number;
     }>;
   };
 

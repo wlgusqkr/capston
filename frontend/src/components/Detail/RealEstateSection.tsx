@@ -1,29 +1,31 @@
-// RealEstateSection — SPEC 6.3 Section 2 (부동산 시세).
+// RealEstateSection — SPEC 6.3 Section 2 (자취 시장 대시보드).
 //
-// R-3: <Card> wrappers stripped. Section is `.detail-section` with mono
-// English eyebrow ("BUDGET / RENT") + Korean Section Heading + content
-// max-width: 720px (set by parent .detail-section).
+// Phase 4.7: "최근 5건만" 표 기반 → 자취생 친화 풀 대시보드로 확장.
+// 아파트는 매매성/가족 시장이라 자취 시세 감 X → 백엔드에서 apt 제외 + 보증금
+// 5억 이하만 자취 시장 KPI/차트/표에 포함.
 //
-// Layout:
-//   - Header: title + period toggle (3/6/12 months — UI only, doesn't filter
-//     data yet)
-//   - Top grid (2 cols on desktop): unframed charts side by side
-//       Left  — LineChart of monthly rent trend (3 lines, null gaps OK)
-//       Right — Horizontal BarChart of avg monthly rent per deposit band
-//   - Bottom: table of 5 most recent deals (already unframed transaction-row
-//     pattern post-DS).
+// Layout (위 → 아래):
+//   1. Header: 제목 + 기간 토글 (월별 추이에만 영향)
+//   2. KPI 4 카드 — 평균 환산월세 / 최저 보증금 / 평균 면적 / 최근 6m 거래수
+//   3. 유형별 평균 환산월세 (가로 BarChart) + 면적-환산월세 산점도 (ScatterChart)
+//   4. 월별 평균 추이 (LineChart 4 series) + 보증금 대역 (가로 BarChart)
+//   5. 최근 자취 거래 5건 표 (apt 제외, 환산월세 포함)
 import { useState } from 'react';
 import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   Legend,
   Line,
   LineChart,
   ResponsiveContainer,
+  Scatter,
+  ScatterChart,
   Tooltip,
   XAxis,
   YAxis,
+  ZAxis,
 } from 'recharts';
 
 import { CHART_COLORS } from '@/lib/colors';
@@ -31,6 +33,15 @@ import { formatConvertedRent } from '@/lib/rent';
 import type { DongDetail } from '@/types/api';
 
 import './RealEstateSection.css';
+
+type DealTypeKey = 'villa' | 'dagagu' | 'danok' | 'officetel';
+
+const DEAL_TYPE_FILL: Record<DealTypeKey, string> = {
+  villa: CHART_COLORS.villa,
+  dagagu: CHART_COLORS.dagagu,
+  danok: CHART_COLORS.danok,
+  officetel: CHART_COLORS.officetel,
+};
 
 interface RealEstateSectionProps {
   realEstate: DongDetail['real_estate'];
@@ -55,17 +66,40 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
     monthly: b.avg_monthly_rent,
   }));
 
+  const kpi = realEstate.studio_kpi;
+  const typeAvg = realEstate.type_avg.map((t) => ({
+    label: t.label,
+    avg: t.avg_converted_rent ?? 0,
+    has: t.avg_converted_rent !== null,
+    deal_type: t.deal_type,
+    count: t.count,
+  }));
+
+  // 산점도는 deal_type별로 시리즈 분리 (Recharts 색 구분)
+  const scatterByType: Record<DealTypeKey, Array<{ x: number; y: number }>> = {
+    villa: [],
+    dagagu: [],
+    danok: [],
+    officetel: [],
+  };
+  for (const p of realEstate.scatter) {
+    scatterByType[p.deal_type as DealTypeKey]?.push({
+      x: p.area_m2,
+      y: p.converted_rent,
+    });
+  }
+
   return (
     <section
       className="detail-section real-estate"
       aria-labelledby="rent-heading"
     >
       <p className="mono-label detail-section__eyebrow" aria-hidden="true">
-        BUDGET / RENT
+        STUDIO MARKET / 자취 시세
       </p>
       <header className="real-estate__header">
         <h2 id="rent-heading" className="detail-section__heading">
-          부동산 시세
+          자취 시세 대시보드
         </h2>
         <div className="real-estate__period" role="tablist" aria-label="기간 선택">
           {PERIOD_OPTIONS.map((opt) => {
@@ -87,6 +121,179 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
           })}
         </div>
       </header>
+
+      <p className="real-estate__filter-hint mono-label">
+        아파트 제외 · 보증금 5억 이하 · 최근 6개월 자취 시장 기준
+      </p>
+
+      {/* ── KPI 4 카드 ── */}
+      <div className="real-estate__kpi-grid" aria-label="자취 시장 핵심 지표">
+        <KpiCard
+          label="평균 환산월세"
+          value={kpi.avg_converted_rent != null ? `${kpi.avg_converted_rent}만원` : '-'}
+          hint="월세 + 보증금 × 0.005"
+        />
+        <KpiCard
+          label="최저 보증금"
+          value={kpi.min_deposit != null ? `${kpi.min_deposit.toLocaleString()}만원` : '-'}
+          hint="자취 시장 진입 가격"
+        />
+        <KpiCard
+          label="평균 면적"
+          value={kpi.avg_area_m2 != null ? `${kpi.avg_area_m2}㎡` : '-'}
+          hint={kpi.avg_area_m2 != null ? `약 ${(kpi.avg_area_m2 / 3.3058).toFixed(1)}평` : ''}
+        />
+        <KpiCard
+          label="최근 6개월 거래"
+          value={kpi.recent_count.toLocaleString()}
+          hint="아파트 제외, 자취 가능 매물"
+        />
+      </div>
+
+      {/* ── 유형별 평균 + 면적-환산월세 산점도 ── */}
+      <div className="real-estate__grid">
+        <div className="real-estate__chart-block" aria-label="유형별 평균 환산월세">
+          <h3 className="real-estate__chart-title">유형별 평균 환산월세 (만원)</h3>
+          <p className="real-estate__chart-hint mono-label">
+            거래 3건 미만 유형은 회색 처리
+          </p>
+          <div className="real-estate__chart">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={typeAvg}
+                layout="vertical"
+                margin={{ top: 8, right: 24, bottom: 0, left: 8 }}
+              >
+                <CartesianGrid stroke={CHART_COLORS.grid} strokeDasharray="3 3" horizontal={false} />
+                <XAxis
+                  type="number"
+                  stroke={CHART_COLORS.axis}
+                  tick={{ fill: CHART_COLORS.axis, fontSize: 11 }}
+                  tickMargin={6}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="label"
+                  stroke={CHART_COLORS.axis}
+                  tick={{ fill: CHART_COLORS.axis, fontSize: 11 }}
+                  width={80}
+                  tickMargin={6}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: 'var(--color-surface)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-caption-size)',
+                  }}
+                  labelStyle={{ color: 'var(--color-text)' }}
+                  formatter={(value: number, _n, item) => {
+                    const datum = item?.payload as (typeof typeAvg)[number];
+                    if (!datum.has) return ['데이터 부족', ''] as [string, string];
+                    return [`${value}만원 (${datum.count}건)`, '평균 환산월세'] as [
+                      string,
+                      string,
+                    ];
+                  }}
+                />
+                <Bar dataKey="avg" radius={[0, 4, 4, 0]} barSize={18}>
+                  {typeAvg.map((d, i) => (
+                    <Cell
+                      key={i}
+                      fill={
+                        d.has
+                          ? DEAL_TYPE_FILL[d.deal_type as DealTypeKey]
+                          : 'var(--color-soft-stone, #eeece7)'
+                      }
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="real-estate__chart-block" aria-label="면적-환산월세 산점도">
+          <h3 className="real-estate__chart-title">면적·환산월세 분포</h3>
+          <p className="real-estate__chart-hint mono-label">
+            최근 6개월, 점 하나 = 거래 1건 (최대 200건)
+          </p>
+          <div className="real-estate__chart">
+            <ResponsiveContainer width="100%" height="100%">
+              <ScatterChart margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
+                <CartesianGrid stroke={CHART_COLORS.grid} strokeDasharray="3 3" />
+                <XAxis
+                  type="number"
+                  dataKey="x"
+                  name="면적"
+                  unit="㎡"
+                  stroke={CHART_COLORS.axis}
+                  tick={{ fill: CHART_COLORS.axis, fontSize: 11 }}
+                  tickMargin={6}
+                />
+                <YAxis
+                  type="number"
+                  dataKey="y"
+                  name="환산월세"
+                  unit="만원"
+                  stroke={CHART_COLORS.axis}
+                  tick={{ fill: CHART_COLORS.axis, fontSize: 11 }}
+                  tickMargin={6}
+                  width={48}
+                />
+                <ZAxis range={[28, 28]} />
+                <Tooltip
+                  cursor={{ strokeDasharray: '3 3' }}
+                  contentStyle={{
+                    background: 'var(--color-surface)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-caption-size)',
+                  }}
+                  labelStyle={{ color: 'var(--color-text)' }}
+                  formatter={(value: number, name: string) => {
+                    if (name === '면적') return [`${value}㎡`, name] as [string, string];
+                    if (name === '환산월세')
+                      return [`${value}만원`, name] as [string, string];
+                    return [`${value}`, name] as [string, string];
+                  }}
+                />
+                <Legend
+                  verticalAlign="top"
+                  height={28}
+                  iconType="circle"
+                  iconSize={8}
+                  wrapperStyle={{ fontSize: 'var(--font-caption-size)' }}
+                />
+                <Scatter
+                  name="연립다세대"
+                  data={scatterByType.villa}
+                  fill={CHART_COLORS.villa}
+                  fillOpacity={0.7}
+                />
+                <Scatter
+                  name="다가구"
+                  data={scatterByType.dagagu}
+                  fill={CHART_COLORS.dagagu}
+                  fillOpacity={0.7}
+                />
+                <Scatter
+                  name="단독"
+                  data={scatterByType.danok}
+                  fill={CHART_COLORS.danok}
+                  fillOpacity={0.7}
+                />
+                <Scatter
+                  name="오피스텔"
+                  data={scatterByType.officetel}
+                  fill={CHART_COLORS.officetel}
+                  fillOpacity={0.7}
+                />
+              </ScatterChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
 
       <div className="real-estate__grid">
         <div className="real-estate__chart-block" aria-label="월별 평균 월세 추이">
@@ -226,11 +433,11 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
         </div>
       </div>
 
-      <div className="real-estate__deals" aria-label="최근 실거래 5건">
+      <div className="real-estate__deals" aria-label="최근 자취 거래 5건">
         <header className="real-estate__deals-header">
-          <h3 className="real-estate__chart-title">최근 실거래 5건</h3>
+          <h3 className="real-estate__chart-title">최근 자취 거래 5건</h3>
           <p className="real-estate__deals-hint mono-label">
-            환산 = 월세 + 보증금 × 0.005 (연 6%/월 0.005 가정)
+            아파트 제외 · 환산 = 월세 + 보증금 × 0.005 (연 6%)
           </p>
         </header>
         <div className="real-estate__table-scroll">
@@ -294,4 +501,21 @@ function formatBandLabel(band: string): string {
     default:
       return band;
   }
+}
+
+interface KpiCardProps {
+  label: string;
+  value: string;
+  hint?: string;
+}
+
+/** 자취 시장 KPI 1 카드 — 작은 라벨 + 큰 숫자 + (옵션) 힌트. */
+function KpiCard({ label, value, hint }: KpiCardProps) {
+  return (
+    <div className="real-estate__kpi">
+      <p className="mono-label real-estate__kpi-label">{label}</p>
+      <p className="real-estate__kpi-value tabular">{value}</p>
+      {hint ? <p className="real-estate__kpi-hint">{hint}</p> : null}
+    </div>
+  );
 }
