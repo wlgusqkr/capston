@@ -21,9 +21,9 @@ urlpatterns = [
     # GET /api/dongs/scores
     path("dongs/scores", DongScoresView.as_view(), name="dong-scores"),
     # GET /api/dongs/<slug>/summary
-    path("dongs/<slug:slug>/summary", DongSummaryView.as_view(), name="dong-summary"),
+    path("dongs/<str:slug>/summary", DongSummaryView.as_view(), name="dong-summary"),
     # GET /api/dongs/<slug>/detail
-    path("dongs/<slug:slug>/detail", DongDetailView.as_view(), name="dong-detail"),
+    path("dongs/<str:slug>/detail", DongDetailView.as_view(), name="dong-detail"),
     # GET /api/compare?slugs=A,B,C
     path("compare", CompareView.as_view(), name="compare"),
     # POST /api/score/point  (Phase 2a — 임의 지점 커널 점수, SPEC 11)
