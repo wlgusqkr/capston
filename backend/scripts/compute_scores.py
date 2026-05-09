@@ -2,22 +2,30 @@
 
 알고리즘 (SPEC 11.2)
 --------------------
-- score_rent: 보증금 1000만원 기준 환산 월세(만원/월) 평균 → 백분위 → 100 - 백분위.
-  환산식: converted = monthly_rent + max(0, deposit - 1000) / 100 * 0.5
-  (보증금 1000 초과분은 100만원당 0.5만원 월세로 환산. 학부 프로젝트 단순화.)
-- score_amenity: 카테고리별 카운트 → log1p → 가중합 → 백분위.
-- score_transit: (1 - dist/1000 클램프) 지하철 + log1p(버스카운트)/log1p(50) 정규화 → 가중합 → 백분위.
+- score_rent: 환산월세(만원/월) = monthly_rent + deposit * 0.005 (apps.realestate.utils
+  와 단일 진실). 동별 평균 → 백분위 invert (저렴할수록 높음).
+  RentDeal 7.4M 은 SQL aggregation (Avg, Count) 으로 처리, 메모리 안전.
+- score_amenity: 동별 Store 카운트 + Park 카운트 → log scale 가중합 → 백분위.
+  (RDS 통합 후 Amenity 모델은 derived view 로 빠지고 raw 는 Store 가 보유.
+  카테고리별 정밀 가중은 추후 별도 PR.)
+- score_transit: (1 - rank=1 거리/1000 클램프) 지하철 가중 + log1p(BusStop 카운트)/
+  log1p(50) 정규화 → 가중합 → 백분위. NearestSubway 캐시 (compute_nearest_subway.py)
+  필요.
 
 각 점수는 0~100 (소수점 1자리). Dong.score_rent / score_amenity / score_transit
 컬럼에 bulk_update 로 갱신. 총점(composite)은 API 호출 시점에 가중치 곱해 계산.
 
-거래량 3건 미만 동(SPEC 14.2) → 같은 구 평균 → 서울 중위값 fallback.
+거래량 3건 미만 동 → 같은 구 평균 → 서울 중위값 fallback.
 
 Usage
 -----
     python scripts/compute_scores.py --mode check
     python scripts/compute_scores.py --mode dummy
     python scripts/compute_scores.py --mode real
+
+Prerequisite (real mode)
+------------------------
+    python scripts/compute_nearest_subway.py    # NearestSubway 캐시 채우기
 """
 
 from __future__ import annotations
@@ -33,10 +41,11 @@ from _django import setup
 
 setup()
 
-from django.db.models import Count, Sum  # noqa: E402
+from django.db.models import Avg, Count, F, Value  # noqa: E402
 
-from apps.amenities.models import Amenity  # noqa: E402
+from apps.amenities.models import Store  # noqa: E402
 from apps.neighborhoods.models import Dong  # noqa: E402
+from apps.parks.models import ParkDong  # noqa: E402
 from apps.realestate.models import RentDeal  # noqa: E402
 from apps.realestate.utils import convert_to_monthly  # noqa: E402
 from apps.transit.models import BusStop, NearestSubway  # noqa: E402
@@ -137,20 +146,27 @@ def _percentile_scores(values: List[Optional[float]], reverse: bool = False) -> 
 # Step 1: 동별 raw metric 수집
 # ---------------------------------------------------------------------------
 def _collect_rent_metrics(dongs: List[Dong]) -> Dict[int, Optional[float]]:
-    """동별 평균 환산월세. <3건은 None (구 평균 → 서울 중위 fallback 후 처리)."""
-    result: Dict[int, Optional[float]] = {}
-    # 한 번의 쿼리로 가져와 파이썬에서 집계 (deal 27,050건 — 충분히 가벼움)
-    deals_by_dong: Dict[int, List[float]] = defaultdict(list)
-    for d in RentDeal.objects.values_list("dong_id", "deposit", "monthly_rent"):
-        dong_id, deposit, rent = d
-        deals_by_dong[dong_id].append(_converted_rent(deposit, rent))
+    """동별 평균 환산월세. <3건은 None (구 평균 → 서울 중위 fallback 후 처리).
 
+    7.4M RentDeal 행을 메모리에 적재하지 않고 SQL aggregation 으로 동별 평균을 계산.
+    환산식: monthly_rent + deposit * 0.005 (utils.convert_to_monthly 와 동일 계수).
+    """
+    qs = (
+        RentDeal.objects.values("dong_id")
+        .annotate(
+            avg_rent=Avg(F("monthly_rent") + F("deposit") * Value(0.005)),
+            n=Count("id"),
+        )
+    )
+    agg = {row["dong_id"]: (row["avg_rent"], row["n"]) for row in qs}
+
+    result: Dict[int, Optional[float]] = {}
     for dong in dongs:
-        deals = deals_by_dong.get(dong.id, [])
-        if len(deals) < 3:
+        rec = agg.get(dong.id)
+        if rec is None or rec[1] < 3:
             result[dong.id] = None
         else:
-            result[dong.id] = sum(deals) / len(deals)
+            result[dong.id] = float(rec[0])
     return result
 
 
@@ -186,23 +202,39 @@ def _apply_rent_fallback(
 
 
 def _collect_amenity_metrics(dongs: List[Dong]) -> Dict[int, float]:
-    """동별 amenity 가중 점수 (log scale, 카테고리별 가중합)."""
-    counts: Dict[int, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
-    for row in (
-        Amenity.objects.values("dong_id", "category")
-        .annotate(n=Count("id"))
-        .iterator()
-    ):
-        counts[row["dong_id"]][row["category"]] = row["n"]
+    """동별 amenity 점수 — Store 카운트(0.8) + Park 카운트(0.2) log scale 가중합.
+
+    RDS 통합 후 Amenity 모델은 derived view 로 재정의될 예정이라, 본 단계는
+    Store(상가 raw 535k) + ParkDong(공원 다대다) 으로 직접 계산. 카테고리별
+    정밀 가중(편의점/카페/병원 등)은 향후 별도 PR.
+
+    Store/ParkDong 의 dong FK 는 to_field="code" (Dong.code) 라서 ORM
+    `dong__id` 로 join 해 Dong.id (auto pk) 키로 통일.
+    """
+    store_counts: Dict[int, int] = {
+        row["dong__id"]: row["n"]
+        for row in (
+            Store.objects.filter(dong__isnull=False)
+            .values("dong__id")
+            .annotate(n=Count("id"))
+        )
+        if row["dong__id"] is not None
+    }
+    park_counts: Dict[int, int] = {
+        row["dong__id"]: row["n"]
+        for row in (
+            ParkDong.objects.values("dong__id").annotate(n=Count("id"))
+        )
+        if row["dong__id"] is not None
+    }
 
     result: Dict[int, float] = {}
     for dong in dongs:
-        cdict = counts.get(dong.id, {})
-        score = 0.0
-        for cat, weight in AMENITY_WEIGHTS.items():
-            cnt = cdict.get(cat, 0)
-            score += math.log1p(cnt) * weight
-        result[dong.id] = score
+        n_store = store_counts.get(dong.id, 0)
+        n_park = park_counts.get(dong.id, 0)
+        # store 는 동당 수십~수천 → log1p 후 1~3 스케일,
+        # park 는 동당 0~5 → log1p 후 0~1.5 스케일. 가중치로 균형.
+        result[dong.id] = math.log1p(n_store) * 0.8 + math.log1p(n_park) * 0.2
     return result
 
 
@@ -213,10 +245,14 @@ def _collect_transit_metrics(dongs: List[Dong]) -> Dict[int, float]:
     for ns in NearestSubway.objects.filter(rank=1).values_list("dong_id", "distance_m"):
         nearest_dist[ns[0]] = ns[1]
 
-    # 버스 정류장 카운트
+    # 버스 정류장 카운트 — BusStop.dong 은 to_field="code" 라서 dong__id 로 join.
     bus_counts: Dict[int, int] = {}
-    for row in BusStop.objects.values("dong_id").annotate(n=Count("id")):
-        bus_counts[row["dong_id"]] = row["n"]
+    for row in (
+        BusStop.objects.filter(dong__isnull=False)
+        .values("dong__id")
+        .annotate(n=Count("id"))
+    ):
+        bus_counts[row["dong__id"]] = row["n"]
 
     result: Dict[int, float] = {}
     log_cap = math.log1p(BUS_COUNT_CAP)
