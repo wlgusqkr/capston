@@ -138,8 +138,12 @@ def _parse_int(
     return v
 
 
-def parse_explore_filters(request: Request) -> dict[str, Any]:
-    """쿼리 파라미터 → 정규화된 필터 dict. 검증 실패 시 ValidationError."""
+def parse_base_filters(request: Request) -> dict[str, Any]:
+    """공통 자취 거래량 필터 파싱 (deal_types/period/deposit/monthly/area).
+
+    Explore 와 Match 양쪽이 공유 (eng-review #17). sort/page/page_size 는 explore
+    only — `parse_explore_filters` 에서 추가.
+    """
     p = request.query_params
 
     deal_types = _parse_csv_set(p.get("deal_types"), ALL_DEAL_TYPES)
@@ -173,6 +177,23 @@ def parse_explore_filters(request: Request) -> dict[str, Any]:
     if area_min > area_max:
         raise ValidationError({"area_min": "area_min은 area_max 이하여야 합니다."})
 
+    return {
+        "deal_types": deal_types,
+        "period": period,
+        "deposit_min": deposit_min,
+        "deposit_max": deposit_max,
+        "monthly_min": monthly_min,
+        "monthly_max": monthly_max,
+        "area_min": area_min,
+        "area_max": area_max,
+    }
+
+
+def parse_explore_filters(request: Request) -> dict[str, Any]:
+    """쿼리 파라미터 → 정규화된 explore 필터 dict (base + sort/page)."""
+    base = parse_base_filters(request)
+    p = request.query_params
+
     page = _parse_int(p.get("page"), "page", 1, 1, 100_000)
     page_size = _parse_int(p.get("page_size"), "page_size", DEFAULT_PAGE_SIZE, 1, MAX_PAGE_SIZE)
 
@@ -183,14 +204,7 @@ def parse_explore_filters(request: Request) -> dict[str, Any]:
         )
 
     return {
-        "deal_types": deal_types,
-        "period": period,
-        "deposit_min": deposit_min,
-        "deposit_max": deposit_max,
-        "monthly_min": monthly_min,
-        "monthly_max": monthly_max,
-        "area_min": area_min,
-        "area_max": area_max,
+        **base,
         "page": page,
         "page_size": page_size,
         "sort": sort,
@@ -204,11 +218,11 @@ def parse_explore_filters(request: Request) -> dict[str, Any]:
 CONVERTED_EXPR: Expression = F("monthly_rent") + F("deposit") * Value(0.005)
 
 
-def apply_filters(
-    qs: QuerySet[RentDeal], dong_id: int, filters: dict[str, Any], today: date
+def apply_base_filters(
+    qs: QuerySet[RentDeal], filters: dict[str, Any], today: date
 ) -> QuerySet[RentDeal]:
+    """dong 무관 base 필터만 적용 (match-counts 가 모든 동 GROUP BY 위해 사용)."""
     qs = qs.filter(
-        dong_id=dong_id,
         deal_type__in=filters["deal_types"],
         deposit__gte=filters["deposit_min"],
         deposit__lte=filters["deposit_max"],
@@ -223,6 +237,13 @@ def apply_filters(
 
         qs = qs.filter(deal_date__gte=today - timedelta(days=days))
     return qs
+
+
+def apply_filters(
+    qs: QuerySet[RentDeal], dong_id: int, filters: dict[str, Any], today: date
+) -> QuerySet[RentDeal]:
+    """단일 동 + base 필터. Explore 는 항상 dong scope."""
+    return apply_base_filters(qs.filter(dong_id=dong_id), filters, today)
 
 
 def compute_kpi(qs: QuerySet[RentDeal]) -> dict[str, Any]:

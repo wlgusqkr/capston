@@ -7,6 +7,7 @@ neighborhoods 앱 URL.
 
 from django.urls import path
 
+from .match import DongMatchCountsView, DongMatchDetailView
 from .views import (
     CompareView,
     DongDetailView,
@@ -21,6 +22,14 @@ app_name = "neighborhoods"
 urlpatterns = [
     # GET /api/dongs/scores
     path("dongs/scores", DongScoresView.as_view(), name="dong-scores"),
+    # GET /api/dongs/match-counts — 메인 지도 자취 거래량 분포 (Phase 5)
+    path("dongs/match-counts", DongMatchCountsView.as_view(), name="dong-match-counts"),
+    # GET /api/dongs/<slug>/match-detail — 동 패널 매칭 KPI (Phase 5)
+    path(
+        "dongs/<str:slug>/match-detail",
+        DongMatchDetailView.as_view(),
+        name="dong-match-detail",
+    ),
     # GET /api/dongs/<slug>/summary
     path("dongs/<str:slug>/summary", DongSummaryView.as_view(), name="dong-summary"),
     # GET /api/dongs/<slug>/detail
