@@ -1,32 +1,35 @@
 // MainMap (`/`) — entry point of the app.
 //
-// Phase 5 layout (STUDIO MATCH):
+// Phase 5 cleanup layout:
 //   ┌──────────────┬───────────────────────────────────────┐
 //   │  STUDIO      │                                        │
 //   │  MATCH       │                                        │
 //   │  (filters)   │                                        │
 //   │  ─────────   │       Leaflet map (full-bleed)         │
-//   │  LAYERS      │       425 행정동 polygon               │
-//   │  (5 radio)   │                                        │
-//   │  ─────────   │       Legend + ViewToggle floating     │
-//   │  WEIGHTS     │       (bottom-right)                   │
-//   │  (sliders)   │                                        │
+//   │  MAP MODE    │       425 행정동 polygon               │
+//   │  (2 radio)   │                                        │
+//   │  거래핀 OFF  │       Legend + ViewToggle floating     │
+//   │  ─────────   │       (bottom-right)                   │
+//   │  WEIGHTS     │                                        │
+//   │  (chips +    │                                        │
+//   │   sliders)   │                                        │
 //   └──────────────┴───────────────────────────────────────┘
-//   280px sidebar  +  fluid map
+//   320px sidebar  +  fluid map
 //
 // State:
 //   - useReducer(panelReducer)        right slide-in 패널 코디네이션
-//   - useStudioMatchFilters()         URL state, debounced 200ms via hook
-//   - activeLayer                     'match' (Phase 5 default) | 'composite' | ...
-//   - weights                         가중치 (match 모드일 때 disabled)
+//   - useStudioMatchFilters()         URL state (자취 거래량 필터, 단일 진실)
+//   - mapMode                         'match' (default) | 'score'
+//   - weights                         (score 모드 + 핀 layer 재사용)
+//   - showPins                        거래 핀 layer 토글 (default OFF)
 //   - heatmapVisible                  히트맵 표시 (legacy 보존)
 //
-// 제거됨 (Phase 5, eng-review #1·#13):
-//   - rentCapEnabled / rentCap        — 월세 슬라이더로 흡수
-//   - nearUniversityOnly              — STUDIO MATCH 패널 안 chip 으로 보존
-//   - CriteriaPanel (floating pill)   — fixed sidebar 로 전환
-//   - LayerSwitcher (floating pills)  — fixed sidebar 의 LAYERS 섹션으로 전환
-//   - FilterControls                  — 필터들이 STUDIO MATCH 로 통합
+// 제거됨 (Phase 5 cleanup, 사용자 지적 #1·#2):
+//   - LayerSwitcher (LAYERS 5라디오) — MapModeToggle 2라디오로 단순화.
+//                                     단일 축 (rent/amenity/transit) 보기는
+//                                     WEIGHTS 프리셋 chip (100/0/0) 으로 흡수.
+//   - TransactionFilters (top-right floating) — STUDIO MATCH 와 의미 중복.
+//                                                핀 layer 가 STUDIO MATCH 필터 사용.
 //
 // SPEC 6.1. Mobile is WONTFIX project decision (desktop-only).
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
@@ -37,15 +40,11 @@ import DongPanel from '@/components/Map/DongPanel';
 import HeatMap from '@/components/Map/HeatMap';
 import KernelScoreLayer from '@/components/Map/KernelScoreLayer';
 import KernelScorePanel from '@/components/Map/KernelScorePanel';
-import { LAYERS } from '@/components/Map/LayerSwitcher';
-import type { LayerKey } from '@/components/Map/LayerSwitcher';
 import Legend from '@/components/Map/Legend';
+import MapModeToggle from '@/components/Map/MapModeToggle';
+import type { MapMode } from '@/components/Map/MapModeToggle';
 import MatchFilterPanel from '@/components/Map/MatchFilterPanel';
 import MatchKpiCard from '@/components/Map/MatchKpiCard';
-import TransactionFilters, {
-  buildFilters,
-} from '@/components/Map/TransactionFilters';
-import type { PeriodKey } from '@/components/Map/TransactionFilters';
 import TransactionPanel from '@/components/Map/TransactionPanel';
 import TransactionPinLayer, {
   MIN_ZOOM_FOR_PINS,
@@ -67,7 +66,11 @@ import { getAuthErrorMessage } from '@/lib/authErrors';
 import { DEFAULT_WEIGHTS } from '@/types/api';
 import type {
   DongScore,
+  ExplorePeriod,
+  MatchFilters,
+  RentDealPin,
   TransactionDealTypeFilter,
+  TransactionFilters,
   Weights,
 } from '@/types/api';
 
@@ -79,6 +82,51 @@ import {
 import './MainMap.css';
 
 const MAX_COMPARE = 3;
+
+/** ExplorePeriod → bbox 핀 layer 의 from 일자 변환.
+ *  'all' 은 from=null 로 보내 backend 가 전체 기간을 응답하게. */
+function periodToFrom(period: ExplorePeriod, today: Date = new Date()): string | null {
+  if (period === 'all') return null;
+  const days =
+    period === '3m' ? 90 : period === '6m' ? 180 : period === '12m' ? 365 : 730;
+  const t = new Date(today);
+  t.setDate(t.getDate() - days);
+  const y = t.getFullYear();
+  const m = String(t.getMonth() + 1).padStart(2, '0');
+  const d = String(t.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/** STUDIO MATCH 필터 → bbox 핀 layer 의 backend 필터 (deal_type single + from/to).
+ *  deal_types 가 1개면 그대로, 그 외엔 'all' 로 보내고 클라이언트에서 다시 거른다.
+ *  backend 변경 없이 단순화 — 핀 limit 200 이라 클라 사이드 추가 필터 비용 무시 가능. */
+function matchFiltersToTxFilters(f: MatchFilters): TransactionFilters {
+  const dealType: TransactionDealTypeFilter =
+    f.deal_types.length === 1
+      ? (f.deal_types[0] as TransactionDealTypeFilter)
+      : 'all';
+  return {
+    deal_type: dealType,
+    from: periodToFrom(f.period),
+    to: null,
+  };
+}
+
+/** STUDIO MATCH 필터의 deal_types/deposit/monthly/area 까지 핀 결과에 적용.
+ *  backend 가 single deal_type 만 받으므로 multi-select 는 클라에서 재필터링.
+ *  (Backend bbox 엔드포인트는 deposit/monthly/area 미지원 — 클라 사이드만.) */
+function applyClientPinFilter(
+  pins: RentDealPin[],
+  f: MatchFilters,
+): RentDealPin[] {
+  return pins.filter((p) => {
+    if (!f.deal_types.includes(p.deal_type)) return false;
+    if (p.deposit < f.deposit_min || p.deposit > f.deposit_max) return false;
+    if (p.monthly_rent < f.monthly_min || p.monthly_rent > f.monthly_max) return false;
+    if (p.area_m2 < f.area_min || p.area_m2 > f.area_max) return false;
+    return true;
+  });
+}
 
 export default function MainMap() {
   const navigate = useNavigate();
@@ -100,12 +148,14 @@ export default function MainMap() {
     hasSyncedFromUserRef.current = true;
   }, [user]);
 
-  // Phase 5: default 'match' (자취생 첫 화면이 자기 조건으로 즉시 시작).
-  const [activeLayer, setActiveLayer] = useState<LayerKey>('match');
+  // Phase 5 cleanup: mapMode 'match' (default) | 'score'.
+  const [mapMode, setMapMode] = useState<MapMode>('match');
   const [nearUniversityOnly, setNearUniversityOnly] = useState(false);
   const [preferenceOpen, setPreferenceOpen] = useState(false);
   const [compareSlugs, setCompareSlugs] = useState<string[]>([]);
   const [heatmapVisible, setHeatmapVisible] = useState(true);
+  // Phase 5 cleanup: 거래 핀 toggle (default OFF — 히트맵만으로도 충분).
+  const [showPins, setShowPins] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | null>(null);
 
@@ -126,34 +176,43 @@ export default function MainMap() {
     kernelSchool,
   } = panelState;
 
-  // ---- Phase 1b: transaction pin layer state ------------------------------
+  // ---- Phase 1b → 5 cleanup: pin layer state, STUDIO MATCH 필터 그대로 사용 ----
   const [mapState, setMapState] = useState<MapState | null>(null);
-  const [txDealType, setTxDealType] = useState<TransactionDealTypeFilter>('all');
-  const [txPeriod, setTxPeriod] = useState<PeriodKey>('6m');
 
   // ---- Phase 2b: kernel-score debounce ------------------------------------
   const [kernelWeightsDebounced, setKernelWeightsDebounced] =
     useState<Weights>(DEFAULT_WEIGHTS);
   const kernelWeightsTimer = useRef<number | null>(null);
 
+  // STUDIO MATCH 필터 → backend bbox 필터 (deal_type single + from/to).
   const txFilters = useMemo(
-    () => buildFilters(txDealType, txPeriod),
-    [txDealType, txPeriod],
+    () => matchFiltersToTxFilters(matchFilters),
+    [matchFilters],
   );
 
   const txQuery = useTransactions({
     bbox: mapState?.bbox ?? null,
     zoom: mapState?.zoom ?? 0,
     filters: txFilters,
+    // showPins=false 면 useTransactions 가 enabled 라도 결과를 안 그릴 뿐이므로
+    // 호출 자체는 켜둠 (zoom 변경 시 이미 캐시되어 ON 토글 즉시 표시).
   });
 
-  const showZoomHint = mapState != null && mapState.zoom < MIN_ZOOM_FOR_PINS;
+  // 클라이언트 측 추가 필터 (multi-select deal_types + deposit/monthly/area).
+  // backend bbox 엔드포인트는 deposit/monthly/area 미지원 → 여기서 정밀 매칭.
+  const filteredPins = useMemo(() => {
+    if (!txQuery.data) return [];
+    return applyClientPinFilter(txQuery.data.items, matchFilters);
+  }, [txQuery.data, matchFilters]);
+
+  const showZoomHint =
+    showPins && mapState != null && mapState.zoom < MIN_ZOOM_FOR_PINS;
 
   // Pins for the currently selected jibun — used by TransactionPanel.
   const selectedJibunPins = useMemo(() => {
-    if (!selectedJibun || !txQuery.data) return [];
-    return txQuery.data.items.filter((p) => jibunKeyOf(p) === selectedJibun);
-  }, [selectedJibun, txQuery.data]);
+    if (!selectedJibun) return [];
+    return filteredPins.filter((p) => jibunKeyOf(p) === selectedJibun);
+  }, [selectedJibun, filteredPins]);
 
   // If filter changes drop the selected jibun from the result set, close.
   useEffect(() => {
@@ -232,7 +291,7 @@ export default function MainMap() {
     [selectedJibun, selectedSlug, kernelPoint],
   );
 
-  const isMatchMode = activeLayer === 'match';
+  const isMatchMode = mapMode === 'match';
 
   /* ---------- Click handlers (dispatch into the reducer) ------------------ */
 
@@ -327,15 +386,14 @@ export default function MainMap() {
     }
   };
 
-  // HeatMap mode + activeLayer 분리. 'match' → mode='match', score 축은 미사용.
+  // HeatMap mode + activeLayer. score 모드는 항상 'composite' (단일 축은 weights 100/0/0 으로 표현).
   const heatmapMode = isMatchMode ? 'match' : 'score';
-  const scoreLayer = isMatchMode ? 'composite' : (activeLayer as 'composite' | 'rent' | 'amenity' | 'transit');
 
   return (
     <div className="main-map">
       <h1 className="sr-only">서울 동네 점수 지도</h1>
 
-      {/* ───── 좌측 사이드바 (Phase 5) ───── */}
+      {/* ───── 좌측 사이드바 (Phase 5 cleanup) ───── */}
       <aside className="main-map__sidebar" aria-label="필터 + 가중치 사이드바">
         {/* 1) STUDIO MATCH (top) */}
         <MatchFilterPanel
@@ -352,32 +410,19 @@ export default function MainMap() {
 
         <div className="main-map__sidebar-divider" aria-hidden="true" />
 
-        {/* 2) LAYERS — radio 5종 */}
+        {/* 2) MAP MODE — 매칭 / 종합 점수 + 거래 핀 토글 + 히트맵 토글 */}
         <section className="main-map__sidebar-section">
-          <p className="mono-label main-map__sidebar-eyebrow">LAYERS</p>
-          <h3 className="main-map__sidebar-title">히트맵 모드</h3>
-          <div className="main-map__layer-radio" role="radiogroup" aria-label="히트맵 레이어">
-            {LAYERS.map((layer) => {
-              const selected = layer.key === activeLayer;
-              return (
-                <label
-                  key={layer.key}
-                  className={`main-map__layer-radio-item${
-                    selected ? ' main-map__layer-radio-item--active' : ''
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="active-layer"
-                    value={layer.key}
-                    checked={selected}
-                    onChange={() => setActiveLayer(layer.key)}
-                  />
-                  <span>{layer.label}</span>
-                </label>
-              );
-            })}
-          </div>
+          <p className="mono-label main-map__sidebar-eyebrow">MAP MODE</p>
+          <h3 className="main-map__sidebar-title">지도 모드</h3>
+          <MapModeToggle mode={mapMode} onModeChange={setMapMode} />
+          <label className="main-map__heatmap-toggle">
+            <input
+              type="checkbox"
+              checked={showPins}
+              onChange={(e) => setShowPins(e.target.checked)}
+            />
+            <span>거래 핀 표시</span>
+          </label>
           <label className="main-map__heatmap-toggle">
             <input
               type="checkbox"
@@ -392,11 +437,11 @@ export default function MainMap() {
 
         {/* 3) WEIGHTS (bottom) — match 모드에서는 disabled */}
         <section className="main-map__sidebar-section">
-          <p className="mono-label main-map__sidebar-eyebrow">WEIGHTS</p>
+          <p className="mono-label main-map__sidebar-eyebrow">SCORE WEIGHTS</p>
           <h3 className="main-map__sidebar-title">종합 점수 가중치</h3>
           {isMatchMode ? (
             <p className="main-map__sidebar-hint">
-              매칭 모드에서는 가중치가 적용되지 않아요. LAYERS 에서 종합/전월세/시설/교통 으로
+              종합 점수 모드에서만 가중치 적용. 위 MAP MODE 에서 종합 점수로
               전환하면 활성화됩니다.
             </p>
           ) : null}
@@ -406,7 +451,7 @@ export default function MainMap() {
             onOpenPreference={() => setPreferenceOpen(true)}
             showSum={false}
             disabled={isMatchMode}
-            disabledHint="매칭 모드에서는 가중치 미사용"
+            disabledHint="종합 점수 모드에서만 가중치 적용"
           />
         </section>
       </aside>
@@ -422,40 +467,36 @@ export default function MainMap() {
           onDongClick={handleDongClick}
           heatmapVisible={heatmapVisible}
           mode={heatmapMode}
-          activeLayer={scoreLayer}
+          activeLayer="composite"
           matchCounts={isMatchMode ? matchCounts : undefined}
         >
-          <TransactionPinLayer
-            pins={txQuery.data?.items ?? []}
-            selectedJibun={selectedJibun}
-            onPinClick={handlePinClick}
-            onMapStateChange={setMapState}
-            suppressTooltips={suppressTooltips}
-          />
+          {showPins && (
+            <TransactionPinLayer
+              pins={filteredPins}
+              selectedJibun={selectedJibun}
+              onPinClick={handlePinClick}
+              onMapStateChange={setMapState}
+              suppressTooltips={suppressTooltips}
+            />
+          )}
           <KernelScoreLayer
             point={kernelPoint}
             onPointClick={handleKernelPointClick}
           />
         </HeatMap>
 
-        {/* ---- Top-right: TransactionFilters + CompareChip (when basket ≥ 1) ---- */}
-        <TransactionFilters
-          dealType={txDealType}
-          period={txPeriod}
-          onDealTypeChange={setTxDealType}
-          onPeriodChange={setTxPeriod}
-        />
+        {/* ---- Top-right: CompareChip (when basket ≥ 1) ---- */}
         <div className="main-map__compare-chip">
           <CompareChip count={compareSlugs.length} onClick={handleOpenCompare} />
         </div>
 
         {showZoomHint && (
-          <p className="tx-zoom-hint mono-label" role="status">
+          <p className="main-map__zoom-hint mono-label" role="status">
             더 확대해 거래 핀 보기
           </p>
         )}
 
-        {!showZoomHint && txQuery.isError && (
+        {showPins && !showZoomHint && txQuery.isError && (
           <div
             className="main-map__overlay main-map__overlay--error"
             role="alert"

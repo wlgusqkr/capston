@@ -42,12 +42,11 @@ const VWORLD_ATTRIBUTION =
     : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>';
 
 /** 레이어 탭 — 색상의 기준이 되는 점수 축. score 모드 전용.
- *  ('match' 는 LayerSwitcher 쪽 LayerKey 에만 등장하고 본 HeatMap 으로는
- *   mode='match' prop 으로 전달됨 — score 축과 의미가 다름.) */
+ *  Phase 5 cleanup 이후 호출측 (MainMap) 은 항상 'composite' 로 고정 사용 —
+ *  단일 축 (rent/amenity/transit) 보기는 WEIGHTS 100/0/0 프리셋 칩으로 흡수.
+ *  rent/amenity/transit 키는 pickScore unit test 와 잠재적 상세 화면 재사용을
+ *  위해 type 에 그대로 보존. */
 export type ScoreLayerKey = 'composite' | 'rent' | 'amenity' | 'transit';
-
-/** @deprecated Use ScoreLayerKey or LayerSwitcher's LayerKey. 호환 alias. */
-export type LayerKey = ScoreLayerKey;
 
 /** 히트맵 색칠 모드.
  *  - 'score': activeLayer 의 점수 (composite/rent/amenity/transit) 기반.
