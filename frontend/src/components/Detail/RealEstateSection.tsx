@@ -187,10 +187,11 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
                     fontSize: 'var(--font-caption-size)',
                   }}
                   labelStyle={{ color: 'var(--color-text)' }}
-                  formatter={(value: number, _n, item) => {
+                  formatter={(value, _n, item) => {
+                    const v = typeof value === 'number' ? value : Number(value);
                     const datum = item?.payload as (typeof typeAvg)[number];
                     if (!datum.has) return ['데이터 부족', ''] as [string, string];
-                    return [`${value}만원 (${datum.count}건)`, '평균 환산월세'] as [
+                    return [`${v}만원 (${datum.count}건)`, '평균 환산월세'] as [
                       string,
                       string,
                     ];
@@ -251,11 +252,13 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
                     fontSize: 'var(--font-caption-size)',
                   }}
                   labelStyle={{ color: 'var(--color-text)' }}
-                  formatter={(value: number, name: string) => {
-                    if (name === '면적') return [`${value}㎡`, name] as [string, string];
-                    if (name === '환산월세')
-                      return [`${value}만원`, name] as [string, string];
-                    return [`${value}`, name] as [string, string];
+                  formatter={(value, name) => {
+                    const v = typeof value === 'number' ? value : Number(value);
+                    const n = String(name);
+                    if (n === '면적') return [`${v}㎡`, n] as [string, string];
+                    if (n === '환산월세')
+                      return [`${v}만원`, n] as [string, string];
+                    return [`${v}`, n] as [string, string];
                   }}
                 />
                 <Legend

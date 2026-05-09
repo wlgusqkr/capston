@@ -426,11 +426,13 @@ function ScatterBlock({
                 borderRadius: 'var(--radius-md)',
                 fontSize: 'var(--font-caption-size)',
               }}
-              formatter={(value: number, name: string) => {
-                if (name === '면적') return [`${value}㎡`, name] as [string, string];
-                if (name === '환산월세')
-                  return [`${value}만원`, name] as [string, string];
-                return [`${value}`, name] as [string, string];
+              formatter={(value, name) => {
+                const v = typeof value === 'number' ? value : Number(value);
+                const n = String(name);
+                if (n === '면적') return [`${v}㎡`, n] as [string, string];
+                if (n === '환산월세')
+                  return [`${v}만원`, n] as [string, string];
+                return [`${v}`, n] as [string, string];
               }}
             />
             <Legend
@@ -506,10 +508,11 @@ function ChartsRow({ typeAvg, depositBand, trend }: ChartsRowProps) {
                   borderRadius: 'var(--radius-md)',
                   fontSize: 'var(--font-caption-size)',
                 }}
-                formatter={(value: number, _n, item) => {
+                formatter={(value, _n, item) => {
+                  const v = typeof value === 'number' ? value : Number(value);
                   const d = item?.payload as (typeof typeData)[number];
                   if (!d.has) return ['데이터 부족', ''] as [string, string];
-                  return [`${value}만원 (${d.count}건)`, '평균'] as [string, string];
+                  return [`${v}만원 (${d.count}건)`, '평균'] as [string, string];
                 }}
               />
               <Bar dataKey="avg" radius={[0, 4, 4, 0]} barSize={18}>
@@ -550,9 +553,10 @@ function ChartsRow({ typeAvg, depositBand, trend }: ChartsRowProps) {
                   borderRadius: 'var(--radius-md)',
                   fontSize: 'var(--font-caption-size)',
                 }}
-                formatter={(value: number, _n, item) => {
+                formatter={(value, _n, item) => {
+                  const v = typeof value === 'number' ? value : Number(value);
                   const d = item?.payload as (typeof bandData)[number];
-                  return [`${value}건 · 평균 ${d.monthly}만원`, ''] as [string, string];
+                  return [`${v}건 · 평균 ${d.monthly}만원`, ''] as [string, string];
                 }}
               />
               <Bar dataKey="count" fill={CHART_COLORS.bar} radius={[4, 4, 0, 0]} barSize={28} />
