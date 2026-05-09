@@ -142,6 +142,7 @@ class DongScoresView(APIView):
         # 426개 정도라 단일 쿼리 + 메모리 정렬. 인덱스/공간 쿼리 불필요.
         qs = Dong.objects.all().only(
             "slug",
+            "code",
             "name",
             "gu",
             "centroid",

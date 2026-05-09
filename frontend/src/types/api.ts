@@ -8,6 +8,8 @@
 export interface DongScore {
   /** URL-safe slug, used in /dong/:slug routes. */
   slug: string;
+  /** 행정동 코드 10자리 (행안부). seoul_dongs.geojson properties.adm_cd2 와 매칭. */
+  code: string;
   /** 행정동 한국어 이름, e.g. "필동". */
   name: string;
   /** 구 이름, e.g. "중구". */

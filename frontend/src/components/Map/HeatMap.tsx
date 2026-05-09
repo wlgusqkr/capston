@@ -4,7 +4,7 @@
 // 복원. 타일은 VWorld(국토교통부) — 한국어 지명·도로·지하철이 OSM보다 풍부.
 //
 // /seoul_dongs.geojson 정적 파일에서 425개 행정동 경계를 1회 로드하고
-// feature.properties.adm_cd === dong.slug 로 score 데이터와 조인한다.
+// feature.properties.adm_cd2 (10자리 행정동 코드) === dong.code 로 score 데이터와 조인.
 //
 // VWorld 키: frontend/.env 의 VITE_VWORLD_API_KEY.
 //   - 키 없으면 CartoDB Voyager 타일로 폴백 (시각적으로 무난, 그러나 한국어 라벨 약함).
@@ -79,9 +79,11 @@ export default function HeatMap({
 }: HeatMapProps) {
   const { data: geojson, isLoading: geoLoading } = useDongGeoJson();
 
-  const dongBySlug = useMemo(() => {
+  // GeoJSON 의 adm_cd2 (10자리 행정동 코드) 와 매칭하기 위해 code 키로 인덱싱.
+  // (구버전은 adm_cd 7자리 ↔ slug 매칭이었으나 RDS 통합 후 한글 slug 라 깨짐.)
+  const dongByCode = useMemo(() => {
     const m: Record<string, DongScore> = {};
-    for (const d of dongs) m[d.slug] = d;
+    for (const d of dongs) m[d.code] = d;
     return m;
   }, [dongs]);
 
@@ -98,8 +100,8 @@ export default function HeatMap({
   //   - heatmap fill opacity: 0.7
   //   - cells without data: very faint Soft Stone wash
   const styleFn = (feature?: Feature<Geometry, DongFeatureProps>) => {
-    const slug = feature?.properties?.adm_cd ?? '';
-    const dong = dongBySlug[slug];
+    const code = feature?.properties?.adm_cd2 ?? '';
+    const dong = dongByCode[code];
     const score = dong ? pickScore(dong, activeLayer) : null;
     return {
       color: MAP_POLYGON_STROKE.default.color,
@@ -121,8 +123,8 @@ export default function HeatMap({
     feature: Feature<Geometry, DongFeatureProps>,
     layer: Layer,
   ): void => {
-    const slug = feature.properties.adm_cd;
-    const dong = dongBySlug[slug];
+    const code = feature.properties.adm_cd2 ?? '';
+    const dong = dongByCode[code];
     if (!dong) return;
     const shownScore = pickScore(dong, activeLayer);
 

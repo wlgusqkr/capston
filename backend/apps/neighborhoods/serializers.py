@@ -52,6 +52,7 @@ class DongScoreSerializer(serializers.ModelSerializer):
         model = Dong
         fields = (
             "slug",
+            "code",  # 행정동 코드 10자리 — frontend HeatMap GeoJSON adm_cd2 매칭용
             "name",
             "gu",
             "score",
