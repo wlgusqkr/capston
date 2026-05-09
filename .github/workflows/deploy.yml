@@ -29,15 +29,15 @@ jobs:
           git fetch --all --prune
           git reset --hard origin/main
 
-      - name: Build frontend (atomic swap into $SLGI_DIR/dist)
+      - name: Build frontend (replace dist contents — keep dir inode for caddy mount)
         run: |
           cd "$REPO_DIR/frontend"
           docker run --rm -v "$PWD:/app" -w /app node:22-alpine \
             sh -c "npm ci --no-audit --no-fund && npm run build"
-          rm -rf "$SLGI_DIR/dist.new"
-          cp -r dist "$SLGI_DIR/dist.new"
-          rm -rf "$SLGI_DIR/dist"
-          mv "$SLGI_DIR/dist.new" "$SLGI_DIR/dist"
+          mkdir -p "$SLGI_DIR/dist"
+          # Preserve dist/ inode (caddy bind-mounts it). Swap CONTENTS only.
+          find "$SLGI_DIR/dist" -mindepth 1 -delete
+          cp -a dist/. "$SLGI_DIR/dist/"
 
       - name: Build backend image
         run: |
