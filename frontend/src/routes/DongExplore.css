@@ -160,15 +160,55 @@
   border-color: var(--color-text);
 }
 
-/* Range slider — 두 input range 위아래로 배치 (단순 dual range) */
+/* Range slider — 두 input range 위아래로 배치 (단순 dual range).
+ * thumb 24px / track 4px — 정밀 조작 가능하고 desktop hover/drag 친화. */
 .explore__range-inputs {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 .explore__range-inputs input[type='range'] {
   width: 100%;
-  accent-color: var(--color-text);
+  height: 24px;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.explore__range-inputs input[type='range']::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-hairline);
+}
+.explore__range-inputs input[type='range']::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-hairline);
+}
+.explore__range-inputs input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-text);
+  border: 2px solid var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-text);
+  margin-top: -7px; /* (4 - 18) / 2 으로 트랙 중앙 정렬 */
+  cursor: grab;
+}
+.explore__range-inputs input[type='range']::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-text);
+  border: 2px solid var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-text);
+  cursor: grab;
+}
+.explore__range-inputs input[type='range']:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--color-focus, #4c6ee6);
+  outline-offset: 2px;
 }
 
 /* ────── Main canvas ────── */
@@ -253,10 +293,17 @@
   gap: var(--space-2);
   margin-bottom: var(--space-5);
 }
+/* H2 (섹션 타이틀: '면적·환산월세 분포', '거래 목록') */
+h2.explore__chart-title {
+  font-size: 22px;
+  letter-spacing: -0.01em;
+}
+/* H3 (작은 차트 카드 타이틀) */
 .explore__chart-title {
   margin: 0;
-  font-size: var(--font-h3-size, 18px);
+  font-size: 17px;
   font-weight: 600;
+  letter-spacing: -0.005em;
 }
 .explore__chart-hint {
   margin: 0;
