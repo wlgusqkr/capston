@@ -210,6 +210,18 @@ export type ExploreDealType = 'villa' | 'dagagu' | 'danok' | 'officetel' | 'apt'
 
 export type ExplorePeriod = '3m' | '6m' | '12m' | '24m' | 'all';
 
+/** 자취 거래량 필터 공통 base — Explore + MainMap StudioMatch 양쪽 공유 (eng-review #16). */
+export interface BaseRentFilters {
+  deal_types: ExploreDealType[];
+  period: ExplorePeriod;
+  deposit_min: number;
+  deposit_max: number;
+  monthly_min: number;
+  monthly_max: number;
+  area_min: number;
+  area_max: number;
+}
+
 export type ExploreSort =
   | 'date_desc'
   | 'date_asc'
@@ -223,15 +235,7 @@ export type ExploreSort =
   | 'area_asc';
 
 /** 사용자가 조작하는 필터 상태. URL 쿼리스트링과 1:1 동기화. */
-export interface ExploreFilters {
-  deal_types: ExploreDealType[];
-  period: ExplorePeriod;
-  deposit_min: number;
-  deposit_max: number;
-  monthly_min: number;
-  monthly_max: number;
-  area_min: number;
-  area_max: number;
+export interface ExploreFilters extends BaseRentFilters {
   page: number;
   page_size: number;
   sort: ExploreSort;
@@ -301,6 +305,50 @@ export interface ExploreResponse {
   deposit_band: ExploreDepositBandRow[];
   monthly_trend: ExploreMonthlyTrendRow[];
   deals: ExploreDealsPage;
+}
+
+// -------- Studio Match (Phase 5 — 메인 지도 자취 거래량 분포) ------------
+// GET /api/dongs/match-counts?<filters>
+// GET /api/dongs/:slug/match-detail?<filters>
+//
+// 데이터 = 국토부 실거래 최근 N개월 (현재 매물 재고 X, 자취·원룸 거래량 분포).
+
+export interface MatchFilters extends BaseRentFilters {}
+
+export interface MatchCountItem {
+  /** 행정동 코드 10자리 (GeoJSON adm_cd2 매칭). */
+  code: string;
+  slug: string;
+  /** 필터 통과 거래 건수. */
+  count: number;
+  /** 0~100. min_sample 미만이면 0. */
+  ratio: number;
+  /** false 면 NO_DATA 색 (응답 분기 — eng-review #4). */
+  has_data: boolean;
+}
+
+export interface MatchCountsResponse {
+  filters_applied: MatchFilters;
+  total_matched: number;
+  /** 표본이 이 미만인 동은 ratio=0 (eng-review #3). */
+  min_sample: number;
+  dongs: MatchCountItem[];
+}
+
+export interface MatchDetailResponse {
+  /** 동 메타. */
+  dong: { slug: string; code: string; name: string; gu: string };
+  filters_applied: MatchFilters;
+  /** 이 동의 필터 통과 거래 수. */
+  count: number;
+  /** 평균 환산월세 (만원, 정수). null = 거래 부족. */
+  avg_converted_rent: number | null;
+  /** 평균 보증금 (만원, 정수). null = 거래 부족. */
+  avg_deposit: number | null;
+  /** 매칭률 (%, 1 decimal). 같은 동·같은 기간·같은 거래유형 set 전체 거래 대비. null = denominator 0. */
+  match_ratio: number | null;
+  /** 매칭률 분모 (같은 동/기간/유형 set 전체 거래수). */
+  period_total: number;
 }
 
 // -------- Preference learning (SPEC 6.5, 11.4) ---------------------------

@@ -1,0 +1,14 @@
+/* MatchModeBadge — Legend 좌측 inline. Coral 텍스트로 매칭 모드 표시. */
+
+.match-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-right: var(--space-2);
+  border-right: 1px solid var(--color-hairline);
+  font-size: var(--font-mono-label-size);
+  letter-spacing: var(--font-mono-label-tracking);
+  color: var(--color-coral);
+  text-transform: uppercase;
+  white-space: nowrap;
+}

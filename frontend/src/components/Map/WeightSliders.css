@@ -28,3 +28,10 @@
   flex-direction: column;
   gap: var(--space-3);
 }
+
+/* Phase 5: match 모드일 때 sliders 회색 처리. */
+.weight-sliders--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}

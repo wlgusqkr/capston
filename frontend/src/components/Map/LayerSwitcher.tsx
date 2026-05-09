@@ -9,7 +9,10 @@
 
 import './LayerSwitcher.css';
 
+/** Phase 5: 'match' (자취 거래량 분포) 가 default 첫 옵션으로 추가됨.
+ *  나머지 4종은 기존 score 기반 (composite/rent/amenity/transit). */
 export const LAYERS = [
+  { key: 'match', label: '매칭' },
   { key: 'composite', label: '종합' },
   { key: 'rent', label: '전월세' },
   { key: 'amenity', label: '생활시설' },

@@ -23,6 +23,8 @@
 // Keyboard:
 //   ESC closes the panel (only when open and the user is not typing in an
 //   input — the panel does not contain any inputs in this iteration).
+import type { ReactNode } from 'react';
+
 import { Badge, Button, Card, MetricBar, Score } from '@/components/ui';
 import { useDongSummary } from '@/hooks/useDongs';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
@@ -49,6 +51,9 @@ export interface DongPanelProps {
   onOpenDetail: (slug: string) => void;
   onAddCompare: (slug: string) => void;
   onFavorite: (slug: string) => void;
+  /** Phase 5: match 모드일 때 score 카드 위에 노출되는 KPI 카드 (MatchKpiCard).
+   *  match 모드 외에는 null/undefined → 미노출. */
+  matchKpi?: ReactNode;
 }
 
 /** Korean label + Badge variant for amenity_level. */
@@ -79,6 +84,7 @@ export default function DongPanel({
   onOpenDetail,
   onAddCompare,
   onFavorite,
+  matchKpi,
 }: DongPanelProps) {
   const isOpen = slug != null;
   const { data, isLoading, isError, error } = useDongSummary(slug, weights);
@@ -119,6 +125,8 @@ export default function DongPanel({
 
           {data && (
             <>
+              {/* Phase 5: match 모드 — match KPI 카드가 score 카드 위에 (eng-review #14). */}
+              {matchKpi}
               <ScoreCard summary={data} />
               <KeyMetrics summary={data} />
               <ScoreBreakdown rawScores={rawScores} />

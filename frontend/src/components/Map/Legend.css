@@ -60,3 +60,13 @@
 .legend__step--q5 {
   background: var(--heatmap-5);
 }
+
+/* Mode 전환 시 양 끝 라벨 200ms cross-fade.
+ * key 변경으로 element 재마운트 → opacity 0→1. */
+.legend__label--fade {
+  animation: legend-label-fade 200ms ease-out;
+}
+@keyframes legend-label-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

@@ -20,7 +20,7 @@ import { GeoJSON, MapContainer, TileLayer, ZoomControl } from 'react-leaflet';
 import { useDongGeoJson } from '@/hooks/useDongGeoJson';
 import type { DongFeatureProps } from '@/hooks/useDongGeoJson';
 import { HEATMAP_NO_DATA, MAP_POLYGON_STROKE, scoreToHeatmapColor } from '@/lib/colors';
-import type { DongScore } from '@/types/api';
+import type { DongScore, MatchCountItem } from '@/types/api';
 
 import 'leaflet/dist/leaflet.css';
 import './HeatMap.css';
@@ -41,22 +41,38 @@ const VWORLD_ATTRIBUTION =
     ? '&copy; <a href="https://www.vworld.kr/">VWorld</a> 국토교통부'
     : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>';
 
-/** 레이어 탭 — 색상의 기준이 되는 점수 축. */
-export type LayerKey = 'composite' | 'rent' | 'amenity' | 'transit';
+/** 레이어 탭 — 색상의 기준이 되는 점수 축. score 모드 전용.
+ *  ('match' 는 LayerSwitcher 쪽 LayerKey 에만 등장하고 본 HeatMap 으로는
+ *   mode='match' prop 으로 전달됨 — score 축과 의미가 다름.) */
+export type ScoreLayerKey = 'composite' | 'rent' | 'amenity' | 'transit';
+
+/** @deprecated Use ScoreLayerKey or LayerSwitcher's LayerKey. 호환 alias. */
+export type LayerKey = ScoreLayerKey;
+
+/** 히트맵 색칠 모드.
+ *  - 'score': activeLayer 의 점수 (composite/rent/amenity/transit) 기반.
+ *  - 'match': MatchCountItem.ratio (0~100, log scale 정규화) 기반.
+ *  Phase 5 default 는 'match' (자취생 첫 화면이 자기 조건으로 즉시 시작). */
+export type HeatMapMode = 'score' | 'match';
 
 export interface HeatMapProps {
+  /** score 모드용 데이터. match 모드에서도 click handler 의 dong 인자에 필요. */
   dongs: DongScore[];
   onDongClick?: (dong: DongScore) => void;
   /** 히트맵 폴리곤 표시 여부. false면 베이스맵만 보임. */
   heatmapVisible?: boolean;
-  /** 색상 기준이 되는 점수 축. 기본 'composite' (가중합). */
-  activeLayer?: LayerKey;
+  /** 색상 기준이 되는 점수 축. 기본 'composite' (가중합). score 모드에서만 사용. */
+  activeLayer?: ScoreLayerKey;
+  /** Phase 5: 'score' (기존) 또는 'match' (조건 거래량). default 'match'. */
+  mode?: HeatMapMode;
+  /** match 모드에서 폴리곤 색칠에 쓰는 카운트 분포. mode='match' 일 때만 의미. */
+  matchCounts?: MatchCountItem[];
   /** 추가 레이어를 MapContainer 내부에 렌더링. react-leaflet 컴포넌트만 (e.g.,
    *  CircleMarker, useMap 사용 컴포넌트). 일반 DOM 노드는 작동 안 함. */
   children?: ReactNode;
 }
 
-function pickScore(d: DongScore, layer: LayerKey): number {
+export function pickScore(d: DongScore, layer: ScoreLayerKey): number {
   switch (layer) {
     case 'rent':
       return d.score_rent;
@@ -70,37 +86,79 @@ function pickScore(d: DongScore, layer: LayerKey): number {
   }
 }
 
+/** Phase 4.7 fix 회귀 가드용 헬퍼. GeoJSON feature.properties.adm_cd2 (10자리
+ *  행정동 코드) 와 DongScore.code 가 동일 키여야 정상 매칭된다. 7자리 adm_cd 로
+ *  매칭하던 옛 코드가 RDS 통합 후 깨졌으므로 회귀 방지를 위해 분리. */
+export function indexDongsByCode(
+  dongs: DongScore[],
+): Record<string, DongScore> {
+  const m: Record<string, DongScore> = {};
+  for (const d of dongs) m[d.code] = d;
+  return m;
+}
+
 export default function HeatMap({
   dongs,
   onDongClick,
   heatmapVisible = true,
   activeLayer = 'composite',
+  mode = 'match',
+  matchCounts,
   children,
 }: HeatMapProps) {
   const { data: geojson, isLoading: geoLoading } = useDongGeoJson();
 
   // GeoJSON 의 adm_cd2 (10자리 행정동 코드) 와 매칭하기 위해 code 키로 인덱싱.
   // (구버전은 adm_cd 7자리 ↔ slug 매칭이었으나 RDS 통합 후 한글 slug 라 깨짐.)
-  const dongByCode = useMemo(() => {
-    const m: Record<string, DongScore> = {};
-    for (const d of dongs) m[d.code] = d;
-    return m;
-  }, [dongs]);
+  const dongByCode = useMemo(() => indexDongsByCode(dongs), [dongs]);
 
-  // 가중치/레이어 변경마다 색이 갱신되도록 GeoJSON 레이어를 강제 리마운트.
+  // match 모드용 — code 키로 인덱싱한 MatchCountItem 맵.
+  const matchByCode = useMemo(() => {
+    const m: Record<string, MatchCountItem> = {};
+    for (const item of matchCounts ?? []) m[item.code] = item;
+    return m;
+  }, [matchCounts]);
+
+  // 가중치/레이어/모드 변경마다 색이 갱신되도록 GeoJSON 레이어를 강제 리마운트.
   // 425개라 비용 약간 있지만 슬라이더 빈도 낮아 OK.
+  // mode 도 키에 포함 (eng-review 회귀 가드 — score↔match 토글 시 리마운트).
   const layerKey = useMemo(() => {
     let acc = 0;
-    for (const d of dongs) acc = (acc + Math.round(pickScore(d, activeLayer) * 100)) | 0;
-    return `${activeLayer}-${dongs.length}-${acc}-${heatmapVisible ? 1 : 0}`;
-  }, [dongs, heatmapVisible, activeLayer]);
+    if (mode === 'score') {
+      for (const d of dongs) acc = (acc + Math.round(pickScore(d, activeLayer) * 100)) | 0;
+      return `score-${activeLayer}-${dongs.length}-${acc}-${heatmapVisible ? 1 : 0}`;
+    }
+    // match — ratio 기반 키 (정수 부분만 충분).
+    for (const item of matchCounts ?? []) {
+      acc = (acc + Math.round(item.ratio * 10)) | 0;
+    }
+    return `match-${matchCounts?.length ?? 0}-${acc}-${heatmapVisible ? 1 : 0}`;
+  }, [dongs, heatmapVisible, activeLayer, mode, matchCounts]);
+
+  // match 모드 fillOpacity — 0.85 (eng-review #15 모드 시각 차이).
+  const matchFillOpacity = 0.85;
+  const scoreFillOpacity = 0.7;
 
   // DESIGN_SYSTEM.md "Map-Specific Shapes":
   //   - default polygon stroke: 1px white @ 60% opacity
-  //   - heatmap fill opacity: 0.7
+  //   - heatmap fill opacity: 0.7 (score) / 0.85 (match — 모드 시각 차이)
   //   - cells without data: very faint Soft Stone wash
   const styleFn = (feature?: Feature<Geometry, DongFeatureProps>) => {
     const code = feature?.properties?.adm_cd2 ?? '';
+
+    if (mode === 'match') {
+      const item = matchByCode[code];
+      // has_data=false 또는 ratio===0 → NO_DATA 색 (Soft Stone 70% opacity).
+      const hasColor = item != null && item.has_data && item.ratio > 0;
+      return {
+        color: MAP_POLYGON_STROKE.default.color,
+        weight: MAP_POLYGON_STROKE.default.weight,
+        opacity: MAP_POLYGON_STROKE.default.opacity,
+        fillColor: hasColor ? scoreToHeatmapColor(item.ratio) : HEATMAP_NO_DATA,
+        fillOpacity: hasColor ? matchFillOpacity : 0.7 * 0.5,
+      };
+    }
+
     const dong = dongByCode[code];
     const score = dong ? pickScore(dong, activeLayer) : null;
     return {
@@ -108,11 +166,11 @@ export default function HeatMap({
       weight: MAP_POLYGON_STROKE.default.weight,
       opacity: MAP_POLYGON_STROKE.default.opacity,
       fillColor: score !== null ? scoreToHeatmapColor(score) : HEATMAP_NO_DATA,
-      fillOpacity: score !== null ? 0.7 : 0.15,
+      fillOpacity: score !== null ? scoreFillOpacity : 0.15,
     };
   };
 
-  const layerLabel: Record<LayerKey, string> = {
+  const layerLabel: Record<ScoreLayerKey, string> = {
     composite: '종합점수',
     rent: '전월세 점수',
     amenity: '생활시설 점수',
@@ -126,13 +184,28 @@ export default function HeatMap({
     const code = feature.properties.adm_cd2 ?? '';
     const dong = dongByCode[code];
     if (!dong) return;
-    const shownScore = pickScore(dong, activeLayer);
 
-    layer.bindTooltip(
-      `<div class="map-tooltip__name">${dong.gu} · ${dong.name}</div>` +
-        `<div class="map-tooltip__score tabular">${layerLabel[activeLayer]} ${shownScore.toFixed(1)}</div>`,
-      { sticky: true, direction: 'top', offset: [0, -4], opacity: 1 },
-    );
+    if (mode === 'match') {
+      const item = matchByCode[code];
+      const countLabel =
+        item != null
+          ? `${item.count.toLocaleString()}건`
+          : '데이터 없음';
+      layer.bindTooltip(
+        `<div class="map-tooltip__name">${dong.gu} · ${dong.name}</div>` +
+          `<div class="map-tooltip__score tabular">조건 매칭 ${countLabel}</div>`,
+        { sticky: true, direction: 'top', offset: [0, -4], opacity: 1 },
+      );
+    } else {
+      const shownScore = pickScore(dong, activeLayer);
+      layer.bindTooltip(
+        `<div class="map-tooltip__name">${dong.gu} · ${dong.name}</div>` +
+          `<div class="map-tooltip__score tabular">${layerLabel[activeLayer]} ${shownScore.toFixed(1)}</div>`,
+        { sticky: true, direction: 'top', offset: [0, -4], opacity: 1 },
+      );
+    }
+
+    const restingFillOpacity = mode === 'match' ? matchFillOpacity : scoreFillOpacity;
 
     layer.on({
       click: (e: LeafletMouseEvent) => {
@@ -143,13 +216,13 @@ export default function HeatMap({
       },
       mouseover: (e) =>
         (e.target as { setStyle: (s: object) => void }).setStyle({
-          fillOpacity: 0.85,
+          fillOpacity: Math.min(1, restingFillOpacity + 0.1),
           weight: MAP_POLYGON_STROKE.hover.weight,
           opacity: MAP_POLYGON_STROKE.hover.opacity,
         }),
       mouseout: (e) =>
         (e.target as { setStyle: (s: object) => void }).setStyle({
-          fillOpacity: 0.7,
+          fillOpacity: restingFillOpacity,
           weight: MAP_POLYGON_STROKE.default.weight,
           opacity: MAP_POLYGON_STROKE.default.opacity,
         }),

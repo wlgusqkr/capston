@@ -1,33 +1,125 @@
-/* MainMap layout — R-1 full-bleed map + progressive-disclosure floating chrome.
+/* MainMap layout — Phase 5 fixed sidebar + fluid map.
  *
- * Stage 2b: the .sidebar wrapper is gone. The map fills the viewport and
- * floating panels live at the corners per the R-1 z-coordinate map.
+ * 좌측 280px fixed sidebar (STUDIO MATCH / LAYERS / WEIGHTS) + 우측 fluid map.
  *
  * Z-coordinate map (1280×720 reference, 1440×900 verified):
  *   TopNav (Stage 3)        sticky top, full width      z 1000
- *   Layer pills             top-left,  inset 24,80      z 500
- *   기준 pill / panel       bottom-left, inset 24,24    z 500 / 510
+ *   Sidebar                 fixed left, full height     z 200
  *   Compare chip (≥1)       top-right, inset 24,80      z 500
- *   TransactionFilters      top-right, inset 24,24      z 480 (existing)
- *   Legend                  bottom-right, ABOVE zoom    z 400 (Legend.css)
- *   ViewToggle              bottom-right corner          z 400 (ViewToggle.css)
- *   Leaflet zoom            top-right (Leaflet default) z 1000 (HeatMap.css)
+ *   TransactionFilters      top-right, inset 24,24      z 480
+ *   Legend                  bottom-right, ABOVE zoom    z 400
+ *   ViewToggle              bottom-right corner          z 400
+ *   Leaflet zoom            top-right (Leaflet default) z 1000
  *   Slide-in panels         right edge                  z 600
  *   Toast / overlay         top-center                  z 500-600
- *
- * NB: TopNav doesn't exist yet (Stage 3). Until it lands, the map fills
- * 100vh and the existing offsets work without TopNav reservation.
  */
 
 .main-map {
   position: relative;
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
   width: 100vw;
-  /* Subtract TopNav (56px) so the map doesn't slide under it. TopNav uses
-   * position: sticky so it takes layout space at the top of <body>. */
+  /* Subtract TopNav (56px) so the map doesn't slide under it. */
   height: calc(100vh - var(--space-14));
   overflow: hidden;
   background: var(--color-bg);
 }
+
+/* ───── Sidebar (Phase 5) ───── */
+
+.main-map__sidebar {
+  position: relative;
+  height: 100%;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-hairline);
+  z-index: 200;
+}
+
+.main-map__sidebar-divider {
+  height: 1px;
+  background: var(--color-hairline);
+  margin: 0;
+}
+
+.main-map__sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6);
+}
+
+.main-map__sidebar-eyebrow {
+  margin: 0;
+  color: var(--color-text-subtle);
+  font-size: var(--font-mono-label-size);
+  letter-spacing: var(--font-mono-label-tracking);
+  text-transform: uppercase;
+}
+
+.main-map__sidebar-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: var(--letter-spacing-ko);
+}
+
+.main-map__sidebar-hint {
+  margin: 0;
+  font-size: var(--font-caption-size);
+  color: var(--color-text-subtle);
+  line-height: 1.5;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-soft-stone);
+  border-radius: var(--radius-sm);
+}
+
+/* LAYERS radio (5 옵션) — vertical list, full-width radio buttons. */
+.main-map__layer-radio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.main-map__layer-radio-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-body-size);
+  color: var(--color-text-subtle);
+  min-height: 40px;
+  transition: all 120ms ease;
+}
+.main-map__layer-radio-item input {
+  margin: 0;
+  accent-color: var(--color-text);
+}
+.main-map__layer-radio-item:hover {
+  border-color: var(--color-text-subtle);
+  color: var(--color-text);
+}
+.main-map__layer-radio-item--active {
+  background: var(--color-soft-stone);
+  border-color: var(--color-text);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.main-map__heatmap-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-caption-size);
+  color: var(--color-text-subtle);
+  cursor: pointer;
+}
+
+/* ───── Map area ───── */
 
 .main-map__map {
   position: relative;
@@ -38,39 +130,7 @@
 
 /* ---------- Floating chrome positioning ---------- */
 
-/* Top-left: Layer pills. Inset 24px from the map's own top edge (TopNav
- * already reserved its 56px above). */
-.main-map__layer-pills {
-  position: absolute;
-  top: var(--space-6);
-  left: var(--space-6);
-  z-index: 500;
-}
-
-/* Bottom-left: 기준 pill / expanded panel + ephemeral coach-mark.
- * The wrapper itself is just an anchor; CriteriaPanel renders the pill or
- * panel depending on its `open` prop. The coach-mark is a sibling with its
- * own absolute position relative to this wrapper. */
-.main-map__criteria {
-  position: absolute;
-  bottom: var(--space-6);
-  left: var(--space-6);
-  z-index: 500;
-}
-
-/* The coach-mark sits just to the RIGHT of the pill (left edge offset by
- * the pill's typical width ~140px + 8px). */
-.main-map__criteria .criteria-coach {
-  bottom: 0;
-  left: calc(140px + var(--space-2));
-}
-
-/* Top-right: Compare chip (when basket >= 1). Slightly below the
- * existing TransactionFilters top-right anchor so they don't overlap.
- * TransactionFilters lives at top: 16, right: 16 with its own
- * margin-top: var(--space-16) to clear Leaflet zoom — approx 16+64+~80 of
- * vertical space taken at top-right. We anchor the chip BELOW the filters
- * by stacking on the same right edge but further down. */
+/* Top-right: Compare chip (when basket >= 1). */
 .main-map__compare-chip {
   position: absolute;
   top: calc(var(--space-4) + var(--space-16) + var(--space-20));
@@ -80,8 +140,6 @@
 
 /* ---------- Inline overlays (loading / error / toast) ---------- */
 
-/* Top-center floating overlay (loading / error notice).
- * Floating map UI exception — uses --shadow-floating per DESIGN_SYSTEM.md. */
 .main-map__overlay {
   position: absolute;
   top: var(--space-4);

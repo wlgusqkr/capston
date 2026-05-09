@@ -11,6 +11,9 @@ import type {
   DongSummary,
   ExploreFilters,
   ExploreResponse,
+  MatchCountsResponse,
+  MatchDetailResponse,
+  MatchFilters,
   FavoriteItem,
   KernelScoreRequest,
   KernelScoreResponse,
@@ -119,6 +122,46 @@ export async function getDongExplore(
     },
   });
   return data;
+}
+
+/** GET /api/dongs/match-counts — 메인 지도 자취 거래량 분포 (Phase 5).
+ *  필터 통과 거래 수를 동별로 반환. ratio 는 log scale 정규화 + min_sample 가드.
+ */
+export async function getDongMatchCounts(
+  filters: MatchFilters,
+): Promise<MatchCountsResponse> {
+  const { data } = await api.get<MatchCountsResponse>('/dongs/match-counts', {
+    params: matchFiltersToParams(filters),
+  });
+  return data;
+}
+
+/** GET /api/dongs/:slug/match-detail — 동 패널 매칭 KPI 카드 (Phase 5).
+ *  count / 평균 환산월세 / 평균 보증금 / 매칭률 + denominator.
+ */
+export async function getDongMatchDetail(
+  slug: string,
+  filters: MatchFilters,
+): Promise<MatchDetailResponse> {
+  const { data } = await api.get<MatchDetailResponse>(
+    `/dongs/${slug}/match-detail`,
+    { params: matchFiltersToParams(filters) },
+  );
+  return data;
+}
+
+/** MatchFilters → axios params (csv join + 통일된 키). Explore 와 호환. */
+function matchFiltersToParams(filters: MatchFilters): Record<string, string | number> {
+  return {
+    deal_types: filters.deal_types.join(','),
+    period: filters.period,
+    deposit_min: filters.deposit_min,
+    deposit_max: filters.deposit_max,
+    monthly_min: filters.monthly_min,
+    monthly_max: filters.monthly_max,
+    area_min: filters.area_min,
+    area_max: filters.area_max,
+  };
 }
 
 /** GET /api/preference/pairs?count=N — fetch pairs for the onboarding modal
