@@ -28,7 +28,8 @@ const DEAL_TYPE_LABEL: Record<TransactionDealType, string> = {
   apt: '아파트',
   officetel: '오피스텔',
   villa: '연립다세대',
-  danok: '단독다가구',
+  dagagu: '다가구',
+  danok: '단독',
 };
 
 /** 1평 = 3.3058 m² (한국 면적 환산 표준). */

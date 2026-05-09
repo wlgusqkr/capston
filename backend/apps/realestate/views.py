@@ -3,7 +3,7 @@ RentDeal 관련 뷰.
 
 엔드포인트:
 - GET /api/transactions/bbox?bbox=lng1,lat1,lng2,lat2
-                            &deal_type=apt|officetel|villa|danok|all
+                            &deal_type=apt|officetel|villa|dagagu|danok|all
                             &from=YYYY-MM-DD&to=YYYY-MM-DD
                             &limit=200
   → 메인 지도 bbox 내 실거래 핀 (SPEC 6.1)
@@ -12,7 +12,7 @@ RentDeal 관련 뷰.
 - bbox가 너무 크면 limit (default 200, max 500) 으로 자동 컷. 명시적 에러 X.
 - limit + 1 fetch → has_more 단순 페이지네이션. cursor 없음 (학부 데모 충분).
 - N+1 회피: select_related("dong").
-- geom__isnull=False 필수 (적재된 27,050건 중 7,243건은 좌표 없음 — danok 100%).
+- geom__isnull=False 필수 (RDS 통합 후 7.4M 거래는 모두 좌표 보유, 안전 가드).
 - ordering: -deal_date (최신순). RentDeal.Meta.ordering이 동일하지만 명시.
 
 캐싱:
@@ -46,8 +46,8 @@ MAX_LIMIT = 500
 # 현재 적재 19,807건이라 5*MAX_LIMIT=2,500이면 대부분 케이스 정확함.
 TOTAL_COUNT_CAP_MULTIPLIER = 5
 
-# deal_type 화이트리스트. RentDeal.DEAL_TYPE_CHOICES와 일치 + "all".
-ALLOWED_DEAL_TYPES = {"apt", "officetel", "villa", "danok", "all"}
+# deal_type 화이트리스트. RentDeal.DEAL_TYPE_CHOICES (5종) + "all".
+ALLOWED_DEAL_TYPES = {"apt", "officetel", "villa", "dagagu", "danok", "all"}
 
 # 캐시 TTL (SPEC 14.3: API 응답 5분 캐싱).
 CACHE_TTL_SECONDS = 300
@@ -133,7 +133,7 @@ def _parse_deal_type(raw: Optional[str]) -> str:
     summary="bbox 내 전월세 실거래 핀 (메인 지도용)",
     description=(
         "메인 지도(SPEC 6.1)에서 현재 viewport 내 실거래 핀을 조회. "
-        "geom이 null인 거래(단독다가구 100%)는 응답에서 제외. "
+        "geom이 null인 거래는 응답에서 제외(RDS 통합 후 7.4M 모두 좌표 보유 — 안전 가드). "
         "limit + 1 fetch 패턴으로 has_more 단순 판정. "
         "total은 표시용 별도 count (상한 cap 적용 시 has_more_total=true)."
     ),
@@ -153,7 +153,7 @@ def _parse_deal_type(raw: Optional[str]) -> str:
             type=OpenApiTypes.STR,
             location=OpenApiParameter.QUERY,
             required=False,
-            description="apt | officetel | villa | danok | all (기본: all)",
+            description="apt | officetel | villa | dagagu | danok | all (기본: all)",
         ),
         OpenApiParameter(
             name="from",

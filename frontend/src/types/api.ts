@@ -359,7 +359,7 @@ export interface ApiErrorDetail {
 /** Backend whitelist for the `deal_type` query parameter.
  *  `all` is a sentinel meaning "no filter" — never appears in `RentDealPin.deal_type`.
  */
-export type TransactionDealType = 'apt' | 'officetel' | 'villa' | 'danok';
+export type TransactionDealType = 'apt' | 'officetel' | 'villa' | 'dagagu' | 'danok';
 
 /** Same as `TransactionDealType` but with the `all` sentinel for filter UI. */
 export type TransactionDealTypeFilter = TransactionDealType | 'all';

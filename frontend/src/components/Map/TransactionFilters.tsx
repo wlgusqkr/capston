@@ -37,7 +37,8 @@ const DEAL_TYPE_OPTIONS: Array<{ value: TransactionDealTypeFilter; label: string
   { value: 'apt', label: '아파트' },
   { value: 'officetel', label: '오피스텔' },
   { value: 'villa', label: '연립다세대' },
-  { value: 'danok', label: '단독다가구' },
+  { value: 'dagagu', label: '다가구' },
+  { value: 'danok', label: '단독' },
 ];
 
 export interface TransactionFiltersProps {
