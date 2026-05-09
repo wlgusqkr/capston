@@ -143,17 +143,23 @@ export const MAP_PIN = {
  * the legacy 4-color category palette. If a future chart needs a 5-step
  * sequential palette, use `HEATMAP_COLORS_ORDERED`.
  *
- * Mapping (SPEC 6.3 RealEstate trend chart):
- *   villa     → Ink (#212121)        — primary series, monochrome
- *   multi     → Action Blue (#1863dc) — editorial accent for secondary line
- *   officetel → Coral (#ff7759)      — warm accent for tertiary line
+ * Mapping (SPEC 6.3 RealEstate trend chart, 4 series):
+ *   villa     → Ink (#212121)         — primary series, monochrome
+ *   dagagu    → Action Blue (#1863dc) — secondary line (옛 multi 자리 이어받음)
+ *   danok     → Slate Mid (#6b7280)   — tertiary, 단독 = mature mid-grey
+ *   officetel → Coral (#ff7759)       — warm accent
+ *
+ * Phase 1 RDS 통합으로 단독다가구(multi) 카테고리가 다가구(dagagu)·단독(danok)
+ * 두 시리즈로 분리됨. 차트 라인 4개로 늘어남 (apt는 별도 시장이라 미포함).
  */
 export const CHART_COLORS = {
   /** 연립다세대 (villa) — primary series, Ink. */
   villa: '#212121',
-  /** 단독다가구 (multi) — secondary series, Action Blue. */
-  multi: '#1863dc',
-  /** 오피스텔 (officetel) — tertiary series, Coral. */
+  /** 다가구 (dagagu) — Action Blue. 자취 시장의 본진. */
+  dagagu: '#1863dc',
+  /** 단독 (danok) — Slate Mid. */
+  danok: '#6b7280',
+  /** 오피스텔 (officetel) — Coral. */
   officetel: '#ff7759',
   /** Generic bar fill — Near-Black for deposit bands. */
   bar: '#17171c',

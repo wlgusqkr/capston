@@ -99,7 +99,10 @@ export interface DongDetail {
       month: string;
       /** Average monthly rent (만원). null when fewer than 3 deals that month. */
       villa: number | null;
-      multi: number | null;
+      /** 다가구 — 옛 multi 통합값에서 분리. */
+      dagagu: number | null;
+      /** 단독 — 옛 multi 통합값에서 분리. */
+      danok: number | null;
       officetel: number | null;
     }>;
     deposit_band_avg: Array<{

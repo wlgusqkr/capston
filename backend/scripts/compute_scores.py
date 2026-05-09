@@ -43,9 +43,8 @@ setup()
 
 from django.db.models import Avg, Count, F, Value  # noqa: E402
 
-from apps.amenities.models import Store  # noqa: E402
+from apps.amenities.models import Amenity  # noqa: E402
 from apps.neighborhoods.models import Dong  # noqa: E402
-from apps.parks.models import ParkDong  # noqa: E402
 from apps.realestate.models import RentDeal  # noqa: E402
 from apps.realestate.utils import convert_to_monthly  # noqa: E402
 from apps.transit.models import BusStop, NearestSubway  # noqa: E402
@@ -202,39 +201,28 @@ def _apply_rent_fallback(
 
 
 def _collect_amenity_metrics(dongs: List[Dong]) -> Dict[int, float]:
-    """동별 amenity 점수 — Store 카운트(0.8) + Park 카운트(0.2) log scale 가중합.
+    """동별 amenity 가중 점수 — 11 카테고리별 카운트 → log1p → AMENITY_WEIGHTS 가중합.
 
-    RDS 통합 후 Amenity 모델은 derived view 로 재정의될 예정이라, 본 단계는
-    Store(상가 raw 535k) + ParkDong(공원 다대다) 으로 직접 계산. 카테고리별
-    정밀 가중(편의점/카페/병원 등)은 향후 별도 PR.
-
-    Store/ParkDong 의 dong FK 는 to_field="code" (Dong.code) 라서 ORM
-    `dong__id` 로 join 해 Dong.id (auto pk) 키로 통일.
+    Amenity 테이블은 ETL 18_amenity_from_store.py 로 Store(category_code 매핑) +
+    Park 에서 derived 적재됨 (~187k row). Amenity.dong 은 default FK (Dong.id) 라
+    그대로 dong_id 로 GROUP BY.
     """
-    store_counts: Dict[int, int] = {
-        row["dong__id"]: row["n"]
-        for row in (
-            Store.objects.filter(dong__isnull=False)
-            .values("dong__id")
-            .annotate(n=Count("id"))
-        )
-        if row["dong__id"] is not None
-    }
-    park_counts: Dict[int, int] = {
-        row["dong__id"]: row["n"]
-        for row in (
-            ParkDong.objects.values("dong__id").annotate(n=Count("id"))
-        )
-        if row["dong__id"] is not None
-    }
+    counts: Dict[int, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    for row in (
+        Amenity.objects.values("dong_id", "category")
+        .annotate(n=Count("id"))
+        .iterator()
+    ):
+        counts[row["dong_id"]][row["category"]] = row["n"]
 
     result: Dict[int, float] = {}
     for dong in dongs:
-        n_store = store_counts.get(dong.id, 0)
-        n_park = park_counts.get(dong.id, 0)
-        # store 는 동당 수십~수천 → log1p 후 1~3 스케일,
-        # park 는 동당 0~5 → log1p 후 0~1.5 스케일. 가중치로 균형.
-        result[dong.id] = math.log1p(n_store) * 0.8 + math.log1p(n_park) * 0.2
+        cdict = counts.get(dong.id, {})
+        score = 0.0
+        for cat, weight in AMENITY_WEIGHTS.items():
+            cnt = cdict.get(cat, 0)
+            score += math.log1p(cnt) * weight
+        result[dong.id] = score
     return result
 
 

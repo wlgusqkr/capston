@@ -144,9 +144,19 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
                 />
                 <Line
                   type="monotone"
-                  dataKey="multi"
-                  name="단독다가구"
-                  stroke={CHART_COLORS.multi}
+                  dataKey="dagagu"
+                  name="다가구"
+                  stroke={CHART_COLORS.dagagu}
+                  strokeWidth={2}
+                  connectNulls={false}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="danok"
+                  name="단독"
+                  stroke={CHART_COLORS.danok}
                   strokeWidth={2}
                   connectNulls={false}
                   dot={{ r: 3 }}

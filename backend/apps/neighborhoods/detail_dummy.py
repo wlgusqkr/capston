@@ -8,7 +8,7 @@
 - 같은 slug + 같은 가중치 → 같은 응답 (deterministic). slug 해시를 시드로 사용.
 - 점수와 모순되지 않게: score_rent 높은 동은 평균 월세 낮게, score_amenity
   높은 동은 편의시설 카운트 많게, etc.
-- "거래 3건 미만 월" SPEC 14.2 — villa/multi/officetel 별로 가끔 None이 나오게
+- "거래 3건 미만 월" SPEC 14.2 — villa/dagagu/danok/officetel 별로 가끔 None이 나오게
   하여 프론트가 점선 처리 케이스를 다룰 수 있게 함.
 
 이 모듈은 마이그레이션이나 DB 변경을 포함하지 않는다. 데이터 적재 후 본
@@ -200,9 +200,11 @@ def _build_real_estate(dong: Dong, today: date) -> dict:
     for i, m in enumerate(months):
         # 마지막 달 가까워질수록 base에 수렴, 이전 달은 ±5 노이즈
         noise_v = rng.uniform(-5, 5) + (5 - i) * rng.uniform(-0.5, 0.5)
-        # 유형별 약간 차이: villa < multi < officetel (오피스텔이 가장 비쌈)
+        # 유형별 차이: villa < dagagu < danok < officetel (오피스텔이 가장 비쌈)
+        # Phase 1 RDS 통합으로 단독다가구(multi) → 다가구(dagagu) + 단독(danok) 분리.
         villa = base + noise_v - 5
-        multi = base + noise_v
+        dagagu = base + noise_v
+        danok = base + noise_v + 3
         officetel = base + noise_v + 8
 
         # SPEC 14.2 — 거래 3건 미만 월은 None. 가끔(~10%) None 처리.
@@ -214,7 +216,8 @@ def _build_real_estate(dong: Dong, today: date) -> dict:
         monthly_trend.append({
             "month": _format_month(m),
             "villa": maybe_null(villa),
-            "multi": maybe_null(multi),
+            "dagagu": maybe_null(dagagu),
+            "danok": maybe_null(danok),
             "officetel": maybe_null(officetel),
         })
 
