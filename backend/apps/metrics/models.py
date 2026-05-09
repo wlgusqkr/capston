@@ -12,7 +12,7 @@ class Metric(models.Model):
     """지표 메타. RDS `metric` 35행."""
 
     metric_code = models.CharField(
-        max_length=20, primary_key=True, help_text="지표 코드 (RDS metric.metric_code)"
+        max_length=30, primary_key=True, help_text="지표 코드 (RDS metric.metric_code)"
     )
     name = models.CharField(max_length=100, help_text="지표 이름")
     unit = models.CharField(max_length=30, blank=True, help_text="단위 (예: '명', '%', '원')")

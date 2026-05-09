@@ -112,7 +112,12 @@ class BusStop(models.Model):
         blank=True,
         help_text="정류소번호 (서울 BIS arsId). RDS stop_number 1:1.",
     )
-    geom = gis_models.PointField(srid=4326, help_text="정류장 위치 (WGS84). GiST 인덱스.")
+    geom = gis_models.PointField(
+        srid=4326,
+        null=True,
+        blank=True,
+        help_text="정류장 위치 (WGS84). GiST 인덱스. RDS에 NULL 719건 존재.",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
