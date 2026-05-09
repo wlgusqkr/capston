@@ -54,10 +54,12 @@ jobs:
           cd "$SLGI_DIR"
           docker compose up -d
 
-      - name: Smoke test (backend schema via caddy)
+      - name: Smoke test (e2e via caddy with correct Host)
         run: |
           for i in 1 2 3 4 5; do
-            if docker exec caddy wget -q -O- http://slgi-backend:8000/api/schema/ > /dev/null; then
+            if docker exec caddy wget -q -O- \
+                --header "Host: slgi.jihyeon.site" \
+                http://localhost/api/schema/ > /dev/null; then
               echo "Backend OK"
               exit 0
             fi
