@@ -101,7 +101,9 @@
 }
 
 .explore__chip {
-  padding: var(--space-2) var(--space-3);
+  /* min-height 44px — touch target + 시각 무게 일관 */
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
   border: 1px solid var(--color-hairline);
   background: var(--color-surface);
   border-radius: 999px;
@@ -113,15 +115,20 @@
 .explore__chip:hover {
   border-color: var(--color-text-subtle);
   color: var(--color-text);
+  background: var(--color-surface-inset);
 }
+/* Active = filled outline (Soft Stone 채움 + Ink 텍스트). Near-Black 채움은
+ * DESIGN_SYSTEM.md 에서 1차 CTA 전용이라 필터에 쓰면 무거워 보임 — 가벼운
+ * Soft Stone 채움 + 진한 보더 + 진한 텍스트로 active 표현. */
 .explore__chip--active {
-  background: var(--color-text);
+  background: var(--color-soft-stone, #eeece7);
   border-color: var(--color-text);
-  color: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 500;
 }
 .explore__chip--active:hover {
-  background: var(--color-text);
-  color: var(--color-surface);
+  background: var(--color-soft-stone, #eeece7);
+  color: var(--color-text);
 }
 
 /* Period radio row */
