@@ -402,18 +402,18 @@ function ScatterBlock({
               type="number"
               dataKey="x"
               name="면적"
-              unit="㎡"
               stroke={CHART_COLORS.axis}
               tick={{ fill: CHART_COLORS.axis, fontSize: 11 }}
+              tickFormatter={(v) => `${v}㎡`}
               tickMargin={6}
             />
             <YAxis
               type="number"
               dataKey="y"
               name="환산월세"
-              unit="만원"
               stroke={CHART_COLORS.axis}
               tick={{ fill: CHART_COLORS.axis, fontSize: 11 }}
+              tickFormatter={(v) => `${v}`}
               tickMargin={6}
               width={56}
             />
