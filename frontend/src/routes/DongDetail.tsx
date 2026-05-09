@@ -7,7 +7,7 @@
 // actions in compact form. The previous sticky bottom CTA bar is gone —
 // audit feedback flagged it as a non-map FAB pattern.
 import { useCallback, useMemo, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import AmenitySection from '@/components/Detail/AmenitySection';
 import HeroSection from '@/components/Detail/HeroSection';
@@ -118,6 +118,17 @@ export default function DongDetail() {
         {data && (
           <>
             <RealEstateSection realEstate={data.real_estate} />
+            <div className="dong-detail__explore-cta">
+              <Link
+                to={`/dong/${data.slug}/explore`}
+                className="dong-detail__explore-link"
+              >
+                자취 시세 더 깊게 탐색하기 →
+              </Link>
+              <p className="mono-label dong-detail__explore-hint">
+                필터(유형·기간·보증금·월세·면적)로 시세 분포 자세히 보기
+              </p>
+            </div>
             <AmenitySection
               amenities={data.amenities}
               allDongs={scoresQ.data}

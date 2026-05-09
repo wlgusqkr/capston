@@ -203,6 +203,106 @@ export interface DongDetail {
   }>;
 }
 
+// -------- Explore (Phase 4.8 — 자취 시세 BI 대시보드) --------------------
+// GET /api/dongs/:slug/explore?<filters>
+
+export type ExploreDealType = 'villa' | 'dagagu' | 'danok' | 'officetel' | 'apt';
+
+export type ExplorePeriod = '3m' | '6m' | '12m' | '24m' | 'all';
+
+export type ExploreSort =
+  | 'date_desc'
+  | 'date_asc'
+  | 'deposit_desc'
+  | 'deposit_asc'
+  | 'monthly_desc'
+  | 'monthly_asc'
+  | 'converted_desc'
+  | 'converted_asc'
+  | 'area_desc'
+  | 'area_asc';
+
+/** 사용자가 조작하는 필터 상태. URL 쿼리스트링과 1:1 동기화. */
+export interface ExploreFilters {
+  deal_types: ExploreDealType[];
+  period: ExplorePeriod;
+  deposit_min: number;
+  deposit_max: number;
+  monthly_min: number;
+  monthly_max: number;
+  area_min: number;
+  area_max: number;
+  page: number;
+  page_size: number;
+  sort: ExploreSort;
+}
+
+export interface ExploreKpi {
+  count: number;
+  avg_converted_rent: number | null;
+  min_deposit: number | null;
+  avg_area_m2: number | null;
+}
+
+export interface ExploreTypeAvgRow {
+  deal_type: ExploreDealType;
+  label: string;
+  avg_converted_rent: number | null;
+  count: number;
+}
+
+export interface ExploreScatterPoint {
+  deal_type: ExploreDealType;
+  area_m2: number;
+  converted_rent: number;
+}
+
+export interface ExploreDepositBandRow {
+  band: string;
+  count: number;
+  avg_monthly_rent: number;
+}
+
+export interface ExploreMonthlyTrendRow {
+  month: string;
+  villa: number | null;
+  dagagu: number | null;
+  danok: number | null;
+  officetel: number | null;
+}
+
+export interface ExploreDealItem {
+  date: string;
+  type: string;
+  deal_type: ExploreDealType;
+  area_m2: number;
+  deposit: number;
+  monthly_rent: number;
+  converted_rent: number;
+  house_name: string;
+  build_year: number | null;
+  floor: number | null;
+}
+
+export interface ExploreDealsPage {
+  items: ExploreDealItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface ExploreResponse {
+  dong: { slug: string; code: string; name: string; gu: string };
+  filters_applied: ExploreFilters;
+  kpi: ExploreKpi;
+  type_avg: ExploreTypeAvgRow[];
+  scatter: ExploreScatterPoint[];
+  deposit_band: ExploreDepositBandRow[];
+  monthly_trend: ExploreMonthlyTrendRow[];
+  deals: ExploreDealsPage;
+}
+
 // -------- Preference learning (SPEC 6.5, 11.4) ---------------------------
 // Source: docs/handoff/20260502-step7a-backend-preference.md
 

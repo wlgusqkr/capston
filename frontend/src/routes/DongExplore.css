@@ -1,0 +1,381 @@
+/* DongExplore — /dong/:slug/explore (Phase 4.8 자취 시세 BI 대시보드).
+ *
+ * Desktop-only. Sidebar (260px) + main canvas grid layout.
+ */
+
+.explore {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: var(--space-6);
+  padding: var(--space-6) var(--space-8);
+  max-width: 1440px;
+  margin: 0 auto;
+  align-items: start;
+}
+
+.explore__error,
+.explore__loading {
+  padding: var(--space-12);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+/* ────── Sidebar ────── */
+
+.explore__sidebar {
+  position: sticky;
+  top: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-5);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  max-height: calc(100vh - var(--space-12));
+  overflow-y: auto;
+}
+
+.explore__filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.explore__filter-header p {
+  margin: 0;
+  color: var(--color-text-subtle);
+}
+
+.explore__reset {
+  background: transparent;
+  border: 0;
+  color: var(--color-text-subtle);
+  font-size: var(--font-caption-size);
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+.explore__reset:hover {
+  background: var(--color-surface-inset);
+  color: var(--color-text);
+}
+
+.explore__field {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.explore__field-title {
+  font-size: var(--font-body-size);
+  font-weight: 500;
+  color: var(--color-text);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.explore__range-value {
+  font-size: var(--font-caption-size);
+  color: var(--color-text-subtle);
+  font-weight: 400;
+}
+
+.explore__hint-small {
+  font-size: var(--font-caption-size);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* Deal type chips (multi-select) */
+.explore__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.explore__chip {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-hairline);
+  background: var(--color-surface);
+  border-radius: 999px;
+  font-size: var(--font-caption-size);
+  color: var(--color-text-subtle);
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+.explore__chip:hover {
+  border-color: var(--color-text-subtle);
+  color: var(--color-text);
+}
+.explore__chip--active {
+  background: var(--color-text);
+  border-color: var(--color-text);
+  color: var(--color-surface);
+}
+.explore__chip--active:hover {
+  background: var(--color-text);
+  color: var(--color-surface);
+}
+
+/* Period radio row */
+.explore__radio-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-1);
+}
+.explore__radio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-caption-size);
+  color: var(--color-text-subtle);
+  cursor: pointer;
+}
+.explore__radio input {
+  display: none;
+}
+.explore__radio:hover {
+  border-color: var(--color-text-subtle);
+}
+.explore__radio--active {
+  background: var(--color-text);
+  color: var(--color-surface);
+  border-color: var(--color-text);
+}
+
+/* Range slider — 두 input range 위아래로 배치 (단순 dual range) */
+.explore__range-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.explore__range-inputs input[type='range'] {
+  width: 100%;
+  accent-color: var(--color-text);
+}
+
+/* ────── Main canvas ────── */
+
+.explore__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  min-width: 0;
+}
+
+.explore__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.explore__back {
+  text-decoration: none;
+  color: var(--color-text-subtle);
+  align-self: flex-start;
+}
+.explore__back:hover {
+  color: var(--color-text);
+}
+.explore__title {
+  font-size: var(--font-display-md-size, 28px);
+  font-weight: 600;
+  margin: 0;
+}
+.explore__title-sub {
+  font-size: var(--font-body-size);
+  font-weight: 400;
+  color: var(--color-text-subtle);
+}
+.explore__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+/* KPI 4 cards */
+.explore__kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+.explore__kpi {
+  padding: var(--space-5);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.explore__kpi-label {
+  margin: 0;
+  color: var(--color-text-subtle);
+}
+.explore__kpi-value {
+  margin: 0;
+  font-size: var(--font-display-md-size, 28px);
+  font-weight: 600;
+  line-height: 1.1;
+}
+.explore__kpi-hint {
+  margin: 0;
+  font-size: var(--font-caption-size);
+  color: var(--color-text-muted);
+}
+
+/* Scatter — main chart, taller */
+.explore__scatter-block {
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: var(--space-5);
+}
+.explore__chart-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+.explore__chart-title {
+  margin: 0;
+  font-size: var(--font-h3-size, 18px);
+  font-weight: 600;
+}
+.explore__chart-hint {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+.explore__scatter {
+  height: 360px;
+}
+
+/* 3 작은 차트 row */
+.explore__charts-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+.explore__chart-block {
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.explore__chart-mid {
+  height: 220px;
+}
+
+/* Deals */
+.explore__deals {
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: var(--space-5);
+}
+.explore__deals-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.explore__deals-tools {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+.explore__sort {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.explore__sort select {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-size: var(--font-body-size);
+  color: var(--color-text);
+}
+.explore__table-scroll {
+  overflow-x: auto;
+}
+.explore__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-body-size);
+}
+.explore__table thead th {
+  background: var(--color-surface-inset);
+  color: var(--color-text-subtle);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-mono-label-size);
+  font-weight: var(--font-mono-label-weight);
+  letter-spacing: var(--font-mono-label-tracking);
+  text-align: left;
+  text-transform: uppercase;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-hairline);
+}
+.explore__table tbody td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-hairline);
+  color: var(--color-text);
+}
+.explore__table tbody tr:last-child td {
+  border-bottom: none;
+}
+.explore__table-name {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.explore__table-converted {
+  font-weight: 600;
+}
+.explore__table-empty {
+  text-align: center;
+  color: var(--color-text-muted);
+  padding: var(--space-6);
+}
+
+/* Pagination */
+.explore__pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+}
+.explore__pagination button {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-hairline);
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: var(--font-body-size);
+}
+.explore__pagination button:disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  background: var(--color-surface-inset);
+}
+.explore__pagination-info {
+  color: var(--color-text-subtle);
+  font-size: var(--font-body-size);
+}

@@ -22,7 +22,10 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from datetime import date
+
 from .compare_dummy import build_compare_row, compute_rent_converted_avgs
+from .explore import build_explore_response
 from .models import Dong
 from .score_point import compute_point_score
 from .serializers import (
@@ -376,3 +379,117 @@ class KernelScoreView(APIView):
             school=data.get("school") or None,
         )
         return Response(result, status=status.HTTP_200_OK)
+
+
+# ---------------------------------------------------------------------------
+# Phase 4.8 — 자취 시세 BI 대시보드 (`/dong/<slug>/explore`)
+# ---------------------------------------------------------------------------
+
+
+@extend_schema(
+    tags=["dongs"],
+    summary="자취 시세 BI 대시보드 데이터 (Phase 4.8)",
+    description=(
+        "한 동의 자취 시장을 깊이 탐색하기 위한 BI 응답. 사용자가 거래유형/기간/"
+        "보증금/월세/면적 필터를 자유롭게 조합하면 KPI · 유형별 평균 · 면적-환산"
+        "월세 산점도 · 보증금 대역 분포 · 월별 추이 · 페이지네이션된 거래표가 모두 "
+        "동기화되어 반환된다. 필터 파라미터/응답 포맷은 backend/apps/neighborhoods/"
+        "explore.py 참조."
+    ),
+    parameters=[
+        OpenApiParameter(
+            name="deal_types",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description="콤마 구분: villa,dagagu,danok,officetel,apt (default 자취 4종)",
+        ),
+        OpenApiParameter(
+            name="period",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description="3m | 6m | 12m | 24m | all (default 6m)",
+        ),
+        OpenApiParameter(
+            name="deposit_min",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description="만원 (default 0)",
+        ),
+        OpenApiParameter(
+            name="deposit_max",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description="만원 (default 50000)",
+        ),
+        OpenApiParameter(
+            name="monthly_min",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description="만원 (default 0)",
+        ),
+        OpenApiParameter(
+            name="monthly_max",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description="만원 (default 300)",
+        ),
+        OpenApiParameter(
+            name="area_min",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description="m² (default 10)",
+        ),
+        OpenApiParameter(
+            name="area_max",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description="m² (default 100)",
+        ),
+        OpenApiParameter(
+            name="page",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description="1-indexed (default 1)",
+        ),
+        OpenApiParameter(
+            name="page_size",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description="default 20, max 100",
+        ),
+        OpenApiParameter(
+            name="sort",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description=(
+                "date_desc | date_asc | deposit_desc | deposit_asc | "
+                "monthly_desc | monthly_asc | converted_desc | converted_asc | "
+                "area_desc | area_asc (default date_desc)"
+            ),
+        ),
+    ],
+)
+class DongExploreView(APIView):
+    """GET /api/dongs/<slug>/explore?<filters>"""
+
+    def get(self, request: Request, slug: str) -> Response:
+        try:
+            dong = Dong.objects.only(
+                "id", "slug", "code", "name", "gu"
+            ).get(slug=slug)
+        except Dong.DoesNotExist as exc:
+            raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
+
+        data = build_explore_response(dong, request, today=date.today())
+        return Response(data, status=status.HTTP_200_OK)

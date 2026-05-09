@@ -10,6 +10,7 @@ from django.urls import path
 from .views import (
     CompareView,
     DongDetailView,
+    DongExploreView,
     DongScoresView,
     DongSummaryView,
     KernelScoreView,
@@ -24,6 +25,8 @@ urlpatterns = [
     path("dongs/<str:slug>/summary", DongSummaryView.as_view(), name="dong-summary"),
     # GET /api/dongs/<slug>/detail
     path("dongs/<str:slug>/detail", DongDetailView.as_view(), name="dong-detail"),
+    # GET /api/dongs/<slug>/explore — 자취 시세 BI 대시보드 (Phase 4.8)
+    path("dongs/<str:slug>/explore", DongExploreView.as_view(), name="dong-explore"),
     # GET /api/compare?slugs=A,B,C
     path("compare", CompareView.as_view(), name="compare"),
     # POST /api/score/point  (Phase 2a — 임의 지점 커널 점수, SPEC 11)

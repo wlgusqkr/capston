@@ -9,6 +9,8 @@ import type {
   DongDetail,
   DongScore,
   DongSummary,
+  ExploreFilters,
+  ExploreResponse,
   FavoriteItem,
   KernelScoreRequest,
   KernelScoreResponse,
@@ -89,6 +91,31 @@ export async function getDongDetail(
       w_rent: weights.rent,
       w_amenity: weights.amenity,
       w_transit: weights.transit,
+    },
+  });
+  return data;
+}
+
+/** GET /api/dongs/:slug/explore — 자취 시세 BI 대시보드 (Phase 4.8).
+ *  필터는 ExploreFilters 그대로 전송. deal_types 는 콤마 join.
+ */
+export async function getDongExplore(
+  slug: string,
+  filters: ExploreFilters,
+): Promise<ExploreResponse> {
+  const { data } = await api.get<ExploreResponse>(`/dongs/${slug}/explore`, {
+    params: {
+      deal_types: filters.deal_types.join(','),
+      period: filters.period,
+      deposit_min: filters.deposit_min,
+      deposit_max: filters.deposit_max,
+      monthly_min: filters.monthly_min,
+      monthly_max: filters.monthly_max,
+      area_min: filters.area_min,
+      area_max: filters.area_max,
+      page: filters.page,
+      page_size: filters.page_size,
+      sort: filters.sort,
     },
   });
   return data;

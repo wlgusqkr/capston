@@ -17,6 +17,7 @@ import { PageTitleProvider } from './contexts/PageTitleContext';
 import Compare from './routes/Compare';
 import DesignSystem from './routes/DesignSystem';
 import DongDetail from './routes/DongDetail';
+import DongExplore from './routes/DongExplore';
 import Login from './routes/Login';
 import MainMap from './routes/MainMap';
 import MyPage from './routes/MyPage';
@@ -30,6 +31,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<MainMap />} />
         <Route path="/dong/:slug" element={<DongDetail />} />
+        <Route path="/dong/:slug/explore" element={<DongExplore />} />
         <Route path="/compare" element={<Compare />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
