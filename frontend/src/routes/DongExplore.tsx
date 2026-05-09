@@ -12,7 +12,6 @@
 //   │  [reset]     │ ─────────────────────────────────────  │
 //   │              │ Deals table (sortable + paginated)    │
 //   └──────────────┴───────────────────────────────────────┘
-import { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   Bar,
@@ -88,16 +87,10 @@ export default function DongExplore() {
   const { slug } = useParams<{ slug: string }>();
   const { filters, patch, setPage, reset } = useExploreFilters();
   const { data, isLoading, isError, error } = useDongExplore(slug, filters);
-  const { setTitle } = usePageTitle();
 
-  useEffect(() => {
-    if (data) {
-      setTitle(`${data.dong.gu} ${data.dong.name} · 자취 시세 탐색`);
-    } else {
-      setTitle('자취 시세 탐색');
-    }
-    return () => setTitle('');
-  }, [data, setTitle]);
+  usePageTitle(
+    data ? `${data.dong.gu} ${data.dong.name} · 자취 시세 탐색` : '자취 시세 탐색',
+  );
 
   if (!slug) {
     return <div className="explore__error">잘못된 URL입니다.</div>;
