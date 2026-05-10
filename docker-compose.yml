@@ -1,24 +1,36 @@
-# 로컬 개발용 — backend + db + redis 전부 docker.
+# 로컬 개발용 — backend + redis 기본, db는 옵트인.
 # 운영 배포는 별도 (홈서버의 services/slgi/docker-compose.yml).
 #
-# 셋업:
-#   cp backend/.env.example backend/.env
+# ─────────────────────────────────────────────────────────────────────────────
+# 모드 1: 운영 DB 사용 (홈서버 postgres) — 기본
+# ─────────────────────────────────────────────────────────────────────────────
+#   cp backend/.env.example backend/.env       # <YOUR_USER>/<YOUR_PASSWORD> 채우기
 #   cp frontend/.env.example frontend/.env
-#   docker compose up -d
+#   ssh -N -L 5432:127.0.0.1:5432 parkparkjihyeon@<ZeroTier-IP>   # 다른 창
+#   docker compose up -d                        # backend + redis (db는 안 뜸)
 #   cd frontend && npm install && npm run dev
-#   → http://localhost:5173
 #
-# VSCode 디버거 attach 사용 시:
+# ─────────────────────────────────────────────────────────────────────────────
+# 모드 2: 풀 로컬 (오프라인, migrate 테스트)
+# ─────────────────────────────────────────────────────────────────────────────
+#   cp backend/.env.local.example backend/.env  # DATABASE_URL이 db:5432
+#   cp frontend/.env.example frontend/.env
+#   docker compose --profile local-db up -d     # db도 같이 기동
+#   cd frontend && npm install && npm run dev
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# 디버거 attach (VSCode F5 → "Attach to Django (docker)")
+# ─────────────────────────────────────────────────────────────────────────────
 #   docker compose stop backend
 #   docker compose run --rm --service-ports backend \
 #     python -m debugpy --listen 0.0.0.0:5678 --wait-for-client \
 #     manage.py runserver 0.0.0.0:8000 --noreload
-#   VSCode → F5 → "Attach to Django (docker)"
 
 services:
   db:
     image: postgis/postgis:16-3.4
     container_name: slgi-db
+    profiles: ["local-db"]
     environment:
       POSTGRES_USER: slgi
       POSTGRES_PASSWORD: slgi
@@ -61,6 +73,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
+        required: false
       redis:
         condition: service_started
     command: python manage.py runserver 0.0.0.0:8000
