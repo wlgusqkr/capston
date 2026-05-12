@@ -6,8 +6,6 @@ import { useId } from 'react';
 
 import { Slider } from '@/components/ui';
 
-import './FilterControls.css';
-
 export interface FilterControlsProps {
   rentCapEnabled: boolean;
   onRentCapToggle: (next: boolean) => void;
@@ -29,27 +27,27 @@ export default function FilterControls({
   const rentCapCheckId = useId();
 
   return (
-    <div className="filter-controls">
-      <label className="filter-controls__check" htmlFor={universityCheckId}>
+    <div className="flex flex-col gap-3">
+      <label className="flex items-center gap-2 text-caption text-text cursor-pointer" htmlFor={universityCheckId}>
         <input
           id={universityCheckId}
           type="checkbox"
           checked={nearUniversityOnly}
           onChange={(e) => onNearUniversityToggle(e.target.checked)}
+          className="w-4 h-4 accent-secondary cursor-pointer"
         />
         <span>대학교 근처만</span>
       </label>
 
-      <div className="filter-controls__block">
-        <label className="filter-controls__check" htmlFor={rentCapCheckId}>
+      <div className="flex flex-col gap-2 pl-1">
+        <label className="flex items-center gap-2 text-caption text-text cursor-pointer" htmlFor={rentCapCheckId}>
           <input
             id={rentCapCheckId}
             type="checkbox"
             checked={rentCapEnabled}
             onChange={(e) => onRentCapToggle(e.target.checked)}
+            className="w-4 h-4 accent-secondary cursor-pointer"
           />
-          {/* "환산 월세" — 보증금을 0.005/월로 환산해 합산한 값.
-              전월세 score 자체가 환산값 기반이므로 라벨만 정직하게 표기. */}
           <span>환산 월세 상한</span>
         </label>
         <Slider
@@ -63,7 +61,7 @@ export default function FilterControls({
           hideHeader={false}
           label={null}
         />
-        <p className="filter-controls__hint mono-label">
+        <p className="m-0 text-text-subtle text-mono-label mono-label">
           보증금 환산 포함 (0.005/월)
         </p>
       </div>

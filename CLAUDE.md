@@ -28,6 +28,7 @@
 - `localStorage` / `sessionStorage` 사용 (메모리 상태로 처리)
 - 기존 메인 지도 / 동네 패널과 평행한 구현 만들기 — 새 Button, Card, 데이터 훅 등 만들기 전에 `frontend/src/components/`와 `ui/`에서 grep 먼저
 - 프론트 작업 중 새 백엔드 API가 필요할 때 그 자리에서 백엔드 코드 손대기 — 멈추고 필요한 데이터 스펙 정리해서 사용자에게 보고
+- `docs/`는 일단 무시. legacy 폴더이므로 참고할 필요 없음.
 
 ## Sub-agent 위임 규칙
 

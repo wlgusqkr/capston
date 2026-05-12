@@ -79,7 +79,6 @@ import {
   panelReducer,
 } from './MainMap.panelReducer';
 
-import './MainMap.css';
 
 const MAX_COMPARE = 3;
 
@@ -390,11 +389,11 @@ export default function MainMap() {
   const heatmapMode = isMatchMode ? 'match' : 'score';
 
   return (
-    <div className="main-map">
+    <div className="relative grid grid-cols-[320px_minmax(0,1fr)] w-screen h-[calc(100vh-var(--space-14))] overflow-hidden bg-bg">
       <h1 className="sr-only">서울 동네 점수 지도</h1>
 
       {/* ───── 좌측 사이드바 (Phase 5 cleanup) ───── */}
-      <aside className="main-map__sidebar" aria-label="필터 + 가중치 사이드바">
+      <aside className="relative h-full overflow-y-auto bg-surface border-r border-divider z-[200]" aria-label="필터 + 가중치 사이드바">
         {/* 1) STUDIO MATCH (top) */}
         <MatchFilterPanel
           filters={matchFilters}
@@ -408,14 +407,14 @@ export default function MainMap() {
           onNearUniversityToggle={setNearUniversityOnly}
         />
 
-        <div className="main-map__sidebar-divider" aria-hidden="true" />
+        <div className="h-px bg-divider m-0" aria-hidden="true" />
 
         {/* 2) MAP MODE — 매칭 / 종합 점수 + 거래 핀 토글 + 히트맵 토글 */}
-        <section className="main-map__sidebar-section">
-          <p className="mono-label main-map__sidebar-eyebrow">MAP MODE</p>
-          <h3 className="main-map__sidebar-title">지도 모드</h3>
+        <section className="flex flex-col gap-3 p-6">
+          <p className="mono-label m-0 text-text-subtle">MAP MODE</p>
+          <h3 className="m-0 text-body-base font-semibold text-text tracking-normal">지도 모드</h3>
           <MapModeToggle mode={mapMode} onModeChange={setMapMode} />
-          <label className="main-map__heatmap-toggle">
+          <label className="flex items-center gap-2 text-caption text-text-subtle cursor-pointer">
             <input
               type="checkbox"
               checked={showPins}
@@ -423,7 +422,7 @@ export default function MainMap() {
             />
             <span>거래 핀 표시</span>
           </label>
-          <label className="main-map__heatmap-toggle">
+          <label className="flex items-center gap-2 text-caption text-text-subtle cursor-pointer">
             <input
               type="checkbox"
               checked={heatmapVisible}
@@ -433,14 +432,14 @@ export default function MainMap() {
           </label>
         </section>
 
-        <div className="main-map__sidebar-divider" aria-hidden="true" />
+        <div className="h-px bg-divider m-0" aria-hidden="true" />
 
         {/* 3) WEIGHTS (bottom) — match 모드에서는 disabled */}
-        <section className="main-map__sidebar-section">
-          <p className="mono-label main-map__sidebar-eyebrow">SCORE WEIGHTS</p>
-          <h3 className="main-map__sidebar-title">종합 점수 가중치</h3>
+        <section className="flex flex-col gap-3 p-6">
+          <p className="mono-label m-0 text-text-subtle">SCORE WEIGHTS</p>
+          <h3 className="m-0 text-body-base font-semibold text-text tracking-normal">종합 점수 가중치</h3>
           {isMatchMode ? (
-            <p className="main-map__sidebar-hint">
+            <p className="m-0 text-caption text-text-subtle leading-[1.5] py-2 px-3 bg-surface-alt rounded-sm">
               종합 점수 모드에서만 가중치 적용. 위 MAP MODE 에서 종합 점수로
               전환하면 활성화됩니다.
             </p>
@@ -459,7 +458,7 @@ export default function MainMap() {
       {/* ───── 우측 지도 영역 ───── */}
       <section
         id="main"
-        className="main-map__map"
+        className="relative w-full h-full bg-surface-alt"
         aria-label="서울 동네 히트맵"
       >
         <HeatMap
@@ -486,19 +485,19 @@ export default function MainMap() {
         </HeatMap>
 
         {/* ---- Top-right: CompareChip (when basket ≥ 1) ---- */}
-        <div className="main-map__compare-chip">
+        <div className="absolute top-[calc(var(--space-4)+var(--space-16))] right-4 z-[500]">
           <CompareChip count={compareSlugs.length} onClick={handleOpenCompare} />
         </div>
 
         {showZoomHint && (
-          <p className="main-map__zoom-hint mono-label" role="status">
+          <p className="absolute top-4 left-1/2 -translate-x-1/2 z-[470] py-2 px-4 bg-surface border border-border rounded-sm shadow-floating text-text-subtle m-0 mono-label" role="status">
             더 확대해 거래 핀 보기
           </p>
         )}
 
         {showPins && !showZoomHint && txQuery.isError && (
           <div
-            className="main-map__overlay main-map__overlay--error"
+            className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 py-2 px-4 bg-surface border border-danger rounded-sm shadow-floating text-caption text-danger z-[500] tracking-normal"
             role="alert"
           >
             거래 정보를 불러오지 못했어요.
@@ -506,21 +505,21 @@ export default function MainMap() {
         )}
 
         {scoresLoading && (
-          <div className="main-map__overlay" role="status" aria-live="polite">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 py-2 px-4 bg-surface border border-border rounded-sm shadow-floating text-caption text-text z-[500] tracking-normal" role="status" aria-live="polite">
             동네 점수를 불러오는 중…
           </div>
         )}
         {scoresError && (
-          <div className="main-map__overlay main-map__overlay--error" role="alert">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 py-2 px-4 bg-surface border border-danger rounded-sm shadow-floating text-caption text-danger z-[500] tracking-normal" role="alert">
             데이터를 불러오지 못했습니다.
-            <span className="main-map__overlay-detail">
+            <span className="text-micro text-text-muted">
               {scoresErr instanceof Error ? scoresErr.message : '알 수 없는 오류'}
             </span>
           </div>
         )}
 
         {toast && (
-          <div className="main-map__overlay main-map__toast" role="status" aria-live="polite">
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 py-2 px-4 bg-surface border border-secondary rounded-sm shadow-floating text-caption text-text z-[600] tracking-normal" role="status" aria-live="polite">
             {toast}
           </div>
         )}

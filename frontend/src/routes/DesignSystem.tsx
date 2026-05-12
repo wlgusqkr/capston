@@ -29,60 +29,67 @@ interface ColorGroup {
 
 const COLOR_GROUPS: ColorGroup[] = [
   {
-    title: 'Primary Surfaces',
+    title: 'Core',
     tokens: [
-      { name: '--color-canvas-white', value: '#ffffff' },
-      { name: '--color-primary-green', value: '#059669' },
-      { name: '--color-green-wash', value: '#ECFDF5' },
-      { name: '--color-near-black', value: '#4C4C4C' },
-      { name: '--color-deep-forest', value: '#003c33' },
+      { name: '--color-primary', value: '#059669' },
+      { name: '--color-primary-hover', value: '#047857' },
+      { name: '--color-primary-soft', value: '#ECFDF5' },
     ],
   },
   {
-    title: 'Neutrals (Gray Scale)',
+    title: 'Secondary',
     tokens: [
-      { name: '--color-gray-mid', value: '#A1A1AA' },
-      { name: '--color-gray-light', value: '#D4D4D8' },
+      { name: '--color-secondary', value: '#4C4C4C' },
+      { name: '--color-secondary-dark', value: '#003c33' },
     ],
   },
   {
-    title: 'Editorial Accents',
+    title: 'Surface',
     tokens: [
-      { name: '--color-coral', value: '#ff7759' },
-      { name: '--color-action-blue', value: '#1863dc' },
+      { name: '--color-bg', value: '#ffffff' },
+      { name: '--color-surface', value: '#ffffff' },
+      { name: '--color-surface-alt', value: '#F4F4F5' },
     ],
   },
   {
-    title: 'Text & Rules',
+    title: 'Text',
     tokens: [
-      { name: '--color-ink', value: '#212121' },
-      { name: '--color-slate', value: '#75758a' },
-      { name: '--color-muted-slate', value: '#93939f' },
-      { name: '--color-hairline', value: '#d9d9dd' },
-      { name: '--color-border-light', value: '#e5e7eb' },
+      { name: '--color-text', value: '#212121' },
+      { name: '--color-text-muted', value: '#75758a' },
+      { name: '--color-text-subtle', value: '#93939f' },
     ],
   },
   {
-    title: 'Semantic Accents',
+    title: 'Border',
     tokens: [
-      { name: '--color-focus-blue', value: '#4c6ee6' },
-      { name: '--color-form-focus-violet', value: '#9b60aa' },
-      { name: '--color-error-red', value: '#b30000' },
+      { name: '--color-border', value: '#e5e7eb' },
+      { name: '--color-divider', value: '#d9d9dd' },
     ],
   },
   {
-    title: 'Status',
+    title: 'Accent',
     tokens: [
-      { name: '--color-success', value: '#1f7a5e' },
+      { name: '--color-accent', value: '#ff7759' },
+      { name: '--color-link', value: '#1863dc' },
+    ],
+  },
+  {
+    title: 'Status / MetricBar',
+    tokens: [
+      { name: '--color-danger', value: '#FB6666' },
+      { name: '--color-danger-soft', value: '#FEE2E2' },
+      { name: '--color-warning', value: '#FFD82A' },
+      { name: '--color-warning-soft', value: '#FFF8E1' },
+      { name: '--color-success', value: '#059669' },
       { name: '--color-success-soft', value: '#ECFDF5' },
-      { name: '--color-warning', value: '#ff7759' },
-      { name: '--color-warning-soft', value: '#fff1ec' },
-      { name: '--color-danger', value: '#b30000' },
-      { name: '--color-danger-soft', value: '#fbe5e5' },
-      { name: '--color-info', value: '#1863dc' },
-      { name: '--color-info-soft', value: '#F4F4F5' },
-      { name: '--color-neutral', value: '#75758a' },
-      { name: '--color-neutral-soft', value: '#F4F4F5' },
+      { name: '--color-info', value: '#5570F1' },
+      { name: '--color-info-soft', value: '#C1CCFF' },
+    ],
+  },
+  {
+    title: 'Focus',
+    tokens: [
+      { name: '--color-focus-ring', value: 'rgba(5,150,105,0.40)' },
     ],
   },
   {
@@ -335,7 +342,7 @@ const styles = {
     fontWeight: 400,
     marginBottom: 'var(--space-2)',
     paddingBottom: 'var(--space-3)',
-    borderBottom: '1px solid var(--color-border-strong)',
+    borderBottom: '1px solid var(--color-divider)',
   } as const,
   editPath: {
     fontSize: 'var(--font-micro-size)',
@@ -421,7 +428,7 @@ const styles = {
   } as const,
   spacingBar: {
     height: 16,
-    background: 'var(--color-deep-forest)',
+    background: 'var(--color-secondary-dark)',
     borderRadius: 'var(--radius-xs)',
     opacity: 0.7,
   } as const,
@@ -433,8 +440,8 @@ const styles = {
   radiusBox: {
     width: '100%',
     height: 100,
-    background: 'var(--color-surface-inset)',
-    border: '2px solid var(--color-border-strong)',
+    background: 'var(--color-surface-alt)',
+    border: '2px solid var(--color-divider)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -478,13 +485,13 @@ const styles = {
     flexShrink: 0,
   } as const,
   heightBar: {
-    background: 'var(--color-near-black)',
+    background: 'var(--color-secondary)',
     borderRadius: 'var(--radius-xs)',
     width: 200,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    color: 'var(--color-text-on-primary)',
+    color: 'var(--color-surface)',
     fontSize: 'var(--font-micro-size)',
     fontFamily: 'var(--font-family-mono)',
   } as const,
@@ -549,7 +556,7 @@ function ColorSwatches() {
     <section style={styles.section}>
       <SectionTitle
         title="Colors"
-        editFile={`${BASE_PATH}/styles/tokens.css`}
+        editFile={`${BASE_PATH}/styles/globals.css`}
       />
       {COLOR_GROUPS.map((group) => (
         <div key={group.title}>
@@ -581,7 +588,7 @@ function TypographyShowcase() {
     <section style={styles.section}>
       <SectionTitle
         title="Typography"
-        editFile={`${BASE_PATH}/styles/tokens.css`}
+        editFile={`${BASE_PATH}/styles/globals.css`}
       />
       {TYPOGRAPHY_TOKENS.map((token) => {
         const isMonoLabel = token.name === 'Mono Label';
@@ -623,7 +630,7 @@ function SpacingShowcase() {
     <section style={styles.section}>
       <SectionTitle
         title="Spacing"
-        editFile={`${BASE_PATH}/styles/tokens.css`}
+        editFile={`${BASE_PATH}/styles/globals.css`}
       />
       {SPACING_TOKENS.map((token) => (
         <div key={token.name} style={styles.spacingRow}>
@@ -646,7 +653,7 @@ function RadiusShowcase() {
     <section style={styles.section}>
       <SectionTitle
         title="Radius"
-        editFile={`${BASE_PATH}/styles/tokens.css`}
+        editFile={`${BASE_PATH}/styles/globals.css`}
       />
       <div style={styles.radiusGrid}>
         {RADIUS_TOKENS.map((token) => (
@@ -681,7 +688,7 @@ function ShadowShowcase() {
     <section style={styles.section}>
       <SectionTitle
         title="Shadows"
-        editFile={`${BASE_PATH}/styles/tokens.css`}
+        editFile={`${BASE_PATH}/styles/globals.css`}
       />
       <div style={styles.shadowBox}>--shadow-floating</div>
     </section>
@@ -693,7 +700,7 @@ function HeightShowcase() {
     <section style={styles.section}>
       <SectionTitle
         title="Component Heights"
-        editFile={`${BASE_PATH}/styles/tokens.css`}
+        editFile={`${BASE_PATH}/styles/globals.css`}
       />
       {HEIGHT_TOKENS.map((token) => (
         <div key={token.name} style={styles.heightRow}>
@@ -717,7 +724,7 @@ function TransitionShowcase() {
     <section style={styles.section}>
       <SectionTitle
         title="Transitions"
-        editFile={`${BASE_PATH}/styles/tokens.css`}
+        editFile={`${BASE_PATH}/styles/globals.css`}
       />
       <div style={styles.tokenList}>
         {TRANSITION_TOKENS.map((token) => (
@@ -736,7 +743,7 @@ function ZIndexShowcase() {
     <section style={styles.section}>
       <SectionTitle
         title="Z-Index"
-        editFile={`${BASE_PATH}/styles/tokens.css`}
+        editFile={`${BASE_PATH}/styles/globals.css`}
       />
       <div style={styles.tokenList}>
         {ZINDEX_TOKENS.map((token) => (
@@ -970,7 +977,7 @@ function MetricBarShowcase() {
         editFile={`${BASE_PATH}/components/ui/MetricBar.tsx`}
       />
       <div style={styles.componentGroup}>
-        <div style={styles.componentLabel}>tone="score" (heatmap quintile colors)</div>
+        <div style={styles.componentLabel}>tone="score" (status-aligned fills)</div>
         <div style={styles.metricBarWrap}>
           <MetricBar label="교통" value={15} tone="score" />
         </div>
@@ -988,7 +995,7 @@ function MetricBarShowcase() {
         </div>
       </div>
       <div style={styles.componentGroup}>
-        <div style={styles.componentLabel}>tone="weight" (near-black fill)</div>
+        <div style={styles.componentLabel}>tone="weight" (primary fill)</div>
         <div style={styles.metricBarWrap}>
           <MetricBar label="전월세 가중치" value={80} tone="weight" unit="%" />
         </div>

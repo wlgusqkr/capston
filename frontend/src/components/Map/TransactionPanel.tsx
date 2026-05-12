@@ -1,19 +1,6 @@
-// TransactionPanel — slide-in right-side panel listing the deals at a single
+// TransactionPanel -- slide-in right-side panel listing the deals at a single
 // jibun (Phase 1b).
-//
-// Mirrors DongPanel structure for consistency:
-//   - Fixed to the right edge, ~400px wide, full viewport height.
-//   - Slides in via translateX. Stays in DOM when closed (jibunKey === null)
-//     so the transition runs both directions.
-//   - Internal scroll for long lists.
-//
-// Sections:
-//   1. Header — jibun + dong_name (gu) mono uppercase, close button
-//   2. Deal list — sorted by date desc; each row has type badge + area +
-//      deposit/monthly_rent + date.
-//   3. Footer — "+N more" hint when caller passes a `truncated` count.
-//
-// ESC closes the panel.
+
 import { useMemo } from 'react';
 
 import { Badge } from '@/components/ui';
@@ -21,9 +8,6 @@ import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { formatConvertedRent } from '@/lib/rent';
 import type { RentDealPin, TransactionDealType } from '@/types/api';
 
-import './TransactionPanel.css';
-
-/** Korean labels for deal types — Pretendard sentence-case (badge content). */
 const DEAL_TYPE_LABEL: Record<TransactionDealType, string> = {
   apt: '아파트',
   officetel: '오피스텔',
@@ -32,12 +16,8 @@ const DEAL_TYPE_LABEL: Record<TransactionDealType, string> = {
   danok: '단독',
 };
 
-/** 1평 = 3.3058 m² (한국 면적 환산 표준). */
 const PYEONG_PER_M2 = 1 / 3.3058;
 
-/** 만원 단위 보증금/월세 → "55만원" 표기.
- *  - 0이면 빈 문자열을 반환하지 않고 "0만원"으로 명시 (UX: 데이터 정직성).
- */
 function formatMan(v: number): string {
   return `${v.toLocaleString('ko-KR')}만원`;
 }
@@ -48,13 +28,8 @@ function formatArea(m2: number): string {
 }
 
 export interface TransactionPanelProps {
-  /** Stable key from TransactionPinLayer.jibunKeyOf — null means panel closed. */
   jibunKey: string | null;
-  /** Pre-grouped deals at this jibun. Caller does the grouping. */
   pins: RentDealPin[];
-  /** True when the parent's API response was truncated by limit/has_more.
-   *  We surface this in the footer as a "+N more" disclosure.
-   */
   hasMore: boolean;
   onClose: () => void;
 }
@@ -67,7 +42,6 @@ export default function TransactionPanel({
 }: TransactionPanelProps) {
   const isOpen = jibunKey != null && pins.length > 0;
 
-  // Sort newest first, fallback to id desc for tie-breaks.
   const sorted = useMemo(() => {
     const copy = [...pins];
     copy.sort((a, b) => {
@@ -77,38 +51,39 @@ export default function TransactionPanel({
     return copy;
   }, [pins]);
 
-  // ESC closes when open — shared useEscapeKey (post-A-7 dedup).
   useEscapeKey(onClose, isOpen);
 
-  // Header text — derived from the first pin (all share dong/gu/jibun).
   const head = sorted[0];
 
   return (
     <aside
-      className={`tx-panel${isOpen ? ' tx-panel--open' : ''}`}
-      // @ts-expect-error — `inert` lands as a boolean attr but React typed it later.
-      // design-audit F-20: keep focusable buttons behind a closed panel out of tab order.
+      className={`absolute top-0 right-0 h-full w-[400px] max-w-full bg-surface border-l border-border transition-transform duration-[300ms] ease-out z-[510] flex flex-col ${
+        isOpen
+          ? 'translate-x-0 pointer-events-auto shadow-floating'
+          : 'translate-x-full pointer-events-none'
+      }`}
+      // @ts-expect-error -- `inert` lands as a boolean attr but React typed it later.
       inert={!isOpen ? '' : undefined}
       aria-hidden={!isOpen}
       aria-label="거래 정보 패널"
       role="complementary"
     >
-      <div className="tx-panel__inner">
-        <header className="tx-panel__header">
-          <div className="tx-panel__title">
-            <p className="tx-panel__where">
+      <div className="flex flex-col h-full min-h-0">
+        <header className="flex items-start justify-between gap-3 px-5 pt-5 pb-3 border-b border-border shrink-0">
+          <div className="flex flex-col gap-1 min-w-0">
+            <p className="m-0 text-caption leading-[var(--font-caption-line)] text-text-muted tracking-[var(--letter-spacing-ko)]">
               {head ? `${head.gu} · ${head.dong_name}` : ''}
             </p>
-            <h2 className="tx-panel__jibun">
+            <h2 className="m-0 font-[family-name:var(--font-family-mono)] text-feature-heading leading-[var(--font-feature-heading-line)] font-semibold text-text uppercase tracking-[0.04em] tabular">
               {head ? head.jibun : ''}
             </h2>
-            <p className="tx-panel__count mono-label tabular">
+            <p className="mono-label tabular mt-1 text-text-subtle">
               {sorted.length}건 거래
             </p>
           </div>
           <button
             type="button"
-            className="tx-panel__close"
+            className="w-8 h-8 rounded-md border border-transparent bg-transparent text-text-muted text-feature-heading leading-none cursor-pointer shrink-0 transition-all duration-[120ms] ease-out inline-flex items-center justify-center hover:bg-surface-alt hover:text-text focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2"
             aria-label="패널 닫기"
             onClick={onClose}
           >
@@ -116,13 +91,13 @@ export default function TransactionPanel({
           </button>
         </header>
 
-        <div className="tx-panel__body">
+        <div className="flex-1 min-h-0 overflow-y-auto">
           {sorted.length === 0 && (
-            <div className="tx-panel__empty" role="status">
+            <div className="px-5 py-6 text-body-base text-text-muted text-center tracking-[var(--letter-spacing-ko)]" role="status">
               거래 정보가 없습니다.
             </div>
           )}
-          <ul className="tx-panel__list">
+          <ul className="list-none m-0 p-0">
             {sorted.map((p) => (
               <DealRow key={p.id} pin={p} />
             ))}
@@ -130,8 +105,8 @@ export default function TransactionPanel({
         </div>
 
         {hasMore && (
-          <footer className="tx-panel__footer">
-            <p className="tx-panel__more mono-label">
+          <footer className="border-t border-border px-5 py-3 bg-surface shrink-0">
+            <p className="mono-label m-0 text-text-subtle text-center">
               지도를 확대하면 더 많은 거래가 표시됩니다
             </p>
           </footer>
@@ -147,62 +122,57 @@ export default function TransactionPanel({
 
 function DealRow({ pin }: { pin: RentDealPin }) {
   const isJeonse = pin.monthly_rent === 0;
-  // Prefer backend's converted_rent (정수 만원, 동일 계수 0.005/월) — 없는 케이스는
-  // 거래 row 단위로는 거의 발생하지 않지만 방어 차원에서 클라이언트 계산으로 폴백.
   const convertedLabel = formatConvertedRent(pin.deposit, pin.monthly_rent);
   return (
-    <li className="tx-row">
-      <div className="tx-row__top">
+    <li className="flex flex-col gap-2 px-5 py-4 border-b border-border bg-surface transition-colors duration-[120ms] ease-out hover:bg-surface-alt">
+      <div className="flex items-center justify-between gap-3">
         <Badge variant="neutral" size="sm">
           {DEAL_TYPE_LABEL[pin.deal_type]}
         </Badge>
-        <span className="tx-row__date tabular">{pin.date}</span>
+        <span className="text-caption text-text-muted tracking-[var(--letter-spacing-ko)] tabular">{pin.date}</span>
       </div>
-      <div className="tx-row__area">{formatArea(pin.area_m2)}</div>
-      <div className="tx-row__price">
+      <div className="text-body-base text-text tracking-[var(--letter-spacing-ko)] tabular">{formatArea(pin.area_m2)}</div>
+      <div className="flex flex-wrap items-baseline gap-2 text-body-base">
         {isJeonse ? (
           <>
-            {/* 전세는 월세=0이라 보증금 환산값이 곧 비교 가능한 월세 부담. */}
             <Badge variant="neutral" size="sm">전세</Badge>
-            <span className="tx-row__price-pair">
-              <span className="tx-row__price-label mono-label">보증금</span>
-              <span className="tx-row__price-amount tabular">
+            <span className="inline-flex items-baseline gap-2">
+              <span className="mono-label text-text-subtle">보증금</span>
+              <span className="font-[family-name:var(--font-family-mono)] text-body-large text-text tracking-[0] tabular">
                 {formatMan(pin.deposit)}
               </span>
             </span>
-            <span className="tx-row__price-sep">·</span>
-            <span className="tx-row__price-pair">
-              <span className="tx-row__price-label mono-label">환산</span>
-              <span className="tx-row__price-amount tabular">
+            <span className="text-text-subtle">·</span>
+            <span className="inline-flex items-baseline gap-2">
+              <span className="mono-label text-text-subtle">환산</span>
+              <span className="font-[family-name:var(--font-family-mono)] text-body-large text-text tracking-[0] tabular">
                 {convertedLabel}
               </span>
             </span>
           </>
         ) : (
           <>
-            <span className="tx-row__price-pair">
-              <span className="tx-row__price-label mono-label">월세</span>
-              <span className="tx-row__price-amount tabular">
+            <span className="inline-flex items-baseline gap-2">
+              <span className="mono-label text-text-subtle">월세</span>
+              <span className="font-[family-name:var(--font-family-mono)] text-body-large text-text tracking-[0] tabular">
                 {formatMan(pin.monthly_rent)}
               </span>
             </span>
-            <span className="tx-row__price-sep">·</span>
-            <span className="tx-row__price-pair">
-              <span className="tx-row__price-label mono-label">보증금</span>
-              <span className="tx-row__price-amount tabular">
+            <span className="text-text-subtle">·</span>
+            <span className="inline-flex items-baseline gap-2">
+              <span className="mono-label text-text-subtle">보증금</span>
+              <span className="font-[family-name:var(--font-family-mono)] text-body-large text-text tracking-[0] tabular">
                 {formatMan(pin.deposit)}
               </span>
             </span>
           </>
         )}
       </div>
-      {/* 환산월세는 보증금 환산 합산으로 동일 기준 비교용. 전세는 위에서 inline
-          노출했으므로 중복을 피한다 (반전세/월세 케이스만 노출). */}
       {!isJeonse && (
-        <div className="tx-row__converted">
-          <span className="tx-row__converted-label mono-label">환산</span>
-          <span className="tx-row__converted-value tabular">{convertedLabel}</span>
-          <span className="tx-row__converted-hint mono-label">
+        <div className="flex items-baseline gap-2 pt-1 border-t border-dashed border-divider mt-1">
+          <span className="mono-label text-text-subtle">환산</span>
+          <span className="font-[family-name:var(--font-family-mono)] text-body-base text-text tracking-[0] tabular">{convertedLabel}</span>
+          <span className="mono-label text-text-subtle text-mono-label ml-auto">
             보증금 환산 포함
           </span>
         </div>

@@ -1,35 +1,10 @@
 // TopNav — global 3-zone navigation chrome (R-2 Stage 3).
-//
-// Zone layout per route (D-2 + D-5 revised: contextual, no mode switcher):
-//
-//   route             left              center                  right
-//   --------------    ----------------- ----------------------  ---------------------
-//   /                 logo              (none — map is content) {nickname}·마이페이지 / 로그인
-//   /dong/:slug       logo              {dong name from ctx}    {nickname}·마이페이지 / 로그인
-//   /compare          logo              "동네 비교"             {nickname}·마이페이지 / 로그인
-//   /mypage           logo              {nickname}              로그아웃 (handled inline)
-//   /login            logo              (none)                  회원가입 →
-//   /register         logo              (none)                  로그인 →
-//   /404              logo              (none)                  default unauthed link
-//
-// Logo always navigates to /. No mode-switcher pills (D-5 revised — broken
-// mental model, removed entirely).
-//
-// Center title for /dong/:slug comes from <PageTitleContext> populated by
-// the DongDetail page itself. While DongDetail's data is loading, fallback
-// is the URL slug; on error, also slug. Avoids TopNav fetching dong data
-// independently (which would break React Query dedup if weights differ).
-
 import { Link, useLocation } from 'react-router-dom';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { usePageTitleValue } from '@/contexts/PageTitleContext';
 import iconSvg from '@/assets/icon.svg';
 
-import './TopNav.css';
-
-/** Extract the slug from /dong/:slug. TopNav is rendered ABOVE <Routes>
- *  so useParams() returns {} — we parse the pathname ourselves. */
 function dongSlugFromPath(pathname: string): string | undefined {
   const match = pathname.match(/^\/dong\/([^/]+)/);
   return match?.[1];
@@ -38,18 +13,14 @@ function dongSlugFromPath(pathname: string): string | undefined {
 type AuthVariant = 'auth-login' | 'auth-register' | 'default';
 
 interface RouteSpec {
-  /** What goes in the center zone. */
   center:
     | { kind: 'none' }
     | { kind: 'static'; label: string }
     | { kind: 'dongDetail' }
     | { kind: 'mypage' };
-  /** What goes in the right zone. */
   authVariant: AuthVariant;
 }
 
-/** Pure router from `pathname` → display variant. Single source for the
- *  contextual TopNav rules. Add new routes here. */
 function specForPath(pathname: string): RouteSpec {
   if (pathname === '/login')
     return { center: { kind: 'none' }, authVariant: 'auth-register' };
@@ -64,7 +35,6 @@ function specForPath(pathname: string): RouteSpec {
     return { center: { kind: 'mypage' }, authVariant: 'default' };
   if (pathname.startsWith('/dong/'))
     return { center: { kind: 'dongDetail' }, authVariant: 'default' };
-  // `/` and 404 fall through:
   return { center: { kind: 'none' }, authVariant: 'default' };
 }
 
@@ -77,63 +47,66 @@ export default function TopNav() {
   const dongSlug = dongSlugFromPath(location.pathname);
 
   return (
-    <header className="topnav" role="banner">
-      <a className="topnav__skip-link" href="#main">
+    <header className="sticky top-0 z-[1000] w-full h-[var(--space-14)] bg-surface border-b border-divider" role="banner">
+      <a
+        className="absolute left-3 top-1 px-3 py-1 bg-primary text-surface rounded-sm text-caption no-underline -translate-y-[150%] transition-transform duration-[120ms] ease-out focus-visible:translate-y-0 focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2"
+        href="#main"
+      >
         메인 콘텐츠로 건너뛰기
       </a>
 
-      <div className="topnav__inner">
-        {/* ---- Left: brand mark + wordmark, click → / ---- */}
-        <Link to="/" className="topnav__brand" aria-label="홈으로">
-          <img src={iconSvg} alt="" className="topnav__brand-icon" aria-hidden="true" />
-          <span className="topnav__brand-text">슬기로운 자취생활</span>
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 h-full px-6 max-w-[1440px] mx-auto">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 no-underline text-text font-normal tracking-normal hover:text-secondary focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2 focus-visible:rounded-sm"
+          aria-label="홈으로"
+        >
+          <img src={iconSvg} alt="" className="w-[var(--control-height-sm)] h-[var(--control-height-sm)] shrink-0 object-contain" aria-hidden="true" />
+          <span className="text-body-base font-normal">슬기로운 자취생활</span>
         </Link>
 
-        {/* ---- Center: contextual page identity ---- */}
-        <div className="topnav__center">
+        <div className="flex items-center justify-center max-w-[480px] min-w-0">
           {spec.center.kind === 'static' && (
-            <span className="topnav__page-title">{spec.center.label}</span>
+            <span className="text-body-large font-normal text-text tracking-normal whitespace-nowrap overflow-hidden text-ellipsis">{spec.center.label}</span>
           )}
           {spec.center.kind === 'dongDetail' && (
-            <span className="topnav__page-title">
+            <span className="text-body-large font-normal text-text tracking-normal whitespace-nowrap overflow-hidden text-ellipsis">
               {publishedTitle ?? dongSlug ?? ''}
             </span>
           )}
           {spec.center.kind === 'mypage' && (
-            <span className="topnav__page-title">
+            <span className="text-body-large font-normal text-text tracking-normal whitespace-nowrap overflow-hidden text-ellipsis">
               {user
                 ? (user.nickname && user.nickname.trim()) || user.username
                 : ''}
             </span>
           )}
-          {/* kind === 'none' → empty center */}
         </div>
 
-        {/* ---- Right: auth-state-driven links ---- */}
-        <nav className="topnav__right" aria-label="사용자 메뉴">
+        <nav className="flex items-center justify-end gap-3" aria-label="사용자 메뉴">
           {spec.authVariant === 'auth-login' && (
-            <Link to="/login" className="topnav__action">
+            <Link to="/login" className="inline-flex items-center gap-1 no-underline text-text text-caption tracking-normal py-2 px-3 rounded-sm transition-all duration-[120ms] ease-out hover:bg-primary-soft hover:text-secondary focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2">
               로그인 →
             </Link>
           )}
           {spec.authVariant === 'auth-register' && (
-            <Link to="/register" className="topnav__action">
+            <Link to="/register" className="inline-flex items-center gap-1 no-underline text-text text-caption tracking-normal py-2 px-3 rounded-sm transition-all duration-[120ms] ease-out hover:bg-primary-soft hover:text-secondary focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2">
               회원가입 →
             </Link>
           )}
           {spec.authVariant === 'default' &&
             (user ? (
-              <Link to="/mypage" className="topnav__action">
-                <span className="topnav__user-name">
+              <Link to="/mypage" className="inline-flex items-center gap-1 no-underline text-text text-caption tracking-normal py-2 px-3 rounded-sm transition-all duration-[120ms] ease-out hover:bg-primary-soft hover:text-secondary focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2">
+                <span className="text-text font-medium">
                   {(user.nickname && user.nickname.trim()) || user.username}
                 </span>
-                <span className="topnav__user-sep" aria-hidden="true">
+                <span className="text-text-subtle" aria-hidden="true">
                   {' · '}
                 </span>
                 <span>마이페이지</span>
               </Link>
             ) : (
-              <Link to="/login" className="topnav__action topnav__action--guest">
+              <Link to="/login" className="inline-flex items-center gap-1 no-underline text-text-muted text-caption tracking-normal py-2 px-3 rounded-sm transition-all duration-[120ms] ease-out hover:bg-primary-soft hover:text-secondary focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2">
                 로그인 →
               </Link>
             ))}

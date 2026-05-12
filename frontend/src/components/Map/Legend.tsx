@@ -7,12 +7,9 @@
 
 import MatchModeBadge from './MatchModeBadge';
 
-import './Legend.css';
-
 export type LegendMode = 'score' | 'match';
 
 export interface LegendProps {
-  /** Phase 5: 'score' (기존) 또는 'match' (조건 거래량). default 'match'. */
   mode?: LegendMode;
 }
 
@@ -25,25 +22,27 @@ export default function Legend({ mode = 'match' }: LegendProps) {
       : '히트맵 색상 범례';
 
   return (
-    <div className="legend" aria-label={ariaLabel}>
+    <div
+      className="absolute right-4 bottom-[calc(16px+32px+8px)] flex items-center gap-2 px-3 py-2 bg-surface border border-border rounded-sm shadow-floating z-[400] font-[var(--font-family-mono)]"
+      aria-label={ariaLabel}
+    >
       {mode === 'match' ? <MatchModeBadge /> : null}
-      {/* key 변경 시 cross-fade 대신 리마운트 — CSS animation 으로 200ms fade. */}
       <span
         key={`start-${mode}`}
-        className="legend__label legend__label--start legend__label--fade"
+        className="text-mono-label leading-[1.4] font-normal tracking-[0.26px] text-text-subtle uppercase [animation:legend-label-fade_200ms_ease-out]"
       >
         {startLabel}
       </span>
-      <div className="legend__bar" role="presentation">
-        <span className="legend__step legend__step--q1" />
-        <span className="legend__step legend__step--q2" />
-        <span className="legend__step legend__step--q3" />
-        <span className="legend__step legend__step--q4" />
-        <span className="legend__step legend__step--q5" />
+      <div className="flex w-[var(--legend-bar-w)] h-[var(--legend-bar-h)] rounded-full overflow-hidden" role="presentation">
+        <span className="flex-1 bg-[var(--heatmap-1)]" />
+        <span className="flex-1 bg-[var(--heatmap-2)]" />
+        <span className="flex-1 bg-[var(--heatmap-3)]" />
+        <span className="flex-1 bg-[var(--heatmap-4)]" />
+        <span className="flex-1 bg-[var(--heatmap-5)]" />
       </div>
       <span
         key={`end-${mode}`}
-        className="legend__label legend__label--end legend__label--fade"
+        className="text-mono-label leading-[1.4] font-normal tracking-[0.26px] text-text-subtle uppercase [animation:legend-label-fade_200ms_ease-out]"
       >
         {endLabel}
       </span>

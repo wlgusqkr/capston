@@ -1,8 +1,4 @@
 // Register (`/register`) — username/password (+ school/year/nickname optional).
-//
-// Backend auto-logs in on success (step9a). AuthContext.register() also
-// falls back to a follow-up login if that ever changes. After success we
-// land on /mypage so the user immediately sees their new account.
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -10,8 +6,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAuthErrorMessage } from '@/lib/authErrors';
-
-import './Auth.css';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -51,7 +45,6 @@ export default function Register() {
       await register({
         username: username.trim(),
         password,
-        // Send only when filled so backend defaults stay clean.
         ...(nickname.trim() ? { nickname: nickname.trim() } : {}),
         ...(school.trim() ? { school: school.trim() } : {}),
         ...(yearNum != null ? { year: yearNum } : {}),
@@ -67,24 +60,21 @@ export default function Register() {
   };
 
   return (
-    <main className="auth" id="main">
-      <div className="auth__card" role="form" aria-labelledby="register-title">
-        {/* In-card brand mark + back link removed in Stage 3 — global TopNav
-         *  handles both. Auth-route TopNav variant (D-8) shows only logo +
-         *  로그인 → on /register. */}
-        <h1 id="register-title" className="auth__title">회원가입</h1>
-        <p className="auth__subtitle">
+    <main className="min-h-screen bg-bg text-text flex items-center justify-center p-6" id="main">
+      <div className="w-full max-w-[480px] bg-surface border border-border rounded-card p-8 flex flex-col gap-5" role="form" aria-labelledby="register-title">
+        <h1 id="register-title" className="text-section-display leading-[1.05] font-semibold tracking-[-0.96px] text-text m-0">회원가입</h1>
+        <p className="text-body-base leading-[1.6] text-text-muted tracking-normal m-0">
           아이디와 비밀번호만 입력해도 가입할 수 있어요. 나머지는 마이페이지에서
           나중에 채워도 OK.
         </p>
 
         {errorMsg && (
-          <div className="auth__error" role="alert">
+          <div className="bg-danger-soft text-danger border border-danger rounded-sm py-3 px-4 text-caption tracking-normal leading-[1.4]" role="alert">
             {errorMsg}
           </div>
         )}
 
-        <form className="auth__form" onSubmit={handleSubmit} noValidate>
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
           <Input
             label="아이디"
             name="username"
@@ -140,11 +130,11 @@ export default function Register() {
           </Button>
         </form>
 
-        <hr className="auth__divider" />
+        <hr className="h-px bg-border m-0 border-none" />
 
-        <div className="auth__footer">
+        <div className="flex flex-col items-center gap-2 text-caption text-text-muted tracking-normal">
           <span>이미 계정이 있으신가요?</span>
-          <Link to="/login" className="auth__footer-link">
+          <Link to="/login" className="text-link underline underline-offset-2 font-medium py-1 px-2 rounded-sm transition-all duration-[120ms] ease-out hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2">
             로그인하기 →
           </Link>
         </div>

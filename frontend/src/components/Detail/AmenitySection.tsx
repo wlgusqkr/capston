@@ -15,8 +15,6 @@ import { useMemo } from 'react';
 import { computeAmenityPercentile } from '@/lib/percentile';
 import type { DongDetail, DongScore } from '@/types/api';
 
-import './AmenitySection.css';
-
 interface AmenitySectionProps {
   amenities: DongDetail['amenities'];
   /** All-dongs score table for the percentile compute. Optional — when
@@ -32,9 +30,6 @@ export default function AmenitySection({
   allDongs,
   currentSlug,
 }: AmenitySectionProps) {
-  // Compute percentile once per (slug, allDongs identity). The category arg
-  // is reserved for a future per-category distribution; today it folds back
-  // to a single dong-level percentile (see lib/percentile.ts comment).
   const currentScore = useMemo(() => {
     if (!allDongs) return undefined;
     return allDongs.find((d) => d.slug === currentSlug)?.score_amenity;
@@ -42,41 +37,46 @@ export default function AmenitySection({
 
   return (
     <section
-      className="detail-section amenity"
+      className="max-w-[720px] pt-20 border-t border-divider"
       aria-labelledby="amenity-heading"
     >
-      <p className="mono-label detail-section__eyebrow" aria-hidden="true">
+      <p className="mono-label m-0 mb-3 text-text-subtle" aria-hidden="true">
         AMENITIES
       </p>
-      <header className="amenity__header">
-        <h2 id="amenity-heading" className="detail-section__heading">
+      <header className="flex items-baseline justify-between gap-4 mb-5 flex-wrap">
+        <h2 id="amenity-heading" className="m-0 text-section-heading leading-[1.15] font-semibold text-text tracking-[-0.36px]">
           편의시설
         </h2>
-        <p className="amenity__hint">
+        <p className="m-0 text-caption text-text-muted tracking-normal">
           개수와 ㎢당 밀도, 서울 기준 상위 % (TOP) 함께 표시.
         </p>
       </header>
 
-      <ul className="amenity__list">
+      <ul className="list-none m-0 p-0">
         {amenities.map((item) => {
           const top =
             currentScore != null
               ? computeAmenityPercentile(allDongs, item.category, currentScore)
               : null;
           return (
-            <li key={item.category} className="amenity__row">
-              <span className="amenity__category">{item.category}</span>
-              <span className="amenity__cell amenity__cell--count">
-                <span className="amenity__cell-value tabular">{item.count}</span>
-                <span className="amenity__cell-unit">개</span>
+            <li
+              key={item.category}
+              className="grid grid-cols-[1fr_84px_84px_80px] items-baseline gap-3 py-3 border-b border-divider last:border-b-0"
+            >
+              <span className="text-feature-heading leading-[1.3] font-semibold text-text tracking-normal">
+                {item.category}
               </span>
-              <span className="amenity__cell amenity__cell--density">
-                <span className="amenity__cell-value tabular">
+              <span className="inline-flex items-baseline gap-[2px] justify-end">
+                <span className="text-feature-heading leading-[1.3] text-text tabular">{item.count}</span>
+                <span className="text-caption text-text-muted tracking-normal">개</span>
+              </span>
+              <span className="inline-flex items-baseline gap-[2px] justify-end">
+                <span className="text-body-base font-normal text-text-muted tabular">
                   {item.density_per_km2.toFixed(1)}
                 </span>
-                <span className="amenity__cell-unit">/㎢</span>
+                <span className="text-caption text-text-muted tracking-normal">/㎢</span>
               </span>
-              <span className="amenity__cell amenity__cell--rank mono-label">
+              <span className="text-right text-text-subtle mono-label">
                 {top == null ? '—' : `TOP ${top}%`}
               </span>
             </li>

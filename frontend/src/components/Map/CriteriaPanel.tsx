@@ -14,8 +14,6 @@ import WeightSliders from './WeightSliders';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import type { Weights } from '@/types/api';
 
-import './CriteriaPanel.css';
-
 export interface CriteriaPanelProps {
   open: boolean;
   onToggle: () => void;
@@ -60,16 +58,16 @@ export default function CriteriaPanel({
     return (
       <button
         type="button"
-        className="criteria-panel__pill map-floating-panel map-floating-panel--snug"
+        className="bg-surface border border-border rounded-pill px-3 py-2 shadow-floating z-[500] pointer-events-auto inline-flex items-center gap-2 cursor-pointer font-inherit text-button font-medium tracking-normal text-text min-h-[40px] hover:text-secondary focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2"
         onClick={onToggle}
         aria-expanded={false}
         aria-controls="criteria-panel-body"
       >
-        <span className="criteria-panel__pill-label">기준</span>
-        <span className="criteria-panel__pill-count tabular">
+        <span>기준</span>
+        <span className="text-text-muted tabular">
           {filterCount > 0 ? `(${filterCount})` : ''}
         </span>
-        <span className="criteria-panel__pill-chevron" aria-hidden="true">
+        <span className="text-text-muted text-[12px]" aria-hidden="true">
           ▾
         </span>
       </button>
@@ -78,15 +76,15 @@ export default function CriteriaPanel({
 
   return (
     <aside
-      className="criteria-panel map-floating-panel map-floating-panel--card"
+      className="bg-surface border border-border rounded-card px-5 py-4 shadow-floating z-[500] pointer-events-auto w-[280px] max-h-[calc(100vh-56px-24px-24px)] overflow-y-auto flex flex-col gap-3"
       aria-label="가중치와 필터"
       id="criteria-panel-body"
     >
-      <div className="criteria-panel__header">
-        <span className="criteria-panel__title mono-label">CRITERIA</span>
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-text-subtle mono-label">CRITERIA</span>
         <button
           type="button"
-          className="criteria-panel__close"
+          className="inline-flex items-center justify-center w-8 h-8 p-0 bg-transparent border-0 rounded-sm text-text-muted text-[20px] leading-none cursor-pointer transition-colors duration-[120ms] ease-out hover:bg-surface-alt hover:text-text focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2"
           onClick={onToggle}
           aria-label="기준 패널 닫기"
         >
@@ -94,7 +92,7 @@ export default function CriteriaPanel({
         </button>
       </div>
 
-      <div className="criteria-panel__section">
+      <div className="flex flex-col">
         <WeightSliders
           weights={weights}
           onWeightsChange={onWeightsChange}
@@ -103,9 +101,9 @@ export default function CriteriaPanel({
         />
       </div>
 
-      <div className="criteria-panel__divider" aria-hidden="true" />
+      <div className="h-px bg-divider my-1" aria-hidden="true" />
 
-      <div className="criteria-panel__section">
+      <div className="flex flex-col">
         <FilterControls
           rentCapEnabled={rentCapEnabled}
           onRentCapToggle={onRentCapToggle}

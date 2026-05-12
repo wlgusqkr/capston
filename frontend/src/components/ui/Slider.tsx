@@ -1,36 +1,5 @@
-/**
- * Slider — wraps native <input type="range"> with a primary track + thumb.
- *
- * Critical use case (SPEC 6.1): 가중치 슬라이더.
- * Three sliders for 전월세 / 생활시설 / 교통, each 0~100. Parent computes sum.
- *
- * Props:
- *   - value, onChange (controlled)
- *   - min/max/step (defaults 0/100/1)
- *   - label, valueText (optional display)
- *   - showValue (default true if valueText is provided)
- *
- * Examples:
- *   <Slider
- *     label="전월세"
- *     value={wRent}
- *     onChange={(v) => setWRent(v)}
- *     valueText={`${wRent}%`}
- *   />
- *
- *   <Slider min={0} max={50} step={5} value={radius} onChange={setRadius} />
- *
- *   <Slider label="안전 가중치" value={ws} onChange={setWs} disabled />
- *
- * Notes:
- *   - onChange is called with a NUMBER, not the event. This is the cleanest API
- *     for the weight-slider use case where parent normalizes the trio.
- *   - Use onInput-equivalent semantics: fires on every drag step.
- */
-
 import { forwardRef, useId } from 'react';
 import type { ChangeEvent, InputHTMLAttributes, ReactNode } from 'react';
-import './Slider.css';
 
 export interface SliderProps
   extends Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'type' | 'size'> {
@@ -40,11 +9,36 @@ export interface SliderProps
   max?: number;
   step?: number;
   label?: ReactNode;
-  /** Right-side text shown next to the label, e.g. "33%". */
   valueText?: ReactNode;
-  /** Hide the label/value row even if `label` is set. */
   hideHeader?: boolean;
 }
+
+const thumbClasses = [
+  '[&::-webkit-slider-thumb]:appearance-none',
+  '[&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5',
+  '[&::-webkit-slider-thumb]:rounded-full',
+  '[&::-webkit-slider-thumb]:bg-surface',
+  '[&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-solid [&::-webkit-slider-thumb]:border-secondary',
+  '[&::-webkit-slider-thumb]:[-mt-2]',
+  '[&::-webkit-slider-thumb]:cursor-pointer',
+  '[&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:duration-[120ms] [&::-webkit-slider-thumb]:ease-out',
+  'hover:[&::-webkit-slider-thumb]:scale-105',
+  'focus-visible:[&::-webkit-slider-thumb]:[box-shadow:0_0_0_4px_var(--color-focus-ring)]',
+  '[&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5',
+  '[&::-moz-range-thumb]:rounded-full',
+  '[&::-moz-range-thumb]:bg-surface',
+  '[&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-solid [&::-moz-range-thumb]:border-secondary',
+  '[&::-moz-range-thumb]:cursor-pointer',
+  '[&::-moz-range-thumb]:transition-transform [&::-moz-range-thumb]:duration-[120ms] [&::-moz-range-thumb]:ease-out',
+  'hover:[&::-moz-range-thumb]:scale-105',
+  'focus-visible:[&::-moz-range-thumb]:[box-shadow:0_0_0_4px_var(--color-focus-ring)]',
+].join(' ');
+
+const trackClasses = [
+  '[&::-webkit-slider-runnable-track]:h-1 [&::-webkit-slider-runnable-track]:rounded-full',
+  '[&::-moz-range-track]:h-1 [&::-moz-range-track]:bg-border [&::-moz-range-track]:rounded-full',
+  '[&::-moz-range-progress]:h-1 [&::-moz-range-progress]:bg-secondary [&::-moz-range-progress]:rounded-full',
+].join(' ');
 
 const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
   {
@@ -65,32 +59,25 @@ const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
 ) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
-
   const percent = ((value - min) / (max - min)) * 100;
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     onChange(Number(e.target.value));
   };
 
-  const wrapperClasses = [
-    'ui-slider',
-    disabled ? 'ui-slider--disabled' : '',
-    className ?? '',
-  ]
-    .filter(Boolean)
-    .join(' ');
-
   return (
-    <div className={wrapperClasses}>
+    <div className={`flex flex-col gap-2 w-full ${disabled ? 'opacity-50' : ''} ${className ?? ''}`}>
       {!hideHeader && (label || valueText) && (
-        <div className="ui-slider__header">
+        <div className="flex items-baseline justify-between gap-3">
           {label && (
-            <label htmlFor={inputId} className="ui-slider__label">
+            <label htmlFor={inputId} className="text-caption font-normal text-text tracking-normal">
               {label}
             </label>
           )}
           {valueText != null && (
-            <span className="ui-slider__value tabular">{valueText}</span>
+            <span className="font-mono text-mono-label tracking-[0.26px] text-secondary font-normal uppercase tabular">
+              {valueText}
+            </span>
           )}
         </div>
       )}
@@ -98,7 +85,7 @@ const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
         ref={ref}
         id={inputId}
         type="range"
-        className="ui-slider__input"
+        className={`appearance-none w-full h-6 bg-transparent m-0 cursor-pointer disabled:cursor-not-allowed focus:outline-none ${trackClasses} ${thumbClasses}`}
         min={min}
         max={max}
         step={step}
@@ -106,7 +93,9 @@ const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
         disabled={disabled}
         onChange={handleChange}
         aria-valuetext={typeof valueText === 'string' ? valueText : undefined}
-        style={{ ['--ui-slider-fill' as string]: `${percent}%` }}
+        style={{
+          ['--ui-slider-fill' as string]: `${percent}%`,
+        }}
         {...rest}
       />
     </div>

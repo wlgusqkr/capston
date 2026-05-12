@@ -1,15 +1,6 @@
 // RealEstateSection — SPEC 6.3 Section 2 (자취 시장 대시보드).
 //
 // Phase 4.7: "최근 5건만" 표 기반 → 자취생 친화 풀 대시보드로 확장.
-// 아파트는 매매성/가족 시장이라 자취 시세 감 X → 백엔드에서 apt 제외 + 보증금
-// 5억 이하만 자취 시장 KPI/차트/표에 포함.
-//
-// Layout (위 → 아래):
-//   1. Header: 제목 + 기간 토글 (월별 추이에만 영향)
-//   2. KPI 4 카드 — 평균 환산월세 / 최저 보증금 / 평균 면적 / 최근 6m 거래수
-//   3. 유형별 평균 환산월세 (가로 BarChart) + 면적-환산월세 산점도 (ScatterChart)
-//   4. 월별 평균 추이 (LineChart 4 series) + 보증금 대역 (가로 BarChart)
-//   5. 최근 자취 거래 5건 표 (apt 제외, 환산월세 포함)
 import { useState } from 'react';
 import {
   Bar,
@@ -31,8 +22,6 @@ import {
 import { CHART_COLORS } from '@/lib/colors';
 import { formatConvertedRent } from '@/lib/rent';
 import type { DongDetail } from '@/types/api';
-
-import './RealEstateSection.css';
 
 type DealTypeKey = 'villa' | 'dagagu' | 'danok' | 'officetel';
 
@@ -75,7 +64,6 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
     count: t.count,
   }));
 
-  // 산점도는 deal_type별로 시리즈 분리 (Recharts 색 구분)
   const scatterByType: Record<DealTypeKey, Array<{ x: number; y: number }>> = {
     villa: [],
     dagagu: [],
@@ -91,17 +79,21 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
 
   return (
     <section
-      className="detail-section real-estate"
+      className="max-w-[720px] pt-20 border-t border-divider"
       aria-labelledby="rent-heading"
     >
-      <p className="mono-label detail-section__eyebrow" aria-hidden="true">
+      <p className="mono-label m-0 mb-3 text-text-subtle" aria-hidden="true">
         STUDIO MARKET / 자취 시세
       </p>
-      <header className="real-estate__header">
-        <h2 id="rent-heading" className="detail-section__heading">
+      <header className="flex items-center justify-between gap-4 mb-6">
+        <h2 id="rent-heading" className="m-0 text-section-heading leading-[1.15] font-semibold text-text tracking-[-0.36px]">
           자취 시세 대시보드
         </h2>
-        <div className="real-estate__period" role="tablist" aria-label="기간 선택">
+        <div
+          className="inline-flex gap-1 bg-surface-alt border border-border rounded-xl p-1"
+          role="tablist"
+          aria-label="기간 선택"
+        >
           {PERIOD_OPTIONS.map((opt) => {
             const active = opt.value === period;
             return (
@@ -110,9 +102,11 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
                 type="button"
                 role="tab"
                 aria-selected={active}
-                className={`real-estate__period-btn${
-                  active ? ' real-estate__period-btn--active' : ''
-                }`}
+                className={`appearance-none border-none cursor-pointer h-[var(--control-height-sm)] px-3 text-caption tracking-normal rounded-pill transition-all duration-[120ms] ease-out ${
+                  active
+                    ? 'bg-secondary text-surface font-medium'
+                    : 'bg-transparent text-text-muted hover:text-text'
+                } focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-1`}
                 onClick={() => setPeriod(opt.value)}
               >
                 {opt.label}
@@ -122,12 +116,11 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
         </div>
       </header>
 
-      <p className="real-estate__filter-hint mono-label">
+      <p className="mono-label my-1 mb-5 text-text-muted">
         아파트 제외 · 보증금 5억 이하 · 최근 6개월 자취 시장 기준
       </p>
 
-      {/* ── KPI 4 카드 ── */}
-      <div className="real-estate__kpi-grid" aria-label="자취 시장 핵심 지표">
+      <div className="grid grid-cols-4 gap-4 mb-[var(--space-7)]" aria-label="자취 시장 핵심 지표">
         <KpiCard
           label="평균 환산월세"
           value={kpi.avg_converted_rent != null ? `${kpi.avg_converted_rent}만원` : '-'}
@@ -150,14 +143,13 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
         />
       </div>
 
-      {/* ── 유형별 평균 + 면적-환산월세 산점도 ── */}
-      <div className="real-estate__grid">
-        <div className="real-estate__chart-block" aria-label="유형별 평균 환산월세">
-          <h3 className="real-estate__chart-title">유형별 평균 환산월세 (만원)</h3>
-          <p className="real-estate__chart-hint mono-label">
+      <div className="grid grid-cols-2 gap-6 mb-8">
+        <div className="flex flex-col gap-2" aria-label="유형별 평균 환산월세">
+          <h3 className="m-0 text-feature-heading leading-[1.3] font-semibold text-text">유형별 평균 환산월세 (만원)</h3>
+          <p className="mono-label m-0 text-text-subtle">
             거래 3건 미만 유형은 회색 처리
           </p>
-          <div className="real-estate__chart">
+          <div className="w-full h-[240px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={typeAvg}
@@ -204,7 +196,7 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
                       fill={
                         d.has
                           ? DEAL_TYPE_FILL[d.deal_type as DealTypeKey]
-                          : 'var(--color-soft-stone, #eeece7)'
+                          : CHART_COLORS.grid
                       }
                     />
                   ))}
@@ -214,12 +206,12 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
           </div>
         </div>
 
-        <div className="real-estate__chart-block" aria-label="면적-환산월세 산점도">
-          <h3 className="real-estate__chart-title">면적·환산월세 분포</h3>
-          <p className="real-estate__chart-hint mono-label">
+        <div className="flex flex-col gap-2" aria-label="면적-환산월세 산점도">
+          <h3 className="m-0 text-feature-heading leading-[1.3] font-semibold text-text">면적·환산월세 분포</h3>
+          <p className="mono-label m-0 text-text-subtle">
             최근 6개월, 점 하나 = 거래 1건 (최대 200건)
           </p>
-          <div className="real-estate__chart">
+          <div className="w-full h-[240px]">
             <ResponsiveContainer width="100%" height="100%">
               <ScatterChart margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
                 <CartesianGrid stroke={CHART_COLORS.grid} strokeDasharray="3 3" />
@@ -298,13 +290,13 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
         </div>
       </div>
 
-      <div className="real-estate__grid">
-        <div className="real-estate__chart-block" aria-label="월별 평균 월세 추이">
-          <h3 className="real-estate__chart-title">월별 평균 월세 (raw, 만원)</h3>
-          <p className="real-estate__chart-hint mono-label">
+      <div className="grid grid-cols-2 gap-6">
+        <div className="flex flex-col gap-2" aria-label="월별 평균 월세 추이">
+          <h3 className="m-0 text-feature-heading leading-[1.3] font-semibold text-text">월별 평균 월세 (raw, 만원)</h3>
+          <p className="mono-label m-0 text-text-subtle">
             보증금 환산 전 — 환산값은 아래 거래표 참고
           </p>
-          <div className="real-estate__chart">
+          <div className="w-full h-[240px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trend} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
                 <CartesianGrid stroke={CHART_COLORS.grid} strokeDasharray="3 3" vertical={false} />
@@ -342,54 +334,18 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
                   iconSize={8}
                   wrapperStyle={{ fontSize: 'var(--font-caption-size)' }}
                 />
-                <Line
-                  type="monotone"
-                  dataKey="villa"
-                  name="연립다세대"
-                  stroke={CHART_COLORS.villa}
-                  strokeWidth={2}
-                  connectNulls={false}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="dagagu"
-                  name="다가구"
-                  stroke={CHART_COLORS.dagagu}
-                  strokeWidth={2}
-                  connectNulls={false}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="danok"
-                  name="단독"
-                  stroke={CHART_COLORS.danok}
-                  strokeWidth={2}
-                  connectNulls={false}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="officetel"
-                  name="오피스텔"
-                  stroke={CHART_COLORS.officetel}
-                  strokeWidth={2}
-                  connectNulls={false}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                />
+                <Line type="monotone" dataKey="villa" name="연립다세대" stroke={CHART_COLORS.villa} strokeWidth={2} connectNulls={false} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="dagagu" name="다가구" stroke={CHART_COLORS.dagagu} strokeWidth={2} connectNulls={false} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="danok" name="단독" stroke={CHART_COLORS.danok} strokeWidth={2} connectNulls={false} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="officetel" name="오피스텔" stroke={CHART_COLORS.officetel} strokeWidth={2} connectNulls={false} dot={{ r: 3 }} activeDot={{ r: 5 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="real-estate__chart-block" aria-label="보증금 구간별 평균 월세">
-          <h3 className="real-estate__chart-title">보증금 구간별 평균 월세 (만원)</h3>
-          <div className="real-estate__chart">
+        <div className="flex flex-col gap-2" aria-label="보증금 구간별 평균 월세">
+          <h3 className="m-0 text-feature-heading leading-[1.3] font-semibold text-text">보증금 구간별 평균 월세 (만원)</h3>
+          <div className="w-full h-[240px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={bands}
@@ -436,46 +392,46 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
         </div>
       </div>
 
-      <div className="real-estate__deals" aria-label="최근 자취 거래 5건">
-        <header className="real-estate__deals-header">
-          <h3 className="real-estate__chart-title">최근 자취 거래 5건</h3>
-          <p className="real-estate__deals-hint mono-label">
+      <div className="flex flex-col gap-3" aria-label="최근 자취 거래 5건">
+        <header className="flex flex-wrap items-baseline justify-between gap-3 pb-2 border-b border-divider">
+          <h3 className="m-0 text-feature-heading leading-[1.3] font-semibold text-text">최근 자취 거래 5건</h3>
+          <p className="mono-label m-0 text-text-subtle">
             아파트 제외 · 환산 = 월세 + 보증금 × 0.005 (연 6%)
           </p>
         </header>
-        <div className="real-estate__table-scroll">
-          <table className="real-estate__table">
+        <div className="w-full overflow-x-auto">
+          <table className="w-full border-collapse text-body-base">
             <thead>
               <tr>
-                <th scope="col">날짜</th>
-                <th scope="col">유형</th>
-                <th scope="col">면적</th>
-                <th scope="col">보증금</th>
-                <th scope="col">월세</th>
-                <th scope="col">환산 월세</th>
+                <th scope="col" className="bg-surface-alt text-text-subtle font-mono text-mono-label font-normal tracking-[0.26px] text-left uppercase py-3 px-5 border-b border-divider">날짜</th>
+                <th scope="col" className="bg-surface-alt text-text-subtle font-mono text-mono-label font-normal tracking-[0.26px] text-left uppercase py-3 px-5 border-b border-divider">유형</th>
+                <th scope="col" className="bg-surface-alt text-text-subtle font-mono text-mono-label font-normal tracking-[0.26px] text-left uppercase py-3 px-5 border-b border-divider">면적</th>
+                <th scope="col" className="bg-surface-alt text-text-subtle font-mono text-mono-label font-normal tracking-[0.26px] text-left uppercase py-3 px-5 border-b border-divider">보증금</th>
+                <th scope="col" className="bg-surface-alt text-text-subtle font-mono text-mono-label font-normal tracking-[0.26px] text-left uppercase py-3 px-5 border-b border-divider">월세</th>
+                <th scope="col" className="bg-surface-alt text-text-subtle font-mono text-mono-label font-normal tracking-[0.26px] text-left uppercase py-3 px-5 border-b border-divider">환산 월세</th>
               </tr>
             </thead>
             <tbody>
               {realEstate.recent_deals.map((deal, idx) => (
                 <tr key={`${deal.date}-${idx}`}>
-                  <td className="tabular">{deal.date}</td>
-                  <td>{deal.type}</td>
-                  <td className="tabular">{deal.area_m2.toFixed(1)}㎡</td>
-                  <td className="tabular">{deal.deposit.toLocaleString()}만원</td>
-                  <td className="tabular">
+                  <td className="tabular py-3 px-5 border-b border-divider text-text tracking-normal last:[&]:border-b-0">{deal.date}</td>
+                  <td className="py-3 px-5 border-b border-divider text-text tracking-normal">{deal.type}</td>
+                  <td className="tabular py-3 px-5 border-b border-divider text-text tracking-normal">{deal.area_m2.toFixed(1)}㎡</td>
+                  <td className="tabular py-3 px-5 border-b border-divider text-text tracking-normal">{deal.deposit.toLocaleString()}만원</td>
+                  <td className="tabular py-3 px-5 border-b border-divider text-text tracking-normal">
                     {deal.monthly_rent === 0 ? '-' : `${deal.monthly_rent}만원`}
                   </td>
-                  <td className="tabular real-estate__converted-cell">
+                  <td className="tabular py-3 px-5 border-b border-divider text-text tracking-normal font-mono">
                     {formatConvertedRent(deal.deposit, deal.monthly_rent)}
                     {deal.monthly_rent === 0 && (
-                      <span className="real-estate__converted-tag mono-label"> 전세</span>
+                      <span className="mono-label text-text-subtle ml-1"> 전세</span>
                     )}
                   </td>
                 </tr>
               ))}
               {realEstate.recent_deals.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="real-estate__table-empty">
+                  <td colSpan={6} className="text-center text-text-muted p-6">
                     최근 실거래 내역이 없습니다.
                   </td>
                 </tr>
@@ -488,7 +444,6 @@ export default function RealEstateSection({ realEstate }: RealEstateSectionProps
   );
 }
 
-/** Map raw band keys ('0'|'500'|'1000'|'2000'|'3000+') to human labels. */
 function formatBandLabel(band: string): string {
   switch (band) {
     case '0':
@@ -512,13 +467,12 @@ interface KpiCardProps {
   hint?: string;
 }
 
-/** 자취 시장 KPI 1 카드 — 작은 라벨 + 큰 숫자 + (옵션) 힌트. */
 function KpiCard({ label, value, hint }: KpiCardProps) {
   return (
-    <div className="real-estate__kpi">
-      <p className="mono-label real-estate__kpi-label">{label}</p>
-      <p className="real-estate__kpi-value tabular">{value}</p>
-      {hint ? <p className="real-estate__kpi-hint">{hint}</p> : null}
+    <div className="p-5 border border-divider rounded-md bg-surface flex flex-col gap-2">
+      <p className="mono-label m-0 text-text-subtle">{label}</p>
+      <p className="tabular m-0 text-[28px] font-semibold text-text leading-[1.1]">{value}</p>
+      {hint ? <p className="m-0 text-caption text-text-muted">{hint}</p> : null}
     </div>
   );
 }

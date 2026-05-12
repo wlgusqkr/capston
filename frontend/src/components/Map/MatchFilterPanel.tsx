@@ -1,19 +1,4 @@
-// MatchFilterPanel — 메인 지도 사이드바 상단 신규 패널 (Phase 5).
-//
-// plan §5.1 wireframe 그대로:
-//   eyebrow mono "STUDIO MATCH / 내 조건 자취 거래량"
-//   헤딩 22px Pretendard 600 "내 조건 자취·원룸 거래량 분포"
-//   - 활성 mode dot (Coral 6px) — match 모드일 때만 헤더 우측
-//   거래 유형 5 chip multi-select (DongExplore 동일 토큰 — 44px / Soft Stone fill)
-//   기간 radio 5종 (3m/6m/12m/24m/all)
-//   dual range slider 3개 (보증금 0~50000 / 월세 0~300 / 면적 10~150) — 18px Ink thumb
-//   결과 카운트 28px tabular `${count.toLocaleString()}건` + 보조문 13px Slate `M개 동에서`
-//   대학 근처 chip (#13 — boolean toggle 로 보존)
-//   초기화 버튼 (default 와 다를 때만 표시)
-//   mono SOURCE 라벨
-//
-// Phase 4.7 design-review 결정 그대로 재사용 (chip 44px / range thumb 18px /
-// heading 위계 / Soft Stone active fill).
+// MatchFilterPanel -- 메인 지도 사이드바 상단 신규 패널 (Phase 5).
 
 import { useMemo } from 'react';
 
@@ -22,8 +7,6 @@ import {
   isStudioMatchDirty,
 } from '@/hooks/useStudioMatchFilters';
 import type { ExploreDealType, ExplorePeriod, MatchFilters } from '@/types/api';
-
-import './MatchFilterPanel.css';
 
 const DEAL_TYPE_OPTIONS: Array<{ value: ExploreDealType; label: string }> = [
   { value: 'villa', label: '연립다세대' },
@@ -45,15 +28,10 @@ export interface MatchFilterPanelProps {
   filters: MatchFilters;
   onPatch: (delta: Partial<MatchFilters>) => void;
   onReset: () => void;
-  /** match 모드일 때만 헤더에 Coral dot 노출. */
   modeActive: boolean;
-  /** 거래량 카운트 (필터 통과 거래수). 로딩 중이면 null/undefined. */
   totalMatched: number | null | undefined;
-  /** count > 0 인 동 수. 로딩 중이면 null/undefined. */
   matchedDongs: number | null | undefined;
-  /** API 호출 진행 여부 — skeleton 표시. */
   isLoading: boolean;
-  /** 대학 근처 chip 토글 (#13, boolean 보존). */
   nearUniversityOnly: boolean;
   onNearUniversityToggle: (next: boolean) => void;
 }
@@ -76,24 +54,24 @@ export default function MatchFilterPanel({
     const next = has
       ? filters.deal_types.filter((x) => x !== t)
       : [...filters.deal_types, t];
-    if (next.length === 0) return; // 최소 1개 유지
+    if (next.length === 0) return;
     onPatch({ deal_types: next });
   };
 
   return (
-    <aside className="match-panel" aria-label="자취 매물 조건 필터">
+    <aside className="flex flex-col gap-5 p-6 bg-surface" aria-label="자취 매물 조건 필터">
       {/* 헤더 */}
-      <header className="match-panel__header">
-        <p className="mono-label match-panel__eyebrow">
+      <header className="flex flex-col gap-2">
+        <p className="mono-label m-0 text-text-subtle text-mono-label tracking-[0.26px] uppercase">
           STUDIO MATCH · 내 조건 자취 거래량
         </p>
-        <div className="match-panel__title-row">
-          <h2 className="match-panel__title">
+        <div className="flex items-center gap-2">
+          <h2 className="m-0 text-[22px] font-semibold text-text tracking-[var(--letter-spacing-ko)] leading-[1.3]">
             내 조건 자취·원룸 거래량 분포
           </h2>
           {modeActive ? (
             <span
-              className="match-panel__mode-dot"
+              className="shrink-0 w-1.5 h-1.5 rounded-full bg-accent"
               aria-label="현재 매칭 모드"
               title="현재 매칭 모드"
             />
@@ -102,7 +80,7 @@ export default function MatchFilterPanel({
         {dirty ? (
           <button
             type="button"
-            className="match-panel__reset"
+            className="self-start bg-transparent border-0 px-2 py-1 -ml-2 text-text-subtle text-caption underline cursor-pointer rounded-sm hover:text-text hover:bg-surface-alt"
             onClick={onReset}
           >
             초기화
@@ -111,9 +89,9 @@ export default function MatchFilterPanel({
       </header>
 
       {/* 거래 유형 */}
-      <fieldset className="match-panel__field">
-        <legend className="match-panel__field-title">거래 유형</legend>
-        <div className="match-panel__chips" role="group" aria-label="거래 유형 (다중 선택)">
+      <fieldset className="border-0 p-0 m-0 flex flex-col gap-2">
+        <legend className="text-body-base font-medium text-text flex justify-between items-baseline p-0">거래 유형</legend>
+        <div className="flex flex-wrap gap-2" role="group" aria-label="거래 유형 (다중 선택)">
           {DEAL_TYPE_OPTIONS.map((opt) => {
             const active = filters.deal_types.includes(opt.value);
             return (
@@ -132,9 +110,9 @@ export default function MatchFilterPanel({
       </fieldset>
 
       {/* 기간 */}
-      <fieldset className="match-panel__field">
-        <legend className="match-panel__field-title">기간 (최근)</legend>
-        <div className="match-panel__radio-row">
+      <fieldset className="border-0 p-0 m-0 flex flex-col gap-2">
+        <legend className="text-body-base font-medium text-text flex justify-between items-baseline p-0">기간 (최근)</legend>
+        <div className="grid grid-cols-5 gap-1">
           {PERIOD_OPTIONS.map((opt) => (
             <label
               key={opt.value}
@@ -177,7 +155,7 @@ export default function MatchFilterPanel({
         formatter={(v) => String(v)}
       />
       <RangeField
-        title="면적 (㎡)"
+        title="면적 (m2)"
         min={10}
         max={150}
         step={1}
@@ -187,10 +165,10 @@ export default function MatchFilterPanel({
         formatter={(v) => String(v)}
       />
 
-      {/* 대학 근처 (#13 보존 — single boolean) */}
-      <fieldset className="match-panel__field">
-        <legend className="match-panel__field-title">캠퍼스 인근</legend>
-        <div className="match-panel__chips" role="group">
+      {/* 대학 근처 */}
+      <fieldset className="border-0 p-0 m-0 flex flex-col gap-2">
+        <legend className="text-body-base font-medium text-text flex justify-between items-baseline p-0">캠퍼스 인근</legend>
+        <div className="flex flex-wrap gap-2" role="group">
           <button
             type="button"
             className={`explore__chip${
@@ -205,17 +183,20 @@ export default function MatchFilterPanel({
       </fieldset>
 
       {/* 결과 카운트 */}
-      <output className="match-panel__result" aria-live="polite">
+      <output
+        className="flex items-baseline gap-2 flex-wrap mt-2 pt-3 border-t border-divider"
+        aria-live="polite"
+      >
         {isLoading || totalMatched == null ? (
-          <span className="match-panel__skeleton" />
+          <span className="inline-block h-7 w-[60%] bg-divider rounded-xs [animation:match-panel-pulse_1.2s_ease-in-out_infinite]" />
         ) : (
           <>
-            <span className="match-panel__count tabular">
+            <span className="text-[28px] font-semibold text-text leading-[1.1] tabular">
               {totalMatched.toLocaleString()}
             </span>
-            <span className="match-panel__count-unit">건</span>
+            <span className="text-body-base text-text-subtle">건</span>
             {matchedDongs != null ? (
-              <span className="match-panel__count-sub">
+              <span className="ml-auto text-[13px] text-text-muted">
                 {matchedDongs.toLocaleString()}개 동에서
               </span>
             ) : null}
@@ -223,7 +204,7 @@ export default function MatchFilterPanel({
         )}
       </output>
 
-      <p className="mono-label match-panel__source">
+      <p className="mono-label m-0 text-text-muted text-mono-label tracking-[0.26px] uppercase">
         SOURCE: 국토부 실거래 (최근{' '}
         {humanPeriod(filters.period)}) · 현재 매물 재고 아님
       </p>
@@ -232,7 +213,7 @@ export default function MatchFilterPanel({
 }
 
 /* ------------------------------------------------------------------------ */
-/* Dual range slider — DongExplore 의 18px Ink thumb 토큰 재사용.            */
+/* Dual range slider                                                         */
 /* ------------------------------------------------------------------------ */
 
 interface RangeFieldProps {
@@ -257,10 +238,10 @@ function RangeField({
   formatter,
 }: RangeFieldProps) {
   return (
-    <fieldset className="match-panel__field">
-      <legend className="match-panel__field-title">
+    <fieldset className="border-0 p-0 m-0 flex flex-col gap-2">
+      <legend className="text-body-base font-medium text-text flex justify-between items-baseline p-0">
         <span>{title}</span>
-        <span className="match-panel__range-value tabular">
+        <span className="text-caption text-text-subtle font-normal tabular">
           {formatter(valueMin)} ~ {formatter(valueMax)}
         </span>
       </legend>
@@ -309,5 +290,4 @@ function humanPeriod(p: ExplorePeriod): string {
   }
 }
 
-// 사용처에서 default 비교가 필요할 수 있어 re-export.
 export { DEFAULT_STUDIO_MATCH_FILTERS };

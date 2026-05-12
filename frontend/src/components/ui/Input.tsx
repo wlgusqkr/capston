@@ -1,30 +1,11 @@
-/**
- * Input — text input with optional label, hint and error message.
- *
- * Examples:
- *   <Input label="검색" placeholder="동 이름 검색" />
- *   <Input label="이메일" hint="로그인에 사용됩니다" type="email" />
- *   <Input label="제목" error="제목을 입력해주세요" />
- *   <Input value={query} onChange={e => setQuery(e.target.value)} />
- *
- * Notes:
- *   - Height 40px (control-height-md)
- *   - Border 1px gray-200, focus ring primary
- *   - For native search, pass type="search"
- */
-
 import { forwardRef, useId } from 'react';
 import type { InputHTMLAttributes, ReactNode } from 'react';
-import './Input.css';
 
 export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label?: ReactNode;
   hint?: ReactNode;
-  /** Error string. When set the field renders in danger state. */
   error?: ReactNode;
-  /** Optional element rendered inside, on the left (e.g. an icon). */
   leftSlot?: ReactNode;
-  /** Optional element rendered inside, on the right. */
   rightSlot?: ReactNode;
 }
 
@@ -37,46 +18,55 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   const hintId = `${inputId}-hint`;
   const errorId = `${inputId}-error`;
 
-  const wrapperClasses = [
-    'ui-input',
-    error ? 'ui-input--error' : '',
-    disabled ? 'ui-input--disabled' : '',
-    className ?? '',
-  ]
-    .filter(Boolean)
-    .join(' ');
-
   const describedBy =
     [error ? errorId : null, hint && !error ? hintId : null].filter(Boolean).join(' ') ||
     undefined;
 
   return (
-    <div className={wrapperClasses}>
+    <div
+      className={`flex flex-col gap-2 w-full ${disabled ? 'opacity-60' : ''} ${className ?? ''}`}
+    >
       {label && (
-        <label htmlFor={inputId} className="ui-input__label">
+        <label htmlFor={inputId} className="text-caption font-normal text-text tracking-normal">
           {label}
         </label>
       )}
-      <div className="ui-input__field">
-        {leftSlot && <span className="ui-input__slot ui-input__slot--left">{leftSlot}</span>}
+      <div
+        className={`flex items-center h-10 bg-surface border rounded-sm px-3 gap-2 transition-all duration-[120ms] ease-out ${
+          error
+            ? 'border-danger focus-within:border-danger focus-within:border-2 focus-within:px-[11px]'
+            : 'border-border focus-within:border-focus-ring focus-within:border-2 focus-within:px-[11px]'
+        } ${disabled ? 'bg-surface-alt cursor-not-allowed' : ''}`}
+      >
+        {leftSlot && (
+          <span className="inline-flex items-center justify-center text-text-muted shrink-0">
+            {leftSlot}
+          </span>
+        )}
         <input
           ref={ref}
           id={inputId}
-          className="ui-input__control"
+          className={`flex-1 border-none outline-none bg-transparent text-body-base text-text tracking-normal min-w-0 h-full placeholder:text-text-subtle ${
+            disabled ? 'cursor-not-allowed' : ''
+          }`}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
           disabled={disabled}
           {...rest}
         />
-        {rightSlot && <span className="ui-input__slot ui-input__slot--right">{rightSlot}</span>}
+        {rightSlot && (
+          <span className="inline-flex items-center justify-center text-text-muted shrink-0">
+            {rightSlot}
+          </span>
+        )}
       </div>
       {error ? (
-        <span id={errorId} className="ui-input__error" role="alert">
+        <span id={errorId} className="text-micro text-danger tracking-normal" role="alert">
           {error}
         </span>
       ) : (
         hint && (
-          <span id={hintId} className="ui-input__hint">
+          <span id={hintId} className="text-micro text-text-muted tracking-normal">
             {hint}
           </span>
         )

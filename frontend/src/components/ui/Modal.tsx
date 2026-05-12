@@ -1,61 +1,22 @@
-/**
- * Modal — translucent backdrop + centered card.
- *
- * Features:
- *   - Closes on ESC and backdrop click (configurable)
- *   - Locks body scroll while open
- *   - Simple focus trap (Tab loops inside the modal)
- *   - aria-modal + role="dialog"
- *   - Renders to document.body via portal
- *
- * Examples:
- *   const [open, setOpen] = useState(false);
- *   <Modal open={open} onClose={() => setOpen(false)} title="가중치 학습">
- *     <p>5번 비교로 자동 추천을 시작할까요?</p>
- *     <Button onClick={start}>시작하기</Button>
- *   </Modal>
- *
- *   <Modal open={true} onClose={close} maxWidth={600} dismissOnBackdrop={false}>
- *     <CustomContent />
- *   </Modal>
- *
- *   <Modal open={x} onClose={close} ariaLabel="설정">
- *     ...
- *   </Modal>
- */
-
 import { useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 
-import './Modal.css';
-
 export interface ModalProps {
   open: boolean;
   onClose: () => void;
-  /** Visible title rendered in the header. If absent, header is omitted. */
   title?: ReactNode;
-  /** aria-label fallback when `title` is not a string (or omitted). */
   ariaLabel?: string;
-  /** ID of an element rendered inside `children` whose text labels the modal.
-   *  Use this when the visible heading lives in the body (not the header), so
-   *  screen readers announce the actual heading instead of an alternate label.
-   *  Takes precedence over both `title` and `ariaLabel` when set. */
   ariaLabelledBy?: string;
-  /** Card max-width in px. Default 600. */
   maxWidth?: number;
-  /** Close on backdrop click. Default true. */
   dismissOnBackdrop?: boolean;
-  /** Close on ESC key. Default true. */
   dismissOnEsc?: boolean;
-  /** Hide the X close button in header. */
   hideCloseButton?: boolean;
   children: ReactNode;
 }
 
-/* Selectors for elements we consider focusable inside the modal. */
 const FOCUSABLE_SELECTOR = [
   'a[href]',
   'button:not([disabled])',
@@ -80,10 +41,8 @@ function Modal({
   const cardRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
 
-  /* ESC handler — shared useEscapeKey hook (post-A-7 dedup). */
   useEscapeKey(onClose, open && dismissOnEsc);
 
-  /* Body scroll lock */
   useEffect(() => {
     if (!open) return;
     const original = document.body.style.overflow;
@@ -93,11 +52,9 @@ function Modal({
     };
   }, [open]);
 
-  /* Focus management: save → focus first → restore on close */
   useEffect(() => {
     if (!open) return;
     previouslyFocused.current = document.activeElement as HTMLElement | null;
-    // Defer to after render so refs are populated.
     const t = window.setTimeout(() => {
       if (!cardRef.current) return;
       const firstFocusable = cardRef.current.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
@@ -109,7 +66,6 @@ function Modal({
     };
   }, [open]);
 
-  /* Focus trap on Tab */
   const onCardKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key !== 'Tab' || !cardRef.current) return;
     const focusables = Array.from(
@@ -133,10 +89,8 @@ function Modal({
   }, []);
 
   if (!open) return null;
-  if (typeof document === 'undefined') return null; // SSR safety
+  if (typeof document === 'undefined') return null;
 
-  // Caller-provided id wins over the auto-rendered title (so a body-level <h2>
-  // can label the dialog), which in turn wins over an explicit aria-label.
   const labelledBy =
     ariaLabelledBy ??
     (typeof title === 'string' && title.length > 0 ? 'ui-modal-title' : undefined);
@@ -145,13 +99,13 @@ function Modal({
 
   return createPortal(
     <div
-      className="ui-modal__backdrop"
+      className="fixed inset-0 bg-backdrop flex items-center justify-center p-4 z-[1000] [animation:ui-modal-fade-in_200ms_ease-out]"
       onClick={dismissOnBackdrop ? onClose : undefined}
       role="presentation"
     >
       <div
         ref={cardRef}
-        className="ui-modal__card"
+        className="relative w-full bg-surface rounded-card border border-divider flex flex-col max-h-[calc(100vh-32px)] overflow-hidden z-[1010] shadow-floating [animation:ui-modal-pop-in_200ms_ease-out] outline-none focus-visible:outline-none"
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
@@ -162,16 +116,16 @@ function Modal({
         onKeyDown={onCardKeyDown}
       >
         {(title || !hideCloseButton) && (
-          <div className="ui-modal__header">
+          <div className="flex items-center justify-between gap-3 px-6 pt-6 pb-3">
             {title && (
-              <h2 id="ui-modal-title" className="ui-modal__title">
+              <h2 id="ui-modal-title" className="text-feature-heading font-semibold leading-[1.3] tracking-normal text-text m-0">
                 {title}
               </h2>
             )}
             {!hideCloseButton && (
               <button
                 type="button"
-                className="ui-modal__close"
+                className="inline-flex items-center justify-center w-8 h-8 rounded-sm text-text-muted cursor-pointer shrink-0 transition-all duration-[120ms] ease-out hover:bg-surface-alt hover:text-text focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2"
                 onClick={onClose}
                 aria-label="닫기"
               >
@@ -193,7 +147,7 @@ function Modal({
             )}
           </div>
         )}
-        <div className="ui-modal__body">{children}</div>
+        <div className="px-6 pt-3 pb-6 overflow-y-auto">{children}</div>
       </div>
     </div>,
     document.body

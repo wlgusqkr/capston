@@ -1,30 +1,4 @@
-/**
- * Badge — small label for state / category / mono technical marker.
- *
- * Variants:
- *   - success   dark green / pale green wash — 충분/양호
- *   - warning   coral wash — 보통
- *   - danger    error red wash — 부족/위험
- *   - neutral   stone wash, slate text — 기본 카테고리 라벨, mono label
- *   - info      action blue / pale blue wash — 정보
- *   - category  coral pill — 동네 카테고리 칩 (`대학가형`, `1인가구 밀집형`)
- *               Coral fill, white text. Active editorial chip.
- *   - mono      transparent + 1px hairline + uppercase mono. System markers
- *               like `WALK 5MIN`, `LINE 3`, `PERCENTILE 87`.
- *
- * Sizes:
- *   - sm  12-13px font, 22px height (default)
- *   - md  14px font, taller
- *
- * Examples:
- *   <Badge variant="success">충분</Badge>
- *   <Badge variant="category">대학가형</Badge>
- *   <Badge variant="mono">WALK 5MIN</Badge>
- *   <Badge variant="neutral">편의점 12개</Badge>
- */
-
 import type { HTMLAttributes, ReactNode } from 'react';
-import './Badge.css';
 
 export type BadgeVariant =
   | 'success'
@@ -42,6 +16,23 @@ export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   children: ReactNode;
 }
 
+const variantClasses: Record<BadgeVariant, string> = {
+  success: 'bg-success-soft text-success rounded-full',
+  warning: 'bg-warning-soft text-accent rounded-full',
+  danger: 'bg-danger-soft text-danger rounded-full',
+  info: 'bg-info-soft text-info rounded-full',
+  neutral: 'bg-surface-alt text-text-muted rounded-full',
+  category:
+    'bg-accent text-surface rounded-[22px] px-2.5 py-1 h-auto font-medium tracking-normal',
+  mono:
+    'bg-transparent text-text-subtle border-divider rounded-xs px-2 py-0.5 font-mono text-mono-label leading-[1.4] tracking-[0.26px] uppercase h-auto',
+};
+
+const sizeClasses: Record<BadgeSize, string> = {
+  sm: 'text-mono-label',
+  md: 'text-caption h-auto px-3 py-1',
+};
+
 function Badge({
   variant = 'neutral',
   size = 'sm',
@@ -49,10 +40,13 @@ function Badge({
   children,
   ...rest
 }: BadgeProps) {
+  const isSpecial = variant === 'category' || variant === 'mono';
+
   const classes = [
-    'ui-badge',
-    `ui-badge--${variant}`,
-    `ui-badge--${size}`,
+    'inline-flex items-center justify-center gap-1 font-normal tracking-normal whitespace-nowrap leading-none border border-solid border-transparent',
+    isSpecial ? '' : `h-[22px] px-2 py-[3px]`,
+    variantClasses[variant],
+    isSpecial ? '' : sizeClasses[size],
     className ?? '',
   ]
     .filter(Boolean)

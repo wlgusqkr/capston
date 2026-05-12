@@ -23,7 +23,6 @@ import { HEATMAP_NO_DATA, MAP_POLYGON_STROKE, scoreToHeatmapColor } from '@/lib/
 import type { DongScore, MatchCountItem } from '@/types/api';
 
 import 'leaflet/dist/leaflet.css';
-import './HeatMap.css';
 
 const SEOUL_CITY_HALL: [number, number] = [37.5665, 126.978];
 const INITIAL_ZOOM = 11;
@@ -230,23 +229,23 @@ export default function HeatMap({
 
   if (geoLoading || !geojson) {
     return (
-      <div className="map-root">
-        <div className="map-fallback">
-          <div className="map-fallback__title">지도 불러오는 중…</div>
+      <div className="relative w-full h-full flex items-center justify-center bg-surface-alt">
+        <div className="max-w-[420px] p-6 border border-border rounded-card bg-surface text-center">
+          <div className="text-feature-heading font-semibold text-text mb-3 tracking-normal">지도 불러오는 중…</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="map-root">
+    <div className="relative w-full h-full">
       <MapContainer
         center={SEOUL_CITY_HALL}
         zoom={INITIAL_ZOOM}
         maxZoom={19}
         zoomControl={false}
         scrollWheelZoom
-        className="map-container"
+        className="w-full h-full bg-surface-alt"
       >
         {/* maxZoom 19까지 허용 — VWorld Base 타일이 z=19까지 응답 (서울 전역 OK).
          *  타일 누락 시 Leaflet이 자동으로 z=18 타일을 stretch — 빈 영역 X. */}

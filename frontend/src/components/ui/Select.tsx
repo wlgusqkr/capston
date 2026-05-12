@@ -1,26 +1,5 @@
-/**
- * Select — wraps native <select> with a custom chevron icon.
- *
- * Examples:
- *   <Select label="기간" value={period} onChange={e => setPeriod(e.target.value)}>
- *     <option value="3m">3개월</option>
- *     <option value="6m">6개월</option>
- *     <option value="12m">12개월</option>
- *   </Select>
- *
- *   <Select label="레이어" hint="히트맵에 표시할 지표" defaultValue="total">
- *     <option value="total">종합</option>
- *     <option value="rent">전월세</option>
- *   </Select>
- *
- * Notes:
- *   - Height 40px (control-height-md)
- *   - Native <select> — accessibility comes for free
- */
-
 import { forwardRef, useId } from 'react';
 import type { ReactNode, SelectHTMLAttributes } from 'react';
-import './Select.css';
 
 export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: ReactNode;
@@ -57,31 +36,32 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
   const hintId = `${selectId}-hint`;
   const errorId = `${selectId}-error`;
 
-  const wrapperClasses = [
-    'ui-select',
-    error ? 'ui-select--error' : '',
-    disabled ? 'ui-select--disabled' : '',
-    className ?? '',
-  ]
-    .filter(Boolean)
-    .join(' ');
-
   const describedBy =
     [error ? errorId : null, hint && !error ? hintId : null].filter(Boolean).join(' ') ||
     undefined;
 
   return (
-    <div className={wrapperClasses}>
+    <div
+      className={`flex flex-col gap-2 w-full ${className ?? ''}`}
+    >
       {label && (
-        <label htmlFor={selectId} className="ui-select__label">
+        <label htmlFor={selectId} className="text-caption font-normal text-text tracking-normal">
           {label}
         </label>
       )}
-      <div className="ui-select__field">
+      <div
+        className={`relative flex items-center h-10 bg-surface border rounded-sm transition-all duration-[120ms] ease-out ${
+          error
+            ? 'border-danger focus-within:border-danger focus-within:border-2'
+            : 'border-border focus-within:border-focus-ring focus-within:border-2'
+        } ${disabled ? 'bg-surface-alt opacity-60' : ''}`}
+      >
         <select
           ref={ref}
           id={selectId}
-          className="ui-select__control"
+          className={`appearance-none flex-1 border-none outline-none bg-transparent text-body-base text-text tracking-normal h-full px-3 pr-8 min-w-0 ${
+            disabled ? 'cursor-not-allowed' : 'cursor-pointer'
+          }`}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
           disabled={disabled}
@@ -89,17 +69,17 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
         >
           {children}
         </select>
-        <span className="ui-select__chevron" aria-hidden="true">
+        <span className="absolute right-3 inline-flex items-center justify-center text-text-muted pointer-events-none" aria-hidden="true">
           <ChevronDown />
         </span>
       </div>
       {error ? (
-        <span id={errorId} className="ui-select__error" role="alert">
+        <span id={errorId} className="text-micro text-danger tracking-normal" role="alert">
           {error}
         </span>
       ) : (
         hint && (
-          <span id={hintId} className="ui-select__hint">
+          <span id={hintId} className="text-micro text-text-muted tracking-normal">
             {hint}
           </span>
         )

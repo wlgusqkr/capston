@@ -8,8 +8,6 @@
 
 import { memo } from 'react';
 
-import './CompareChip.css';
-
 export interface CompareChipProps {
   count: number;
   onClick: () => void;
@@ -21,13 +19,13 @@ function CompareChip({ count, onClick }: CompareChipProps) {
   return (
     <button
       type="button"
-      className="compare-chip map-floating-panel map-floating-panel--snug"
+      className="bg-surface border border-border rounded-pill px-3 py-2 shadow-floating z-[500] pointer-events-auto inline-flex items-center gap-2 cursor-pointer font-inherit text-button font-medium tracking-normal text-surface bg-secondary border-secondary min-h-[40px] [animation:compare-chip-in_200ms_ease-out] hover:bg-secondary hover:border-secondary focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2"
       onClick={onClick}
       aria-label={`담은 동네 ${count}개, 비교 페이지로 이동`}
     >
-      <span className="compare-chip__label">비교</span>
-      <span className="compare-chip__count tabular">({count})</span>
-      <span className="compare-chip__arrow" aria-hidden="true">
+      <span>비교</span>
+      <span className="opacity-85 tabular">({count})</span>
+      <span className="text-[14px]" aria-hidden="true">
         →
       </span>
     </button>

@@ -22,8 +22,6 @@ import type {
   Weights,
 } from '@/types/api';
 
-import './KernelScorePanel.css';
-
 /** Emoji for each nearest-facility category. */
 const CATEGORY_EMOJI: Record<string, string> = {
   subway: '🚇',
@@ -127,26 +125,25 @@ export default function KernelScorePanel({
 
   return (
     <aside
-      className={`kernel-panel${isOpen ? ' kernel-panel--open' : ''}`}
+      className={`absolute top-0 right-0 h-full w-[400px] max-w-full bg-surface border-l border-border transition-transform duration-[300ms] ease-out z-[520] flex flex-col ${isOpen ? 'translate-x-0 pointer-events-auto shadow-floating' : 'translate-x-full pointer-events-none'}`}
       // @ts-expect-error — `inert` lands as a boolean attr but React typed it later.
-      // design-audit F-20: keep focusable buttons behind a closed panel out of tab order.
       inert={!isOpen ? '' : undefined}
       aria-hidden={!isOpen}
       aria-label="커널 점수 패널"
       role="complementary"
     >
-      <div className="kernel-panel__inner">
-        <header className="kernel-panel__header">
-          <div className="kernel-panel__title">
-            <p className="kernel-panel__label mono-label">선택 지점</p>
-            <p className="kernel-panel__coord tabular">{coordLabel}</p>
+      <div className="flex flex-col h-full min-h-0">
+        <header className="flex items-start justify-between gap-3 px-5 pt-5 pb-3 border-b border-border shrink-0">
+          <div className="flex flex-col gap-1 min-w-0">
+            <p className="m-0 text-text-subtle uppercase mono-label">선택 지점</p>
+            <p className="m-0 font-[var(--font-family-mono)] text-caption leading-[1.4] text-text-muted tabular">{coordLabel}</p>
             {data?._meta?.dong_name && (
-              <p className="kernel-panel__dong">{data._meta.dong_name}</p>
+              <p className="mt-1 mb-0 text-feature-heading leading-[1.3] font-semibold text-text tracking-normal">{data._meta.dong_name}</p>
             )}
           </div>
           <button
             type="button"
-            className="kernel-panel__close"
+            className="w-8 h-8 rounded-md border border-transparent bg-transparent text-text-muted text-feature-heading leading-none cursor-pointer shrink-0 transition-colors duration-[120ms] ease-out inline-flex items-center justify-center hover:bg-surface-alt hover:text-text focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2"
             aria-label="패널 닫기"
             onClick={onClose}
           >
@@ -154,15 +151,15 @@ export default function KernelScorePanel({
           </button>
         </header>
 
-        <div className="kernel-panel__body">
+        <div className="flex-1 min-h-0 overflow-y-auto p-5 flex flex-col gap-5">
           {isLoading && !data && (
-            <div className="kernel-panel__status" role="status">
+            <div className="text-body-base text-text-muted tracking-normal py-4 text-center" role="status">
               점수 계산 중…
             </div>
           )}
 
           {isError && !data && (
-            <div className="kernel-panel__status kernel-panel__status--error" role="alert">
+            <div className="text-body-base text-danger tracking-normal py-4 text-center" role="alert">
               점수를 계산하지 못했습니다.
             </div>
           )}
@@ -211,8 +208,8 @@ function ScoreSection({
   isFetching: boolean;
 }) {
   return (
-    <section className="kernel-panel__section kernel-panel__score-section">
-      <div className="kernel-panel__score-row">
+    <section className="flex flex-col gap-2">
+      <div className="flex items-baseline justify-between gap-3">
         <Score
           value={Math.round(score)}
           unit="/ 100"
@@ -221,7 +218,7 @@ function ScoreSection({
           ariaLabel={`종합 점수 ${score.toFixed(1)}점`}
         />
         {isFetching && (
-          <span className="kernel-panel__updating mono-label">갱신 중</span>
+          <span className="text-text-subtle uppercase mono-label">갱신 중</span>
         )}
       </div>
     </section>
@@ -238,9 +235,9 @@ function BreakdownSection({
   breakdown: KernelScoreResponse['breakdown'];
 }) {
   return (
-    <section className="kernel-panel__section" aria-label="점수 구성">
-      <h3 className="kernel-panel__section-title">점수 구성</h3>
-      <div className="kernel-panel__bars">
+    <section className="flex flex-col gap-3" aria-label="점수 구성">
+      <h3 className="font-[var(--font-family-mono)] text-mono-label leading-[1.4] font-normal text-text-subtle m-0 tracking-[0.26px] uppercase">점수 구성</h3>
+      <div className="flex flex-col gap-3">
         <MetricBar label="전월세" value={breakdown.rent} tone="score" />
         <MetricBar label="생활시설" value={breakdown.amenity} tone="score" />
         <MetricBar label="교통" value={breakdown.transit} tone="score" />
@@ -260,13 +257,10 @@ function WeightsSection({
   weights: Weights;
   onChange: (next: Weights) => void;
 }) {
-  // We keep the underlying weights as integer percent. Backend normalizes
-  // anyway, so we don't enforce sum=100 on local panel changes — that's the
-  // sidebar's contract. Each slider here is independent.
   return (
-    <section className="kernel-panel__section" aria-label="가중치">
-      <h3 className="kernel-panel__section-title">가중치</h3>
-      <div className="kernel-panel__weight-list">
+    <section className="flex flex-col gap-3" aria-label="가중치">
+      <h3 className="font-[var(--font-family-mono)] text-mono-label leading-[1.4] font-normal text-text-subtle m-0 tracking-[0.26px] uppercase">가중치</h3>
+      <div className="flex flex-col gap-3">
         <WeightRow
           label="전월세"
           value={weights.rent}
@@ -324,8 +318,8 @@ function SchoolSection({
   commuteMin: number | null;
 }) {
   return (
-    <section className="kernel-panel__section" aria-label="통학">
-      <h3 className="kernel-panel__section-title">통학 학교</h3>
+    <section className="flex flex-col gap-3" aria-label="통학">
+      <h3 className="font-[var(--font-family-mono)] text-mono-label leading-[1.4] font-normal text-text-subtle m-0 tracking-[0.26px] uppercase">통학 학교</h3>
       <Select
         value={school}
         onChange={(e) => onSchoolChange(e.target.value)}
@@ -339,18 +333,18 @@ function SchoolSection({
         ))}
       </Select>
       {school && commuteMin != null && (
-        <p className="kernel-panel__commute">
+        <p className="m-0 p-3 bg-surface-alt rounded-card inline-flex items-center gap-2 text-body-base tracking-normal text-text">
           <span aria-hidden="true">🎓</span>
-          <span className="kernel-panel__commute-text">
-            <span className="kernel-panel__commute-school">{school}</span>
-            <span className="kernel-panel__commute-sep"> 통학 </span>
-            <span className="tabular kernel-panel__commute-min">{commuteMin}</span>
-            <span className="kernel-panel__commute-unit">분</span>
+          <span className="inline-flex items-baseline flex-wrap gap-0">
+            <span className="font-medium">{school}</span>
+            <span className="text-text-muted"> 통학 </span>
+            <span className="tabular font-[var(--font-family-mono)] text-body-large font-medium mx-1">{commuteMin}</span>
+            <span className="text-text-muted">분</span>
           </span>
         </p>
       )}
       {school && commuteMin == null && (
-        <p className="kernel-panel__commute kernel-panel__commute--missing mono-label">
+        <p className="m-0 text-text-subtle bg-transparent p-0 uppercase mono-label">
           학교 매핑 정보 없음
         </p>
       )}
@@ -364,9 +358,9 @@ function SchoolSection({
 
 function NearestSection({ items }: { items: NearestFacility[] }) {
   return (
-    <section className="kernel-panel__section" aria-label="가까운 시설">
-      <h3 className="kernel-panel__section-title">가까운 시설</h3>
-      <ul className="kernel-panel__nearest">
+    <section className="flex flex-col gap-3" aria-label="가까운 시설">
+      <h3 className="font-[var(--font-family-mono)] text-mono-label leading-[1.4] font-normal text-text-subtle m-0 tracking-[0.26px] uppercase">가까운 시설</h3>
+      <ul className="list-none m-0 p-0 flex flex-col border-t border-border">
         {items.map((it) => (
           <NearestRow key={`${it.category}-${it.name}`} item={it} />
         ))}
@@ -378,21 +372,21 @@ function NearestSection({ items }: { items: NearestFacility[] }) {
 function NearestRow({ item }: { item: NearestFacility }) {
   const emoji = CATEGORY_EMOJI[item.category] ?? '📍';
   return (
-    <li className="kernel-panel__nearest-row">
-      <span className="kernel-panel__nearest-emoji" aria-hidden="true">
+    <li className="grid grid-cols-[24px_1fr_auto] items-baseline gap-2 py-3 border-b border-border text-body-base tracking-normal">
+      <span className="text-[16px] leading-none" aria-hidden="true">
         {emoji}
       </span>
-      <span className="kernel-panel__nearest-main">
-        <span className="kernel-panel__nearest-name">{item.name}</span>
+      <span className="min-w-0 text-text inline-flex items-baseline flex-wrap gap-0 overflow-hidden">
+        <span className="font-medium whitespace-nowrap overflow-hidden text-ellipsis">{item.name}</span>
         {item.line && (
-          <span className="kernel-panel__nearest-line"> ({item.line})</span>
+          <span className="text-text-muted text-caption"> ({item.line})</span>
         )}
       </span>
-      <span className="kernel-panel__nearest-meta">
-        <span className="kernel-panel__nearest-walk mono-label tabular">
+      <span className="inline-flex flex-col items-end gap-1">
+        <span className="text-text uppercase mono-label tabular">
           WALK {item.walk_min}MIN
         </span>
-        <span className="kernel-panel__nearest-dist tabular">
+        <span className="text-text-muted text-caption tabular">
           {item.distance_m}m
         </span>
       </span>
@@ -410,15 +404,15 @@ function RadiusSection({
   counts: KernelScoreResponse['radius_counts'];
 }) {
   return (
-    <section className="kernel-panel__section" aria-label="반경 1km 시설">
-      <h3 className="kernel-panel__section-title">반경 1KM 시설</h3>
-      <div className="kernel-panel__radius-grid">
+    <section className="flex flex-col gap-3" aria-label="반경 1km 시설">
+      <h3 className="font-[var(--font-family-mono)] text-mono-label leading-[1.4] font-normal text-text-subtle m-0 tracking-[0.26px] uppercase">반경 1KM 시설</h3>
+      <div className="grid grid-cols-2 gap-2">
         {RADIUS_GRID_ORDER.map((cat) => (
-          <div key={cat} className="kernel-panel__radius-cell">
-            <span className="kernel-panel__radius-label mono-label">
+          <div key={cat} className="flex flex-col gap-1 p-3 bg-surface-alt rounded-md min-h-[64px] justify-center">
+            <span className="text-text-subtle uppercase mono-label">
               {CATEGORY_LABEL_KO[cat] ?? cat}
             </span>
-            <span className="kernel-panel__radius-value tabular">
+            <span className="font-[var(--font-family-mono)] text-card-heading font-semibold leading-none text-text tracking-[0] tabular">
               {(counts[cat] ?? 0).toLocaleString('ko-KR')}
             </span>
           </div>

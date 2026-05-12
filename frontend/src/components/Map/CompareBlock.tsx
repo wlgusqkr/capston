@@ -9,8 +9,6 @@
 
 import { Button } from '@/components/ui';
 
-import './CompareBlock.css';
-
 export interface CompareBlockProps {
   compareCount: number;
   onOpenCompare: () => void;
@@ -21,8 +19,8 @@ export default function CompareBlock({
   onOpenCompare,
 }: CompareBlockProps) {
   return (
-    <div className="compare-block">
-      <p className="compare-block__hint">
+    <div className="flex flex-col gap-2">
+      <p className="m-0 text-micro text-text-muted leading-[1.4] tracking-normal">
         {compareCount === 0
           ? '동네 패널에서 "비교에 추가"를 누르세요.'
           : `현재 ${compareCount}/3개 담겼어요.`}

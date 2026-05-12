@@ -35,8 +35,6 @@ import type {
   Weights,
 } from '@/types/api';
 
-import './DongPanel.css';
-
 export interface DongPanelProps {
   /** Selected dong slug; null means panel is closed. */
   slug: string | null;
@@ -94,30 +92,27 @@ export default function DongPanel({
 
   return (
     <aside
-      className={`dong-panel${isOpen ? ' dong-panel--open' : ''}`}
-      // `inert` removes descendants from the tab order entirely while closed —
-      // aria-hidden alone leaves <button> elements keyboard-focusable behind the
-      // hidden panel. design-audit F-20.
+      className={`absolute top-0 right-0 h-full w-[400px] max-w-full bg-surface border-l border-border transition-transform duration-[300ms] ease-out z-[500] flex flex-col ${isOpen ? 'translate-x-0 pointer-events-auto shadow-floating' : 'translate-x-full pointer-events-none'}`}
       // @ts-expect-error — `inert` lands as a boolean attr but React typed it later.
       inert={!isOpen ? '' : undefined}
       aria-hidden={!isOpen}
       aria-label="동네 요약 패널"
       role="complementary"
     >
-      <div className="dong-panel__inner">
+      <div className="flex flex-col h-full min-h-0">
         <PanelHeader summary={data ?? null} fallbackSlug={slug} onClose={onClose} />
 
-        <div className="dong-panel__body">
+        <div className="flex-1 min-h-0 overflow-y-auto p-5 flex flex-col gap-5">
           {isLoading && (
-            <div className="dong-panel__status" role="status">
+            <div className="text-body-base text-text-muted tracking-normal py-4" role="status">
               요약 정보를 불러오는 중…
             </div>
           )}
 
           {isError && (
-            <div className="dong-panel__status dong-panel__status--error" role="alert">
+            <div className="text-body-base text-danger tracking-normal py-4 flex flex-col gap-1" role="alert">
               요약 정보를 불러오지 못했습니다.
-              <span className="dong-panel__status-detail">
+              <span className="text-caption text-text-muted">
                 {error instanceof Error ? error.message : '알 수 없는 오류'}
               </span>
             </div>
@@ -125,7 +120,6 @@ export default function DongPanel({
 
           {data && (
             <>
-              {/* Phase 5: match 모드 — match KPI 카드가 score 카드 위에 (eng-review #14). */}
               {matchKpi}
               <ScoreCard summary={data} />
               <KeyMetrics summary={data} />
@@ -161,14 +155,14 @@ function PanelHeader({ summary, fallbackSlug, onClose }: PanelHeaderProps) {
   const gu = summary?.gu ?? '';
   const name = summary?.name ?? fallbackSlug ?? '';
   return (
-    <header className="dong-panel__header">
-      <div className="dong-panel__title">
-        <span className="dong-panel__gu">{gu}</span>
-        <h2 className="dong-panel__name">{name}</h2>
+    <header className="flex items-start justify-between gap-3 px-5 pt-5 pb-3 border-b border-border shrink-0">
+      <div className="flex flex-col gap-1 min-w-0">
+        <span className="text-caption leading-[1.4] text-text-muted tracking-normal">{gu}</span>
+        <h2 className="text-feature-heading leading-[1.3] font-semibold text-text m-0 tracking-normal">{name}</h2>
       </div>
       <button
         type="button"
-        className="dong-panel__close"
+        className="w-8 h-8 rounded-md border border-transparent bg-transparent text-text-muted text-feature-heading leading-none cursor-pointer shrink-0 transition-colors duration-[120ms] ease-out inline-flex items-center justify-center hover:bg-surface-alt hover:text-text focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2"
         aria-label="패널 닫기"
         onClick={onClose}
       >
@@ -184,14 +178,14 @@ function PanelHeader({ summary, fallbackSlug, onClose }: PanelHeaderProps) {
 
 function ScoreCard({ summary }: { summary: DongSummary }) {
   return (
-    <Card variant="inset" padding="lg" className="dong-panel__score-card">
+    <Card variant="inset" padding="lg" className="flex flex-col gap-3">
       <Score
         value={Math.round(summary.score)}
         unit="/ 100"
         size="lg"
         ariaLabel={`${summary.name} 종합 점수 ${summary.score.toFixed(1)}점`}
       />
-      <p className="dong-panel__summary-text">{summary.summary}</p>
+      <p className="m-0 text-body-base leading-[1.6] text-text-muted tracking-normal">{summary.summary}</p>
     </Card>
   );
 }
@@ -205,29 +199,29 @@ function KeyMetrics({ summary }: { summary: DongSummary }) {
   const safety = SAFETY_LABELS[summary.safety_level];
   return (
     <section
-      className="dong-panel__section"
+      className="flex flex-col gap-3"
       aria-label="핵심 지표"
     >
-      <h3 className="dong-panel__section-title">핵심 지표</h3>
-      <dl className="dong-panel__metrics">
+      <h3 className="text-mono-label leading-[1.4] font-normal text-text-subtle m-0 tracking-[0.26px] font-[var(--font-family-mono)] uppercase">핵심 지표</h3>
+      <dl className="m-0 flex flex-col border-t border-border">
         <MetricRow
           label="평균 월세"
           value={
             <span className="tabular">
               {summary.rent_avg}
-              <span className="dong-panel__metric-unit"> 만원</span>
+              <span className="text-caption text-text-muted font-normal"> 만원</span>
             </span>
           }
         />
         <MetricRow
           label="가까운 역"
           value={
-            <span className="dong-panel__station">
-              <span className="dong-panel__station-name">{summary.nearest_station.name}</span>
-              <span className="dong-panel__metric-sep"> · </span>
-              <span className="dong-panel__metric-sub">{summary.nearest_station.line}</span>
-              <span className="dong-panel__metric-sep"> · </span>
-              <span className="dong-panel__metric-sub">
+            <span className="inline-flex items-baseline flex-wrap justify-end gap-0">
+              <span className="font-medium">{summary.nearest_station.name}</span>
+              <span className="text-text-subtle"> · </span>
+              <span className="text-text-muted text-caption">{summary.nearest_station.line}</span>
+              <span className="text-text-subtle"> · </span>
+              <span className="text-text-muted text-caption">
                 도보 <span className="tabular">{summary.nearest_station.walking_min}</span>분
               </span>
             </span>
@@ -242,7 +236,7 @@ function KeyMetrics({ summary }: { summary: DongSummary }) {
           value={
             <span className="tabular">
               {summary.single_household_pct.toFixed(0)}
-              <span className="dong-panel__metric-unit">%</span>
+              <span className="text-caption text-text-muted font-normal">%</span>
             </span>
           }
         />
@@ -263,9 +257,9 @@ function MetricRow({
   value: React.ReactNode;
 }) {
   return (
-    <div className="dong-panel__metric">
-      <dt className="dong-panel__metric-label">{label}</dt>
-      <dd className="dong-panel__metric-value">{value}</dd>
+    <div className="flex items-center justify-between gap-3 py-3 border-b border-border min-h-[40px]">
+      <dt className="text-caption leading-[1.4] text-text-muted tracking-normal shrink-0">{label}</dt>
+      <dd className="m-0 text-body-base leading-[1.6] text-text tracking-normal text-right inline-flex items-center gap-2">{value}</dd>
     </div>
   );
 }
@@ -280,16 +274,16 @@ interface ScoreBreakdownProps {
 
 function ScoreBreakdown({ rawScores }: ScoreBreakdownProps) {
   return (
-    <section className="dong-panel__section" aria-label="점수 구성">
-      <h3 className="dong-panel__section-title">점수 구성</h3>
+    <section className="flex flex-col gap-3" aria-label="점수 구성">
+      <h3 className="text-mono-label leading-[1.4] font-normal text-text-subtle m-0 tracking-[0.26px] font-[var(--font-family-mono)] uppercase">점수 구성</h3>
       {rawScores ? (
-        <div className="dong-panel__bars">
+        <div className="flex flex-col gap-3">
           <MetricBar label="교통" value={rawScores.transit} tone="score" />
           <MetricBar label="전월세" value={rawScores.rent} tone="score" />
           <MetricBar label="생활시설" value={rawScores.amenity} tone="score" />
         </div>
       ) : (
-        <p className="dong-panel__bars-empty">점수 정보를 준비 중입니다.</p>
+        <p className="m-0 text-caption text-text-muted tracking-normal">점수 정보를 준비 중입니다.</p>
       )}
     </section>
   );
@@ -313,7 +307,7 @@ function PanelFooter({
   onFavorite,
 }: PanelFooterProps) {
   return (
-    <footer className="dong-panel__footer">
+    <footer className="flex flex-col gap-2 px-5 pt-4 pb-5 border-t border-border bg-surface shrink-0">
       <Button
         variant="primary"
         size="lg"
@@ -322,7 +316,7 @@ function PanelFooter({
       >
         자세히 보기
       </Button>
-      <div className="dong-panel__footer-row">
+      <div className="flex gap-2">
         <Button
           variant="secondary"
           size="md"

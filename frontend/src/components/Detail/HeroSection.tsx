@@ -1,20 +1,9 @@
 // HeroSection — top of dong detail page (SPEC 6.3 Section 1).
 // Rebuilt for R-3 (design-polish-v2.md):
 //
-//   ┌─── HERO ──────────────────────────────────────────┐
-//   │ 노원구 (caption, NOT mono — Codex finding #1)       │
-//   │ 공릉1동 (60px Page Display)                          │
-//   │ 매일 데이터 갱신 · ... (18px subtle)                  │
-//   │ ┌──────────────┐  ┌─────────────────────────────┐ │
-//   │ │ Score lg     │  │ 280×280 mini-map (no Card)  │ │
-//   │ │ 3× MetricBar │  └─────────────────────────────┘ │
-//   │ │              │  [비교] [찜] [공유] page-local    │
-//   │ └──────────────┘                                  │
-//   └──────────────────────────────────────────────────┘
-//
-// No <Card> wrapper anywhere — hero is its own composition. Height:
-// `min(520px, calc(100vh - 56px))` so first fold shows hero + start of
-// next section.
+//   No <Card> wrapper anywhere — hero is its own composition. Height:
+//   `min(520px, calc(100vh - 56px))` so first fold shows hero + start of
+//   next section.
 import { CircleMarker, MapContainer, TileLayer } from 'react-leaflet';
 
 import { Button, MetricBar, Score } from '@/components/ui';
@@ -22,7 +11,6 @@ import { MAP_POLYGON_STROKE, scoreToHeatmapColor } from '@/lib/colors';
 import type { DongDetail, DongScore } from '@/types/api';
 
 import 'leaflet/dist/leaflet.css';
-import './HeroSection.css';
 
 const VWORLD_KEY = import.meta.env.VITE_VWORLD_API_KEY as string | undefined;
 const TILE_URL =
@@ -36,9 +24,6 @@ const TILE_ATTRIBUTION =
 
 interface HeroSectionProps {
   detail: DongDetail;
-  /** Score breakdown for the current dong, joined client-side from
-   *  /api/dongs/scores. Optional — when absent the MetricBar block
-   *  renders zeros (rare; same /scores call already powers percentile). */
   breakdown?: Pick<DongScore, 'score_rent' | 'score_amenity' | 'score_transit'>;
   onAddCompare: () => void;
   onFavorite: () => void;
@@ -56,15 +41,22 @@ export default function HeroSection({
   const polygonColor = scoreToHeatmapColor(detail.score);
 
   return (
-    <section className="hero" aria-label="동네 개요">
-      {/* 노원구 — Pretendard 14px subtle, NOT mono.
-       *  Codex flagged the initial draft's mono-on-Korean misuse (R-3 #1). */}
-      <p className="hero__gu">{detail.gu}</p>
-      <h1 className="hero__name">{detail.name}</h1>
-      <p className="hero__summary">{detail.summary}</p>
+    <section
+      className="min-h-[min(520px,calc(100vh-var(--space-14)))] flex flex-col gap-3 pt-8 pb-8"
+      aria-label="동네 개요"
+    >
+      <p className="m-0 text-caption leading-[1.4] text-text-subtle tracking-normal">
+        {detail.gu}
+      </p>
+      <h1 className="m-0 text-page-display leading-[1] font-bold text-text tracking-[-1.2px]">
+        {detail.name}
+      </h1>
+      <p className="m-0 text-body-large leading-[1.5] text-text-subtle tracking-normal max-w-[60ch]">
+        {detail.summary}
+      </p>
 
-      <div className="hero__split">
-        <div className="hero__data">
+      <div className="flex items-start justify-between gap-10 mt-4 flex-wrap">
+        <div className="flex flex-col gap-5 flex-[1_1_320px] min-w-0">
           <Score
             value={Math.round(detail.score)}
             unit="/ 100"
@@ -72,7 +64,7 @@ export default function HeroSection({
             ariaLabel={`${detail.name} 종합 점수 ${detail.score.toFixed(1)}점`}
           />
           {breakdown ? (
-            <div className="hero__bars" aria-label="점수 구성">
+            <div className="flex flex-col gap-3 max-w-[360px]" aria-label="점수 구성">
               <MetricBar
                 label="전월세"
                 value={breakdown.score_rent}
@@ -90,15 +82,18 @@ export default function HeroSection({
               />
             </div>
           ) : (
-            // Loading: hide the bars entirely instead of rendering 0%.
-            // Codex flagged the prior `?? 0` fallback as "false data, not
-            // a loading state" — a 0% bar reads as a verdict.
-            <div className="hero__bars hero__bars--loading" aria-busy="true" />
+            <div
+              className="flex flex-col gap-3 max-w-[360px] min-h-[calc(var(--space-2)*3+var(--space-3)*2)]"
+              aria-busy="true"
+            />
           )}
         </div>
 
-        <div className="hero__aside">
-          <div className="hero__map-container" aria-label="동네 위치 미니 지도">
+        <div className="flex flex-col gap-4 flex-[0_0_var(--hero-map-side)]">
+          <div
+            className="w-[var(--hero-map-side)] h-[var(--hero-map-side)] rounded-hero overflow-hidden bg-surface-alt"
+            aria-label="동네 위치 미니 지도"
+          >
             <MapContainer
               center={center}
               zoom={14}
@@ -106,7 +101,7 @@ export default function HeroSection({
               zoomControl={false}
               dragging={false}
               doubleClickZoom={false}
-              className="hero__map-leaflet"
+              className="w-full h-full"
               attributionControl={false}
             >
               <TileLayer attribution={TILE_ATTRIBUTION} url={TILE_URL} maxZoom={18} />
@@ -123,11 +118,7 @@ export default function HeroSection({
             </MapContainer>
           </div>
 
-          {/* Page-local action group (D-3, R-3 wireframe right column).
-           *  Visible on first fold. After hero leaves viewport,
-           *  DongDetail renders a scroll-sticky pill rail with the same 3
-           *  actions. */}
-          <div className="hero__actions" aria-label="동네 액션">
+          <div className="flex flex-wrap gap-2" aria-label="동네 액션">
             <Button variant="secondary" size="md" onClick={onAddCompare}>
               비교에 추가
             </Button>

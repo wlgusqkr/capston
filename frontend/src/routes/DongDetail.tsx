@@ -21,19 +21,13 @@ import { useDongDetail, useDongScores } from '@/hooks/useDongs';
 import { useIntersection } from '@/hooks/useIntersection';
 import { DEFAULT_WEIGHTS } from '@/types/api';
 
-import './DongDetail.css';
-
 export default function DongDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
 
-  // Detail page weights default to 33/33/34. Main map weights are not lifted
-  // here in this iteration — see step 6B handoff "known issues" / step 8 plan.
   const weights = DEFAULT_WEIGHTS;
   const { data, isLoading, isError, error } = useDongDetail(slug, weights);
 
-  // All-dongs scores feed the hero MetricBar breakdown (R-3) — same /scores
-  // call that powers the heatmap, so React Query usually dedups with MainMap.
   const scoresQ = useDongScores(weights);
   const breakdown = useMemo(() => {
     if (!data?.slug || !scoresQ.data) return undefined;
@@ -46,12 +40,8 @@ export default function DongDetail() {
     };
   }, [data?.slug, scoresQ.data]);
 
-  // Publish page title to TopNav center zone (R-2 contextual nav).
   usePageTitle(data?.name);
 
-  // D-3: hero visibility drives the scroll-sticky pill rail. The
-  // useIntersection default (intersecting=true) means the rail starts
-  // hidden on mount — no flash before the observer reports.
   const heroRef = useRef<HTMLDivElement>(null);
   const heroVisible = useIntersection(heroRef, { threshold: 0 });
 
@@ -69,20 +59,20 @@ export default function DongDetail() {
   );
 
   return (
-    <div className="dong-detail">
+    <div className="min-h-screen bg-bg text-text">
       {isLoading && (
-        <div className="dong-detail__status" role="status">
+        <div className="max-w-[1200px] mx-auto py-8 px-6 text-center text-body-base text-text-muted tracking-normal" role="status">
           동네 상세 정보를 불러오는 중…
         </div>
       )}
 
       {isError && (
-        <div className="dong-detail__status dong-detail__status--error" role="alert">
+        <div className="max-w-[1200px] mx-auto py-8 px-6 text-center text-danger flex flex-col items-center gap-3" role="alert">
           정보를 불러오지 못했습니다.
-          <span className="dong-detail__status-detail">
+          <span className="text-caption text-text-muted">
             {error instanceof Error ? error.message : '알 수 없는 오류'}
           </span>
-          <div className="dong-detail__status-actions">
+          <div className="mt-2">
             <Button
               variant="secondary"
               size="md"
@@ -94,12 +84,8 @@ export default function DongDetail() {
         </div>
       )}
 
-      {/* main wrapper renders unconditionally so heroRef is observed by the
-       *  IntersectionObserver from mount — without this, conditional render
-       *  on `data` left ref.current null when useIntersection's effect ran
-       *  and the rail never appeared on scroll. */}
       <main
-        className="dong-detail__main"
+        className="max-w-[1200px] mx-auto px-6"
         id="main"
         hidden={!data}
         aria-hidden={!data}
@@ -118,14 +104,14 @@ export default function DongDetail() {
         {data && (
           <>
             <RealEstateSection realEstate={data.real_estate} />
-            <div className="dong-detail__explore-cta">
+            <div className="flex flex-col gap-1 py-5 border-t border-divider border-b border-b-divider my-4">
               <Link
                 to={`/dong/${data.slug}/explore`}
-                className="dong-detail__explore-link"
+                className="text-body-large font-semibold text-text no-underline self-start py-2 hover:text-link"
               >
                 자취 시세 더 깊게 탐색하기 →
               </Link>
-              <p className="mono-label dong-detail__explore-hint">
+              <p className="mono-label m-0 text-text-muted">
                 필터(유형·기간·보증금·월세·면적)로 시세 분포 자세히 보기
               </p>
             </div>
@@ -140,17 +126,12 @@ export default function DongDetail() {
           </>
         )}
 
-        {/* D-3 scroll-sticky pill rail — appears after the hero leaves
-         *  the viewport. Animates via opacity/transform.
-         *  When hero is visible: inert + aria-hidden so the rail's three
-         *  buttons are NOT in keyboard tab order (post-F-20 pattern). The
-         *  hero's own button group is the active action surface in that
-         *  state. Cross-model audit (codex + subagent) flagged the prior
-         *  aria-hidden-only treatment as a focus-trap leak. */}
         {data && (
           <div
-            className={`dong-detail__scroll-rail${
-              heroVisible ? '' : ' dong-detail__scroll-rail--visible'
+            className={`fixed right-6 bottom-6 flex gap-2 py-2 px-3 bg-surface border border-border rounded-md z-50 transition-all duration-200 ease-out ${
+              heroVisible
+                ? 'opacity-0 translate-y-2 pointer-events-none'
+                : 'opacity-100 translate-y-0 pointer-events-auto'
             }`}
             aria-label="동네 액션"
             aria-hidden={heroVisible}

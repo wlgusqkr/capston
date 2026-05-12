@@ -1,10 +1,4 @@
 // Login (`/login`) — username + password form.
-//
-// SPEC 8: route exists. SPEC requirement (step 9 task): no Kakao / social,
-// just standard Django username/password against /api/auth/login.
-//
-// On success the AuthContext picks up the user and we navigate back to the
-// previous page (or "/" if there is none).
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -12,8 +6,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAuthErrorMessage } from '@/lib/authErrors';
-
-import './Auth.css';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -38,8 +30,6 @@ export default function Login() {
     setSubmitting(true);
     try {
       await login({ username: username.trim(), password });
-      // Send the user back where they came from (e.g. /mypage redirect).
-      // Avoid history loops; if there's no history, fall back to /.
       if (window.history.length > 1) {
         navigate(-1);
       } else {
@@ -55,23 +45,20 @@ export default function Login() {
   };
 
   return (
-    <main className="auth" id="main">
-      <div className="auth__card" role="form" aria-labelledby="login-title">
-        {/* In-card brand mark + back link removed in Stage 3 — global TopNav
-         *  handles both (logo → /). Auth-route TopNav variant (D-8) shows
-         *  only logo + 회원가입 → on /login, keeping the auth card focused. */}
-        <h1 id="login-title" className="auth__title">로그인</h1>
-        <p className="auth__subtitle">
+    <main className="min-h-screen bg-bg text-text flex items-center justify-center p-6" id="main">
+      <div className="w-full max-w-[480px] bg-surface border border-border rounded-card p-8 flex flex-col gap-5" role="form" aria-labelledby="login-title">
+        <h1 id="login-title" className="text-section-display leading-[1.05] font-semibold tracking-[-0.96px] text-text m-0">로그인</h1>
+        <p className="text-body-base leading-[1.6] text-text-muted tracking-normal m-0">
           아이디와 비밀번호로 로그인해주세요.
         </p>
 
         {errorMsg && (
-          <div className="auth__error" role="alert">
+          <div className="bg-danger-soft text-danger border border-danger rounded-sm py-3 px-4 text-caption tracking-normal leading-[1.4]" role="alert">
             {errorMsg}
           </div>
         )}
 
-        <form className="auth__form" onSubmit={handleSubmit} noValidate>
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
           <Input
             label="아이디"
             name="username"
@@ -102,11 +89,11 @@ export default function Login() {
           </Button>
         </form>
 
-        <hr className="auth__divider" />
+        <hr className="h-px bg-border m-0 border-none" />
 
-        <div className="auth__footer">
+        <div className="flex flex-col items-center gap-2 text-caption text-text-muted tracking-normal">
           <span>처음 오셨나요?</span>
-          <Link to="/register" className="auth__footer-link">
+          <Link to="/register" className="text-link underline underline-offset-2 font-medium py-1 px-2 rounded-sm transition-all duration-[120ms] ease-out hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2">
             회원가입은 여기로 →
           </Link>
         </div>

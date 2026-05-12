@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import path from 'node:path';
 
 // Vite config for 슬기로운 자취생활 frontend.
@@ -7,7 +8,7 @@ import path from 'node:path';
 // - dev server proxies `/api` to Django backend (CORS already open, but
 //   the proxy keeps relative URLs portable)
 export default defineConfig({
-  plugins: [react()],
+  plugins: [tailwindcss(), react()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),

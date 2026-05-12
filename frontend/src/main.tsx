@@ -1,11 +1,5 @@
-// Entry point. Import order is critical:
-//   1. design tokens (CSS custom properties)
-//   2. global resets / Pretendard font
-//   3. shared component primitives (map-floating-panel, etc.)
-//   4. then React + app code
-import './styles/tokens.css';
 import './styles/globals.css';
-import './styles/components/map-floating-panel.css';
+
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
