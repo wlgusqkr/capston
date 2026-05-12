@@ -1,6 +1,6 @@
 """
 프로젝트 URL 라우팅.
-
+1차 라우팅은 프로젝트가 2차 라우팅은 앱이 한다.
 API는 /api/ 하위. 도메인별 URL은 각 앱의 urls.py에 위임.
 
 9단계: 사용자 명시로 allauth/카카오 비활성화. 표준 Django username/password

@@ -1,26 +1,45 @@
-# 로컬 개발용 — backend + redis 기본, db는 옵트인.
+# 로컬 개발 환경. 두 갈래 지원:
+#
+#   • mac/linux 권장: 호스트 venv (uv) + 이 docker-compose는 db/redis만 띄움.
+#   • windows 권장: 풀 docker (GDAL 설치 우회). 이 파일의 backend 서비스 사용.
+#
 # 운영 배포는 별도 (홈서버의 services/slgi/docker-compose.yml).
 #
 # ─────────────────────────────────────────────────────────────────────────────
-# 모드 1: 운영 DB 사용 (홈서버 postgres) — 기본
+# [A] mac/linux — venv 경로 (디버깅 부드러움)
 # ─────────────────────────────────────────────────────────────────────────────
-#   cp backend/.env.example backend/.env       # <YOUR_USER>/<YOUR_PASSWORD> 채우기
+#   cp backend/.env.example backend/.env        # <YOUR_USER>/<YOUR_PASSWORD> 채우기
 #   cp frontend/.env.example frontend/.env
-#   ssh -N -L 5432:127.0.0.1:5432 parkparkjihyeon@<ZeroTier-IP>   # 다른 창
-#   docker compose up -d                        # backend + redis (db는 안 뜸)
-#   cd frontend && npm install && npm run dev
+#   brew install gdal geos proj                  # mac 1회
+#
+#   # 모드 1) 원격 DB (기본):
+#   ssh -N -L 5432:127.0.0.1:5432 parkparkjihyeon@<ZeroTier-IP>
+#   docker compose up -d redis                   # redis만
+#
+#   # 모드 2) 로컬 DB:
+#   # backend/.env에서 DATABASE_URL을 127.0.0.1:5433으로 토글
+#   docker compose --profile local-db up -d db redis
+#
+#   cd backend && uv sync && uv run python manage.py runserver
+#   # 또는 VSCode F5 → "Django: runserver (venv)"
 #
 # ─────────────────────────────────────────────────────────────────────────────
-# 모드 2: 풀 로컬 (오프라인, migrate 테스트)
+# [B] windows — 풀 docker 경로 (GDAL 설치 회피)
 # ─────────────────────────────────────────────────────────────────────────────
-#   cp backend/.env.local.example backend/.env  # DATABASE_URL이 db:5432
+#   cp backend/.env.docker.example backend/.env  # <YOUR_USER>/<YOUR_PASSWORD> 채우기
 #   cp frontend/.env.example frontend/.env
-#   docker compose --profile local-db up -d     # db도 같이 기동
+#
+#   # 모드 1) 원격 DB:
+#   ssh -N -L 5432:127.0.0.1:5432 parkparkjihyeon@<ZeroTier-IP>
+#   docker compose up -d                         # backend + redis
+#
+#   # 모드 2) 로컬 DB:
+#   # backend/.env에서 DATABASE_URL을 db:5432로 토글
+#   docker compose --profile local-db up -d
+#
 #   cd frontend && npm install && npm run dev
 #
-# ─────────────────────────────────────────────────────────────────────────────
-# 디버거 attach (VSCode F5 → "Attach to Django (docker)")
-# ─────────────────────────────────────────────────────────────────────────────
+#   # 디버거 attach (VSCode F5 → "Attach to Django (docker)"):
 #   docker compose stop backend
 #   docker compose run --rm --service-ports backend \
 #     python -m debugpy --listen 0.0.0.0:5678 --wait-for-client \
