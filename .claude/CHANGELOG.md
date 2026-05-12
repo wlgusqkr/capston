@@ -1,5 +1,12 @@
 # 변경 이력
 
+## 2026-05-12 — 사이드바 CSS 깨짐 수정 + QA 이슈 해결
+- Chip UI 프리미티브 추가, 사이드바 필터 칩/라디오/레인지 슬라이더 스타일 복원
+- Slider 프리미티브 thumb 정렬 버그 수정 (원이 바 아래로 치우치던 문제)
+- Slider track gradient를 Slider 전용으로 스코프 (필터 슬라이더에 50% 채우기 노출 방지)
+- Button disabled 색상, Legend 히트맵 토큰, 임의 px값 토큰 전환 등 QA 지적사항 일괄 수정
+- apt 차트 색상을 CHART_COLORS로 통합
+
 ## 2026-05-12 — 디자인 시스템 v2 + Tailwind CSS 전환
 - 컬러 토큰 시맨틱 리네이밍: 61개 → 25개 + 14개 불변 = 39개
   - 구체적 색상명(near-black, ink, hairline 등) → 역할명(secondary, text, divider 등)

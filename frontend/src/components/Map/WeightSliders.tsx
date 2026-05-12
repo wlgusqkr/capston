@@ -1,6 +1,6 @@
 // WeightSliders -- three rebalancing sliders + 4 preset chips + CTA.
 
-import { Button, Slider } from '@/components/ui';
+import { Button, Chip, Slider } from '@/components/ui';
 import { rebalanceWeights } from '@/lib/weights';
 import type { Weights } from '@/types/api';
 import type { WeightKey } from '@/lib/weights';
@@ -56,16 +56,14 @@ export default function WeightSliders({
         {PRESETS.map((p) => {
           const active = weightsEqual(weights, p.weights);
           return (
-            <button
+            <Chip
               key={p.key}
-              type="button"
-              className={`explore__chip${active ? ' explore__chip--active' : ''}`}
+              active={active}
               onClick={() => handlePreset(p.weights)}
-              aria-pressed={active}
               disabled={disabled}
             >
               {p.label}
-            </button>
+            </Chip>
           );
         })}
       </div>

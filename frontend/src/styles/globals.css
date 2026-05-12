@@ -58,6 +58,9 @@
   --color-metric-4:       #C1CCFF;
   --color-metric-5:       #5570F1;
 
+  /* ----- COLOR — Disabled ----- */
+  --color-disabled:       #A1A1AA;
+
   /* ----- COLOR — Focus ----- */
   --color-focus-ring:     rgba(5, 150, 105, 0.40);
 
@@ -411,9 +414,11 @@
 }
 
 /* ==========================================================================
- * SLIDER TRACK — WebKit 트랙 그라데이션 (동적 CSS 변수 사용)
+ * SLIDER TRACK — WebKit 트랙 그라데이션 (Slider 프리미티브 전용)
+ *
+ * .ui-slider-track 클래스로 스코프. 일반 <input type="range">에는 적용되지 않음.
  * ========================================================================= */
-input[type="range"]::-webkit-slider-runnable-track {
+.ui-slider-track::-webkit-slider-runnable-track {
   background: linear-gradient(
     to right,
     var(--color-secondary) 0%,

@@ -2,11 +2,15 @@
 
 import { useMemo } from 'react';
 
+import { Chip } from '@/components/ui';
 import {
   DEFAULT_STUDIO_MATCH_FILTERS,
   isStudioMatchDirty,
 } from '@/hooks/useStudioMatchFilters';
 import type { ExploreDealType, ExplorePeriod, MatchFilters } from '@/types/api';
+
+const RANGE_INPUT_CLASS =
+  'w-full h-6 bg-transparent cursor-pointer appearance-none [&::-webkit-slider-runnable-track]:h-1 [&::-webkit-slider-runnable-track]:rounded-[2px] [&::-webkit-slider-runnable-track]:bg-divider [&::-moz-range-track]:h-1 [&::-moz-range-track]:rounded-[2px] [&::-moz-range-track]:bg-divider [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-[18px] [&::-webkit-slider-thumb]:h-[18px] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-text [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-surface [&::-webkit-slider-thumb]:shadow-[0_0_0_1px_var(--color-text)] [&::-webkit-slider-thumb]:-mt-[7px] [&::-webkit-slider-thumb]:cursor-grab [&::-moz-range-thumb]:w-[18px] [&::-moz-range-thumb]:h-[18px] [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-text [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-surface [&::-moz-range-thumb]:shadow-[0_0_0_1px_var(--color-text)] [&::-moz-range-thumb]:cursor-grab';
 
 const DEAL_TYPE_OPTIONS: Array<{ value: ExploreDealType; label: string }> = [
   { value: 'villa', label: '연립다세대' },
@@ -66,7 +70,7 @@ export default function MatchFilterPanel({
           STUDIO MATCH · 내 조건 자취 거래량
         </p>
         <div className="flex items-center gap-2">
-          <h2 className="m-0 text-[22px] font-semibold text-text tracking-[var(--letter-spacing-ko)] leading-[1.3]">
+          <h2 className="m-0 text-feature-heading font-semibold text-text tracking-[var(--letter-spacing-ko)] leading-[1.3]">
             내 조건 자취·원룸 거래량 분포
           </h2>
           {modeActive ? (
@@ -95,15 +99,13 @@ export default function MatchFilterPanel({
           {DEAL_TYPE_OPTIONS.map((opt) => {
             const active = filters.deal_types.includes(opt.value);
             return (
-              <button
+              <Chip
                 key={opt.value}
-                type="button"
-                className={`explore__chip${active ? ' explore__chip--active' : ''}`}
+                active={active}
                 onClick={() => toggleType(opt.value)}
-                aria-pressed={active}
               >
                 {opt.label}
-              </button>
+              </Chip>
             );
           })}
         </div>
@@ -116,8 +118,10 @@ export default function MatchFilterPanel({
           {PERIOD_OPTIONS.map((opt) => (
             <label
               key={opt.value}
-              className={`explore__radio${
-                filters.period === opt.value ? ' explore__radio--active' : ''
+              className={`flex items-center justify-center py-2 border rounded-sm text-caption cursor-pointer ${
+                filters.period === opt.value
+                  ? 'bg-text text-surface border-text'
+                  : 'border-divider text-text-subtle hover:border-text-subtle'
               }`}
             >
               <input
@@ -126,6 +130,7 @@ export default function MatchFilterPanel({
                 value={opt.value}
                 checked={filters.period === opt.value}
                 onChange={() => onPatch({ period: opt.value })}
+                className="hidden"
               />
               <span>{opt.label}</span>
             </label>
@@ -169,16 +174,12 @@ export default function MatchFilterPanel({
       <fieldset className="border-0 p-0 m-0 flex flex-col gap-2">
         <legend className="text-body-base font-medium text-text flex justify-between items-baseline p-0">캠퍼스 인근</legend>
         <div className="flex flex-wrap gap-2" role="group">
-          <button
-            type="button"
-            className={`explore__chip${
-              nearUniversityOnly ? ' explore__chip--active' : ''
-            }`}
+          <Chip
+            active={nearUniversityOnly}
             onClick={() => onNearUniversityToggle(!nearUniversityOnly)}
-            aria-pressed={nearUniversityOnly}
           >
             대학교 근처만
-          </button>
+          </Chip>
         </div>
       </fieldset>
 
@@ -191,12 +192,12 @@ export default function MatchFilterPanel({
           <span className="inline-block h-7 w-[60%] bg-divider rounded-xs [animation:match-panel-pulse_1.2s_ease-in-out_infinite]" />
         ) : (
           <>
-            <span className="text-[28px] font-semibold text-text leading-[1.1] tabular">
+            <span className="text-card-heading font-semibold text-text leading-[1.1] tabular">
               {totalMatched.toLocaleString()}
             </span>
             <span className="text-body-base text-text-subtle">건</span>
             {matchedDongs != null ? (
-              <span className="ml-auto text-[13px] text-text-muted">
+              <span className="ml-auto text-mono-label text-text-muted">
                 {matchedDongs.toLocaleString()}개 동에서
               </span>
             ) : null}
@@ -245,7 +246,7 @@ function RangeField({
           {formatter(valueMin)} ~ {formatter(valueMax)}
         </span>
       </legend>
-      <div className="explore__range-inputs">
+      <div className="flex flex-col gap-2">
         <input
           type="range"
           min={min}
@@ -257,6 +258,7 @@ function RangeField({
             onChange(Math.min(v, valueMax - step), valueMax);
           }}
           aria-label={`${title} 최솟값`}
+          className={RANGE_INPUT_CLASS}
         />
         <input
           type="range"
@@ -269,6 +271,7 @@ function RangeField({
             onChange(valueMin, Math.max(v, valueMin + step));
           }}
           aria-label={`${title} 최댓값`}
+          className={RANGE_INPUT_CLASS}
         />
       </div>
     </fieldset>

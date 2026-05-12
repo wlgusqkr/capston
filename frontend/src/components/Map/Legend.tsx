@@ -34,11 +34,11 @@ export default function Legend({ mode = 'match' }: LegendProps) {
         {startLabel}
       </span>
       <div className="flex w-[var(--legend-bar-w)] h-[var(--legend-bar-h)] rounded-full overflow-hidden" role="presentation">
-        <span className="flex-1 bg-[var(--heatmap-1)]" />
-        <span className="flex-1 bg-[var(--heatmap-2)]" />
-        <span className="flex-1 bg-[var(--heatmap-3)]" />
-        <span className="flex-1 bg-[var(--heatmap-4)]" />
-        <span className="flex-1 bg-[var(--heatmap-5)]" />
+        <span className="flex-1 bg-heatmap-1" />
+        <span className="flex-1 bg-heatmap-2" />
+        <span className="flex-1 bg-heatmap-3" />
+        <span className="flex-1 bg-heatmap-4" />
+        <span className="flex-1 bg-heatmap-5" />
       </div>
       <span
         key={`end-${mode}`}

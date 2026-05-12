@@ -161,6 +161,8 @@ export const CHART_COLORS = {
   danok: '#6b7280',
   /** 오피스텔 (officetel) — Accent. */
   officetel: '#ff7759',
+  /** 아파트 (apt) — Purple. 자취 4종과 구별되는 보라 계열. */
+  apt: '#8b5cf6',
   /** Generic bar fill — Secondary for deposit bands. */
   bar: '#4C4C4C',
   /** Axis tick / label color — Text Muted. */

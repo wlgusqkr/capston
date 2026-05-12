@@ -19,7 +19,7 @@ const thumbClasses = [
   '[&::-webkit-slider-thumb]:rounded-full',
   '[&::-webkit-slider-thumb]:bg-surface',
   '[&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-solid [&::-webkit-slider-thumb]:border-secondary',
-  '[&::-webkit-slider-thumb]:[-mt-2]',
+  '[&::-webkit-slider-thumb]:-mt-[8px]',
   '[&::-webkit-slider-thumb]:cursor-pointer',
   '[&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:duration-[120ms] [&::-webkit-slider-thumb]:ease-out',
   'hover:[&::-webkit-slider-thumb]:scale-105',
@@ -85,7 +85,7 @@ const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
         ref={ref}
         id={inputId}
         type="range"
-        className={`appearance-none w-full h-6 bg-transparent m-0 cursor-pointer disabled:cursor-not-allowed focus:outline-none ${trackClasses} ${thumbClasses}`}
+        className={`ui-slider-track appearance-none w-full h-6 bg-transparent m-0 cursor-pointer disabled:cursor-not-allowed focus:outline-none ${trackClasses} ${thumbClasses}`}
         min={min}
         max={max}
         step={step}

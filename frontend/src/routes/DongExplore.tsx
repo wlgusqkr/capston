@@ -52,7 +52,7 @@ const DEAL_TYPE_FILL: Record<ExploreDealType, string> = {
   dagagu: CHART_COLORS.dagagu,
   danok: CHART_COLORS.danok,
   officetel: CHART_COLORS.officetel,
-  apt: '#8b5cf6',
+  apt: CHART_COLORS.apt,
 };
 
 const SORT_OPTIONS: Array<{ value: ExploreSort; label: string }> = [

@@ -36,8 +36,11 @@
 ### Tailwind 유틸리티 예시
 `bg-primary`, `text-text-muted`, `border-divider`, `rounded-card`, `shadow-floating`, `text-caption`, `text-mono-label`
 
+### 토큰 추가
+- **Disabled**: --color-disabled (#A1A1AA) — Button disabled 상태용
+
 ### 프리미티브 (ui/)
-Button, Card, Badge, Score, MetricBar, Input, Select, Slider, Modal, Tooltip — 10개 완성.
+Button, Card, Badge, Chip, Score, MetricBar, Input, Select, Slider, Modal, Tooltip — 11개 완성.
 
 ### 쇼케이스
 `/design-system` 라우트. 모든 토큰 + 프리미티브 시각 확인.
@@ -74,3 +77,21 @@ Django + DRF + GeoDjango. 9개 앱, 28개 모델, 18개 API 엔드포인트.
 ## Data (휴면)
 
 426개 행정동, 740만 거래, 53만 상점, 800만 버스혼잡 데이터 적재 완료.
+
+## QA Notes
+
+마지막 리뷰: 2026-05-12 (커밋 6a11a69 Tailwind 전환 후 사이드바/패널 CSS 깨짐 검토)
+
+### 해결 완료
+- explore__chip/radio/range-inputs CSS 누락 → Chip 프리미티브 + 인라인 Tailwind 전환
+- Slider thumb 정렬 버그 → [-mt-2] (무효 문법) → -mt-[8px] (20px thumb, 4px track 기준 정중앙)
+- Slider track gradient를 .ui-slider-track 클래스로 스코프 (필터 레인지에 50% 채우기 노출 방지)
+- Button disabled hex #A1A1AA → --color-disabled 토큰 추가
+- Legend bg-[var(--heatmap-N)] → bg-heatmap-N 토큰 유틸리티로 전환
+- DongExplore apt 차트 색상 → CHART_COLORS.apt로 통합
+- MatchFilterPanel/MatchKpiCard/KernelScorePanel/CriteriaPanel 임의 px값 → 토큰 전환
+- TransactionPanel 닫기 버튼 transition-all → transition-colors 통일
+
+### 잔여 관찰
+- CriteriaPanel 닫기 버튼 text-[20px]: 정확 매핑 토큰 없음 (feature-heading 22px 근사). 시각 차이 미미하여 유지.
+- CompareChip의 중복 bg-/border- 클래스: Tailwind JIT 우선순위에 의존. 동작 정상이나 코드 정리 권장.

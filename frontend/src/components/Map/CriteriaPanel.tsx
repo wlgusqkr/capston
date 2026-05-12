@@ -67,7 +67,7 @@ export default function CriteriaPanel({
         <span className="text-text-muted tabular">
           {filterCount > 0 ? `(${filterCount})` : ''}
         </span>
-        <span className="text-text-muted text-[12px]" aria-hidden="true">
+        <span className="text-text-muted text-micro" aria-hidden="true">
           ▾
         </span>
       </button>

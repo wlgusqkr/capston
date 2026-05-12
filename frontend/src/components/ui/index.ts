@@ -18,6 +18,9 @@ export type { CardProps, CardVariant, CardPadding } from './Card';
 export { default as Badge } from './Badge';
 export type { BadgeProps, BadgeVariant, BadgeSize } from './Badge';
 
+export { default as Chip } from './Chip';
+export type { ChipProps } from './Chip';
+
 export { default as Score } from './Score';
 export type { ScoreProps, ScoreSize } from './Score';
 

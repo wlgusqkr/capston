@@ -83,7 +83,7 @@ export default function TransactionPanel({
           </div>
           <button
             type="button"
-            className="w-8 h-8 rounded-md border border-transparent bg-transparent text-text-muted text-feature-heading leading-none cursor-pointer shrink-0 transition-all duration-[120ms] ease-out inline-flex items-center justify-center hover:bg-surface-alt hover:text-text focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2"
+            className="w-8 h-8 rounded-md border border-transparent bg-transparent text-text-muted text-feature-heading leading-none cursor-pointer shrink-0 transition-colors duration-[120ms] ease-out inline-flex items-center justify-center hover:bg-surface-alt hover:text-text focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2"
             aria-label="패널 닫기"
             onClick={onClose}
           >

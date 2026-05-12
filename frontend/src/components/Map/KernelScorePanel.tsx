@@ -373,7 +373,7 @@ function NearestRow({ item }: { item: NearestFacility }) {
   const emoji = CATEGORY_EMOJI[item.category] ?? '📍';
   return (
     <li className="grid grid-cols-[24px_1fr_auto] items-baseline gap-2 py-3 border-b border-border text-body-base tracking-normal">
-      <span className="text-[16px] leading-none" aria-hidden="true">
+      <span className="text-body-base leading-none" aria-hidden="true">
         {emoji}
       </span>
       <span className="min-w-0 text-text inline-flex items-baseline flex-wrap gap-0 overflow-hidden">

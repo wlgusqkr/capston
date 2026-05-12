@@ -51,7 +51,7 @@ export default function MatchKpiCard({ slug, filters }: MatchKpiCardProps) {
       ) : (
         <>
           <div className="flex items-baseline gap-1">
-            <span className="text-[28px] font-semibold text-text leading-[1.1] tabular">
+            <span className="text-card-heading font-semibold text-text leading-[1.1] tabular">
               {data.count.toLocaleString()}
             </span>
             <span className="text-body-base text-text-subtle">건</span>
@@ -60,7 +60,7 @@ export default function MatchKpiCard({ slug, filters }: MatchKpiCardProps) {
           <dl className="grid grid-cols-2 gap-3 m-0 pt-2 border-t border-divider">
             <div className="flex flex-col gap-1 m-0">
               <dt className="text-caption text-text-subtle m-0">평균 환산월세</dt>
-              <dd className="text-[18px] font-semibold text-text m-0 tabular">
+              <dd className="text-body-large font-semibold text-text m-0 tabular">
                 {data.avg_converted_rent != null
                   ? `${data.avg_converted_rent}만원`
                   : '-'}
@@ -68,7 +68,7 @@ export default function MatchKpiCard({ slug, filters }: MatchKpiCardProps) {
             </div>
             <div className="flex flex-col gap-1 m-0">
               <dt className="text-caption text-text-subtle m-0">평균 보증금</dt>
-              <dd className="text-[18px] font-semibold text-text m-0 tabular">
+              <dd className="text-body-large font-semibold text-text m-0 tabular">
                 {data.avg_deposit != null
                   ? `${data.avg_deposit.toLocaleString()}만원`
                   : '-'}

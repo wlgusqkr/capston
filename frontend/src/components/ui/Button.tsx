@@ -59,7 +59,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
     fullWidth ? 'w-full' : '',
     fullWidth && variant === 'secondary' ? 'min-h-[44px]' : '',
     loading ? 'opacity-80' : '',
-    'disabled:cursor-not-allowed disabled:opacity-100 disabled:bg-[#A1A1AA] disabled:text-surface disabled:border-[#A1A1AA]',
+    'disabled:cursor-not-allowed disabled:opacity-100 disabled:bg-disabled disabled:text-surface disabled:border-disabled',
     'focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2',
     className ?? '',
   ]
