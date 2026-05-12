@@ -5,9 +5,21 @@
 모든 시크릿/환경 의존 값은 .env로부터 django-environ을 통해 로드한다.
 """
 
+import os
 from pathlib import Path
 
 import environ
+
+# ---------------------------------------------------------------------------
+# Windows GeoDjango: GDAL 종속 DLL을 찾을 수 있도록 검색 경로 등록
+# ---------------------------------------------------------------------------
+if os.name == "nt":
+    _gdal_dir = r"C:\Program Files\GDAL"
+    if os.path.isdir(_gdal_dir):
+        os.environ["PATH"] = _gdal_dir + os.pathsep + os.environ.get("PATH", "")
+        os.environ.setdefault("PROJ_LIB", os.path.join(_gdal_dir, "projlib"))
+        if hasattr(os, "add_dll_directory"):
+            os.add_dll_directory(_gdal_dir)
 
 # ---------------------------------------------------------------------------
 # Paths

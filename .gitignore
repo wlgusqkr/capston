@@ -101,3 +101,5 @@ backend/data/cache/
 .gstack-design-audit/
 .gstack-design-audit-deep/
 /site/
+backend/.claude/settings.local.json
+.claude/settings.local.json
