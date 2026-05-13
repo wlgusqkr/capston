@@ -224,9 +224,17 @@ export interface DongPopulationResponse {
 /** Single metric value within the gu-metrics response. */
 export interface GuMetricValue {
   value: number | null;
+  /** ISO date 'YYYY-MM-DD'. metric_code별로 적재 주기가 달라 응답에 코드별 date가 들어온다. */
+  date?: string | null;
   name: string;
   unit: string;
   category: string;
+}
+
+/** Seoul average row in gu-metrics response. */
+export interface SeoulAvgValue {
+  value: number | null;
+  date?: string | null;
 }
 
 /** Response of GET /api/dongs/:slug/gu-metrics. */
@@ -234,9 +242,12 @@ export interface DongGuMetricsResponse {
   dong: { slug: string; name: string; gu: string };
   gu_code: string;
   gu_name: string;
-  date: string | null;
+  /** Deprecated — top-level date removed in 2026-05-13 backend update.
+   *  Each metric carries its own date now (metrics[code].date). Kept optional
+   *  for backwards-compat only; new code should reference per-metric dates. */
+  date?: string | null;
   metrics: Record<string, GuMetricValue>;
-  seoul_avg: Record<string, { value: number | null }>;
+  seoul_avg: Record<string, SeoulAvgValue>;
 }
 
 // -------- Explore (Phase 4.8 — 자취 시세 BI 대시보드) --------------------

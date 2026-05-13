@@ -29,9 +29,10 @@ import {
   ZAxis,
 } from 'recharts';
 
+import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
 import { CHART_COLORS } from '@/lib/colors';
-import type { DongDetail } from '@/types/api';
+import type { DongDetail, DongGuMetricsResponse } from '@/types/api';
 
 type DealTypeKey = 'villa' | 'dagagu' | 'danok' | 'officetel';
 
@@ -61,9 +62,16 @@ const LABEL_STYLE = { color: 'var(--color-text)' };
 interface RealEstateSectionProps {
   realEstate: DongDetail['real_estate'];
   slug: string;
+  guMetrics?: DongGuMetricsResponse;
 }
 
-export default function RealEstateSection({ realEstate, slug }: RealEstateSectionProps) {
+/** Format ISO date "YYYY-MM-DD" → "YYYY년 기준". */
+function formatMetricDate(date: string | null | undefined): string {
+  if (!date) return '';
+  return `${date.slice(0, 4)}년 기준`;
+}
+
+export default function RealEstateSection({ realEstate, slug, guMetrics }: RealEstateSectionProps) {
   const trend = realEstate.monthly_trend;
 
   // Housing type distribution from type_avg (count per type)
@@ -95,8 +103,84 @@ export default function RealEstateSection({ realEstate, slug }: RealEstateSectio
     monthly: b.avg_monthly_rent,
   }));
 
+  // B5. 지가 변동률
+  const landPriceChange = guMetrics?.metrics['LAND_PRICE_CHANGE_RATE']?.value ?? null;
+  const seoulLandPriceChange = guMetrics?.seoul_avg['LAND_PRICE_CHANGE_RATE']?.value ?? null;
+  const landPriceDate = formatMetricDate(guMetrics?.metrics['LAND_PRICE_CHANGE_RATE']?.date);
+
+  // B6. 주택 수
+  const housingCount = guMetrics?.metrics['HOUSING_COUNT']?.value ?? null;
+  const seoulHousingCount = guMetrics?.seoul_avg['HOUSING_COUNT']?.value ?? null;
+  const housingDate = formatMetricDate(guMetrics?.metrics['HOUSING_COUNT']?.date);
+
   return (
     <div className="flex flex-col gap-5">
+      {/* B5+B6 KPI row — gu-level real estate signals */}
+      {guMetrics && (landPriceChange != null || housingCount != null) && (
+        <div className="grid grid-cols-2 gap-5">
+          {/* B5. 지가 변동률 */}
+          <Card padding="md">
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-caption m-0 text-text-subtle">지가 변동률</p>
+              <Badge variant="neutral" size="sm">
+                {guMetrics.gu_name} 단위
+              </Badge>
+            </div>
+            {landPriceChange != null ? (
+              <>
+                <p
+                  className={`tabular m-0 text-card-heading font-semibold leading-[1.1] ${
+                    landPriceChange >= 0 ? 'text-success' : 'text-danger'
+                  }`}
+                >
+                  {landPriceChange >= 0 ? '▲' : '▼'}
+                  {Math.abs(landPriceChange).toFixed(2)}%
+                </p>
+                {seoulLandPriceChange != null && (
+                  <p className="m-0 mt-1 text-caption text-text-muted">
+                    서울 {seoulLandPriceChange >= 0 ? '+' : ''}
+                    {seoulLandPriceChange.toFixed(2)}%
+                  </p>
+                )}
+                {landPriceDate && (
+                  <p className="m-0 mt-1 text-caption text-text-subtle">{landPriceDate}</p>
+                )}
+              </>
+            ) : (
+              <p className="m-0 text-caption text-text-muted">데이터가 없습니다</p>
+            )}
+          </Card>
+
+          {/* B6. 주택 수 */}
+          <Card padding="md">
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-caption m-0 text-text-subtle">주택 수</p>
+              <Badge variant="neutral" size="sm">
+                {guMetrics.gu_name} 단위
+              </Badge>
+            </div>
+            {housingCount != null ? (
+              <>
+                <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
+                  {Math.round(housingCount).toLocaleString()}
+                  <span className="ml-1 text-body-base font-medium text-text-muted">호</span>
+                </p>
+                {seoulHousingCount != null && (
+                  <p className="m-0 mt-1 text-caption text-text-muted">
+                    서울 {Math.round(seoulHousingCount).toLocaleString()}호
+                  </p>
+                )}
+                {housingDate && (
+                  <p className="m-0 mt-1 text-caption text-text-subtle">{housingDate}</p>
+                )}
+              </>
+            ) : (
+              <p className="m-0 text-caption text-text-muted">데이터가 없습니다</p>
+            )}
+          </Card>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-5">
         {/* 1. Monthly trend line chart */}
         <Card padding="lg">

@@ -89,11 +89,13 @@ Button, Card, Badge, Chip, Score, MetricBar, Input, Select, Slider, Modal, Toolt
 - **TransitSection** (`components/Dashboard/sections/TransitSection.tsx`) — 지하철 TOP3 + 버스 통계 + placeholder 위젯
 
 ### 신규 컴포넌트 (Phase 2)
-- **PopulationSection** (`components/Dashboard/sections/PopulationSection.tsx`) — 남녀 비율 도넛 + 인구 추이 AreaChart + 청년 비율 카드 (구 단위) + 1인 가구 추정 도넛
-- **SafetyEconomySection** (`components/Dashboard/sections/SafetyEconomySection.tsx`) — 안전 등급 6분야 레이더 + 교통사고 통계/바 + 녹지/GRDP/화재 MetricCard (구 단위)
+- **PopulationSection** (`components/Dashboard/sections/PopulationSection.tsx`) — 남녀 비율 도넛 + 인구 추이 AreaChart + 청년 비율 카드 (구 단위, POP_YOUTH_19_34÷POP_TOTAL_YOUTH_BASE 계산) + **평균 연령 카드 (B1: 전체/남/여 칩)** + **고령 인구 비율 도넛 (B2: POP_ELDERLY_RATIO)** + 1인 가구 추정 도넛
+- **SafetyEconomySection** (`components/Dashboard/sections/SafetyEconomySection.tsx`) — 안전 등급 6분야 레이더 (TRAFFIC/CRIME/FIRE/DISEASE/LIFE/SUICIDE, 종합 평균 텍스트) + 교통사고 통계 (ACC_TOTAL_COUNT/INJURY/DRUNK/HITRUN, 비율 계산) + **교통문화지수 레이더 (B3)** + GRDP 총액+1인당 + 녹지비율/1인당녹지/화재 MetricCard. 모든 카드에 metric date 푸터.
+- **TransitSection** (`components/Dashboard/sections/TransitSection.tsx`) — 지하철 TOP3 + 버스 통계 + **1인당 차량 등록 KPI (B4: VEHICLE_REGISTERED÷POP_RESIDENT, 보행 친화도 시그널)** + placeholder 위젯 (혼잡도/동 성격)
+- **RealEstateSection** (`components/Dashboard/sections/RealEstateSection.tsx`) — **지가 변동률 (B5: LAND_PRICE_CHANGE_RATE)** + **주택 수 (B6: HOUSING_COUNT)** KPI 행 추가, 그 아래 기존 4개 Recharts 차트
 - **useDongPopulation** (`hooks/useDongs.ts`) — /api/dongs/:slug/population 훅 (staleTime 10min)
 - **useDongGuMetrics** (`hooks/useDongs.ts`) — /api/dongs/:slug/gu-metrics 훅 (staleTime 5min)
-- **DongPopulationResponse, DongGuMetricsResponse** (`types/api.ts`) — Phase 2 API 타입
+- **DongPopulationResponse, DongGuMetricsResponse, GuMetricValue.date, SeoulAvgValue** (`types/api.ts`) — Phase 2 API 타입. gu-metrics 응답이 35종으로 확장되어 metric_code별 date 필드 추가, top-level date는 optional로 deprecated.
 
 ### 신규 컴포넌트 (Phase 3)
 - **PopularitySection** (`components/Dashboard/sections/PopularitySection.tsx`) — 서울 자취 TOP 10 리스트 (현재 동 하이라이트) + 학교별 TOP 5 (KERNEL_SCHOOL_OPTIONS Select, 현재는 종합 점수 폴백) + 인근 비슷한 동 카드 3장 (similarity_pct + 비교하기 링크). 동 클릭 → handleDongChange (대시보드 내 전환).
@@ -113,7 +115,7 @@ Button, Card, Badge, Chip, Score, MetricBar, Input, Select, Slider, Modal, Toolt
 
 ### 빌드
 - CSS: 73KB (18KB gz)
-- JS main: 984KB (293KB gz), Dashboard chunk: 108KB (28KB gz) — Phase 3 +8KB
+- JS main: 984KB (293KB gz), Dashboard chunk: 119KB (29.7KB gz) — Phase 4 D/E 확장 +11KB (35종 gu-metric 위젯)
 - tsc + vite build 통과
 
 ### 알려진 이슈
@@ -222,3 +224,18 @@ PostgreSQL `DISTINCT ON (metric_code) ORDER BY metric_code, date DESC`로 35종 
 - Phase 3 PopularitySection '비슷한 동' 카드: absolute-button + 내부 Link(stopPropagation) sibling 구조로 a11y 유효. outline-offset이 음수(-2px)라 outline이 카드 안쪽에 그려짐 (의도된 디자인이면 유지).
 - Phase 3 useCountup이 KpiCard와 사실상 같은 로직 (easeOutCubic, 1.2s default) -- hooks/useCountup.ts로 추출 권장.
 - Phase 3 Badge size='sm' 내부에서 text-mono-label 사용 (Badge.tsx:32). globals.css에서 --font-mono를 Pretendard로 오버라이드해 시각 일관성은 유지되나 토큰 정리 차원에서 Badge sm을 text-caption-tight 등으로 교체 검토.
+
+### Phase 4 QA (2026-05-13 — metric 35종 데이터 확장 + 새 위젯 7개)
+- Verdict: **PASS WITH NOTES**. 블로커 없음.
+- 검사 통과: hex 하드코딩 0 (Dashboard 범위), `bg-[/text-[/border-[` arbitrary value 0, localStorage/sessionStorage 0, font-size px 0, `: any` 0, mono-label/font-mono 0, bg-surface-alt 0 (Dashboard 범위), 새 .css 파일 0, MainMap/Map/* 변경 0. tsc + vite build 통과 (Dashboard chunk 119KB).
+- types/api.ts: 기존 `date: string | null` → `date?: string | null` (optional)로 deprecated, `GuMetricValue.date` / `SeoulAvgValue` 신설. 프론트 전역에 `guMetrics.date` 잔존 0건 확인.
+- 새 토큰 사용: `--color-info-soft`/`--color-danger-soft`/`--color-primary-soft`/`--color-cat-*` 모두 globals.css에 존재. 미정의 토큰 참조 없음.
+- Section A·C·D·E 모두 `text-feature-heading leading-[1.3] font-semibold` h3, TOOLTIP_STYLE, MetricCard 푸터 패턴 일관.
+- 관찰 (note-level):
+  - SafetyEconomySection 교통사고 카드의 내부 KPI 숫자(총 발생건수/부상자수)가 `text-feature-heading`(22px) — 다른 KPI 위치(card-heading 28px)와 사이즈 다름. 2열 좁은 그리드 안 sub-KPI라 의도된 다운사이즈로 보임.
+  - accBarColors가 `CATEGORY_COLORS.realestate`(amber)+`CATEGORY_COLORS.safety`(red) 조합. realestate 토큰을 'warning' 의미로 재활용 — CHART_COLORS에 warning swatch 부재로 인한 우회. 차후 차트용 warning 토큰 도입 검토.
+  - PopulationSection 평균연령 카드의 색 로직 `meanAgeDiff <= 0 ? success : danger` — '서울보다 젊으면 좋음'으로 단정. 학생 타겟에선 합리적이나 의견성 derivation.
+  - PopulationSection `singleHouseholdPct` = round((2 - avgPersonsPerHousehold) * 100)는 거친 추정. 카드 하단에 "추정값" 주석 있어 OK이나 SPEC 통계와 다를 수 있음.
+  - greenRatio 계산 `AREA_GREEN / (AREA_GREEN + AREA_URBAN)` — 도시면적이 총면적을 포함하는지 별개인지 메트릭 카탈로그 정의 미확인. 결과값 자체는 합리적 범위로 보이나 정의 검증 권장.
+  - GRDP 단위 변환: `백만원 → 조원(÷1,000,000)` 표기. `--unit` 응답 필드를 무시하고 클라이언트가 단위 결정 — 단위 변경 시 양쪽 동기화 필요.
+  - vehiclePerCapita Card padding이 `md`, B5/B6 RealEstate KPI도 `padding="md"`. 기존 Phase 2 MetricCard/KpiCard는 `padding="lg"` 또는 inline 패딩(p-4). 의도된 컴팩트 KPI면 OK이나 시각적으로 살짝 얕음.

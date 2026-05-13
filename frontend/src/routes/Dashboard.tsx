@@ -108,7 +108,7 @@ export default function Dashboard() {
                   부동산 시세
                 </h2>
               </div>
-              <RealEstateSection realEstate={detail.real_estate} slug={dongSlug} />
+              <RealEstateSection realEstate={detail.real_estate} slug={dongSlug} guMetrics={guMetrics} />
             </Card>
           </section>
         )}
@@ -148,7 +148,7 @@ export default function Dashboard() {
                   교통
                 </h2>
               </div>
-              <TransitSection transit={detail.transit} />
+              <TransitSection transit={detail.transit} guMetrics={guMetrics} />
             </Card>
           </section>
         )}
@@ -175,7 +175,7 @@ export default function Dashboard() {
         )}
 
         {/* Section E: Safety & Economy */}
-        {guMetrics && guMetrics.date && (
+        {guMetrics && (
           <section aria-labelledby="section-safety">
             <Card padding="lg">
               <div className="flex items-center gap-3 mb-4">

@@ -3,16 +3,25 @@
 // Widgets:
 //   1. Nearest subway stations TOP 3 (card list with line colors)
 //   2. Bus stats (stop_count, route_count) as big number cards
-//   3. Time-of-day congestion (placeholder — API not yet available)
-//   4. Dong personality estimate (placeholder — depends on congestion)
+//   3. Per-capita vehicle registration KPI (gu_metric — B4)
+//   4. Time-of-day congestion (placeholder — API not yet available)
+//   5. Dong personality estimate (placeholder — depends on congestion)
 //
-// Data: DongDetail.transit
+// Data: DongDetail.transit + DongGuMetricsResponse (optional)
 
+import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
-import type { DongDetail } from '@/types/api';
+import type { DongDetail, DongGuMetricsResponse } from '@/types/api';
 
 interface TransitSectionProps {
   transit: DongDetail['transit'];
+  guMetrics?: DongGuMetricsResponse;
+}
+
+/** Format ISO date "YYYY-MM-DD" → "YYYY년 기준". */
+function formatMetricDate(date: string | null | undefined): string {
+  if (!date) return '';
+  return `${date.slice(0, 4)}년 기준`;
 }
 
 /** Map subway line string to CSS variable name for line color. */
@@ -26,9 +35,29 @@ function lineColor(line: string): string {
   return 'var(--color-text-muted)';
 }
 
-export default function TransitSection({ transit }: TransitSectionProps) {
+export default function TransitSection({ transit, guMetrics }: TransitSectionProps) {
   const stations = transit.nearest_stations;
   const bus = transit.bus;
+
+  // B4. 1인당 차량 등록 (보행 친화도 시그널)
+  const vehicleRegistered = guMetrics?.metrics['VEHICLE_REGISTERED']?.value ?? null;
+  const popResident = guMetrics?.metrics['POP_RESIDENT']?.value ?? null;
+  const seoulVehicleRegistered = guMetrics?.seoul_avg['VEHICLE_REGISTERED']?.value ?? null;
+  const seoulPopResident = guMetrics?.seoul_avg['POP_RESIDENT']?.value ?? null;
+
+  const vehiclePerCapita =
+    vehicleRegistered != null && popResident != null && popResident > 0
+      ? vehicleRegistered / popResident
+      : null;
+  const seoulVehiclePerCapita =
+    seoulVehicleRegistered != null && seoulPopResident != null && seoulPopResident > 0
+      ? seoulVehicleRegistered / seoulPopResident
+      : null;
+  const vehicleDiff =
+    vehiclePerCapita != null && seoulVehiclePerCapita != null
+      ? vehiclePerCapita - seoulVehiclePerCapita
+      : null;
+  const vehicleDate = formatMetricDate(guMetrics?.metrics['VEHICLE_REGISTERED']?.date);
 
   return (
     <div className="flex flex-col gap-5">
@@ -113,14 +142,55 @@ export default function TransitSection({ transit }: TransitSectionProps) {
         </div>
       </div>
 
-      {/* 3. Congestion placeholder */}
+      {/* B4. 1인당 차량 등록 (보행 친화도 시그널) */}
+      {vehiclePerCapita != null && guMetrics && (
+        <Card padding="md">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <p className="text-caption m-0 text-text-subtle">
+                  1인당 차량 등록
+                </p>
+                <Badge variant="neutral" size="sm">
+                  {guMetrics.gu_name} 단위
+                </Badge>
+              </div>
+              <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
+                {vehiclePerCapita.toFixed(2)}
+                <span className="ml-1 text-body-base font-medium text-text-muted">대 / 명</span>
+              </p>
+              {seoulVehiclePerCapita != null && vehicleDiff != null && (
+                <p className="m-0 text-caption text-text-muted">
+                  서울 {seoulVehiclePerCapita.toFixed(2)}대
+                  <span
+                    className={`ml-1 font-medium ${
+                      vehicleDiff <= 0 ? 'text-success' : 'text-danger'
+                    }`}
+                  >
+                    {vehicleDiff >= 0 ? '▲' : '▼'}
+                    {Math.abs(vehicleDiff).toFixed(2)}대
+                  </span>
+                </p>
+              )}
+              {vehicleDate && (
+                <p className="m-0 text-caption text-text-subtle">{vehicleDate}</p>
+              )}
+            </div>
+            <p className="m-0 text-caption text-text-subtle max-w-[200px] text-right">
+              값이 낮을수록 보행 친화적인 동네입니다
+            </p>
+          </div>
+        </Card>
+      )}
+
+      {/* 4. Congestion placeholder */}
       <Card padding="lg" className="opacity-60">
         <div className="flex items-center justify-center h-[80px] text-text-muted text-caption">
           시간대 혼잡도 위젯은 데이터 준비 중입니다
         </div>
       </Card>
 
-      {/* 4. Dong personality placeholder */}
+      {/* 5. Dong personality placeholder */}
       <Card padding="lg" className="opacity-60">
         <div className="flex items-center justify-center h-[80px] text-text-muted text-caption">
           동 성격 추정 위젯은 데이터 준비 중입니다
