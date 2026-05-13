@@ -4,7 +4,7 @@
 
 ## Project Status
 
-- **단계**: Phase 2 완료 — 대시보드 확장 위젯 (인구·사회/안전·환경·경제)
+- **단계**: Phase 3 완료 — 대시보드 사용자 데이터 위젯 (인기 차트 / 자취생 리뷰)
 - **활성 모드**: 프론트엔드 + 디자인 집중. 백엔드/데이터는 휴면.
 - **데이터**: 426개 행정동 실데이터 적재 완료 (RDS ETL).
 - **CSS 방식**: Tailwind CSS v4 (globals.css 단일 파일). 컴포넌트별 CSS 파일 없음.
@@ -63,7 +63,7 @@ Button, Card, Badge, Chip, Score, MetricBar, Input, Select, Slider, Modal, Toolt
 | 경로 | 컴포넌트 | 상태 |
 |---|---|---|
 | `/` | MainMap | 완성 |
-| `/dashboard` | Dashboard (lazy) | Phase 2 위젯 (A~E 섹션) |
+| `/dashboard` | Dashboard (lazy) | Phase 3 위젯 (A~G 섹션) |
 | `/dong/:slug` | DongDetail | 완성 |
 | `/dong/:slug/explore` | DongExplore | 완성 |
 | `/compare` | Compare | 완성 |
@@ -95,6 +95,11 @@ Button, Card, Badge, Chip, Score, MetricBar, Input, Select, Slider, Modal, Toolt
 - **useDongGuMetrics** (`hooks/useDongs.ts`) — /api/dongs/:slug/gu-metrics 훅 (staleTime 5min)
 - **DongPopulationResponse, DongGuMetricsResponse** (`types/api.ts`) — Phase 2 API 타입
 
+### 신규 컴포넌트 (Phase 3)
+- **PopularitySection** (`components/Dashboard/sections/PopularitySection.tsx`) — 서울 자취 TOP 10 리스트 (현재 동 하이라이트) + 학교별 TOP 5 (KERNEL_SCHOOL_OPTIONS Select, 현재는 종합 점수 폴백) + 인근 비슷한 동 카드 3장 (similarity_pct + 비교하기 링크). 동 클릭 → handleDongChange (대시보드 내 전환).
+- **ReviewDashboardSection** (`components/Dashboard/sections/ReviewDashboardSection.tsx`) — 평균 별점 (avg_rating 카운트업 + 별 5개) + 리뷰 수 + 대표 리뷰 가로 스크롤 카드 (line-clamp-2) + 리뷰 작성 CTA (Detail 페이지로 이동).
+- Dashboard.tsx: LATER_SECTIONS / PlaceholderSection / CategoryKey import 제거. Section F·G 추가 (둘 다 environment 색).
+
 ### TopNav 변경
 - 네비 탭 (맵/대시보드) NavLink 추가 (pill 스타일, active 상태 bg-primary-soft)
 - 컨텍스트 타이틀 (동네 비교, 동 이름 등) 탭 우측 middot 구분
@@ -107,8 +112,8 @@ Button, Card, Badge, Chip, Score, MetricBar, Input, Select, Slider, Modal, Toolt
 - AiSidePanel 글로벌 배치 (AppContent 바깥, AiPanelProvider 안)
 
 ### 빌드
-- CSS: 72KB (18KB gz)
-- JS main: 984KB (293KB gz), Dashboard chunk: 99KB (26KB gz)
+- CSS: 73KB (18KB gz)
+- JS main: 984KB (293KB gz), Dashboard chunk: 108KB (28KB gz) — Phase 3 +8KB
 - tsc + vite build 통과
 
 ### 알려진 이슈
@@ -143,30 +148,31 @@ Django + DRF + GeoDjango. 9개 앱, 28개 모델, 20개 API 엔드포인트.
 
 ## QA Notes
 
-마지막 리뷰: 2026-05-13 (대시보드 폰트 통일 + 그린워시 배경 + 바차트 색상)
+마지막 리뷰: 2026-05-13 (Phase 3 -- 인기 차트 + 자취생 리뷰)
 
 ### 해결 완료
-- explore__chip/radio/range-inputs CSS 누락 → Chip 프리미티브 + 인라인 Tailwind 전환
-- Slider thumb 정렬 버그 → [-mt-2] (무효 문법) → -mt-[8px] (20px thumb, 4px track 기준 정중앙)
+- explore__chip/radio/range-inputs CSS 누락 -> Chip 프리미티브 + 인라인 Tailwind 전환
+- Slider thumb 정렬 버그 -> [-mt-2] (무효 문법) -> -mt-[8px] (20px thumb, 4px track 기준 정중앙)
 - Slider track gradient를 .ui-slider-track 클래스로 스코프 (필터 레인지에 50% 채우기 노출 방지)
-- Button disabled hex #A1A1AA → --color-disabled 토큰 추가
-- Legend bg-[var(--heatmap-N)] → bg-heatmap-N 토큰 유틸리티로 전환
-- DongExplore apt 차트 색상 → CHART_COLORS.apt로 통합
-- MatchFilterPanel/MatchKpiCard/KernelScorePanel/CriteriaPanel 임의 px값 → 토큰 전환
-- TransactionPanel 닫기 버튼 transition-all → transition-colors 통일
-- AiSidePanel text-white → text-surface 통일 (Phase 0 QA)
-- Dashboard setSearchParams 렌더 중 호출 → useEffect로 이동 (Phase 0 QA)
-- Dashboard CategoryKey 로컬 재정의 → lib/colors.ts에서 import (Phase 0 QA)
-- KpiCard text-[28px] → text-card-heading 토큰 전환 (Phase 1 QA)
-- TransitSection text-[32px] → text-card-heading 토큰 전환 (Phase 1 QA)
+- Button disabled hex #A1A1AA -> --color-disabled 토큰 추가
+- Legend bg-[var(--heatmap-N)] -> bg-heatmap-N 토큰 유틸리티로 전환
+- DongExplore apt 차트 색상 -> CHART_COLORS.apt로 통합
+- MatchFilterPanel/MatchKpiCard/KernelScorePanel/CriteriaPanel 임의 px값 -> 토큰 전환
+- TransactionPanel 닫기 버튼 transition-all -> transition-colors 통일
+- AiSidePanel text-white -> text-surface 통일 (Phase 0 QA)
+- Dashboard setSearchParams 렌더 중 호출 -> useEffect로 이동 (Phase 0 QA)
+- Dashboard CategoryKey 로컬 재정의 -> lib/colors.ts에서 import (Phase 0 QA)
+- KpiCard text-[28px] -> text-card-heading 토큰 전환 (Phase 1 QA)
+- TransitSection text-[32px] -> text-card-heading 토큰 전환 (Phase 1 QA)
 - Dashboard 섹션 aria-labelledby 추가 (Phase 1 QA)
-- Phase 2 hardcoded hex → CATEGORY_COLORS 상수 전환 (Phase 2 QA)
-- Phase 2 tooltipStyle → TOOLTIP_STYLE (Phase 1 패턴 통일) (Phase 2 QA)
-- Phase 2 h3 text-body-base → text-feature-heading 통일 (Phase 2 QA)
-- Dashboard mono-label / text-mono-label → text-caption 전환, font-mono → Pretendard 통일
-- Dashboard bg-surface-alt → bg-primary-soft 그린워시 전환 (메인 배경, 스켈레톤, 게이지 뱃지, 테이블 헤더)
-- CHART_COLORS.bar #4C4C4C → #059669 (primary green) 전환
-- --font-sans, --font-mono → Pretendard 오버라이드 (프로젝트 전체 적용)
+- Phase 2 hardcoded hex -> CATEGORY_COLORS 상수 전환 (Phase 2 QA)
+- Phase 2 tooltipStyle -> TOOLTIP_STYLE (Phase 1 패턴 통일) (Phase 2 QA)
+- Phase 2 h3 text-body-base -> text-feature-heading 통일 (Phase 2 QA)
+- Dashboard mono-label / text-mono-label -> text-caption 전환, font-mono -> Pretendard 통일
+- Dashboard bg-surface-alt -> bg-primary-soft 그린워시 전환 (메인 배경, 스켈레톤, 게이지 뱃지, 테이블 헤더)
+- CHART_COLORS.bar #4C4C4C -> #059669 (primary green) 전환
+- --font-sans, --font-mono -> Pretendard 오버라이드 (프로젝트 전체 적용)
+- Phase 3 QA: PopularitySection / ReviewDashboardSection / Dashboard.tsx PASS WITH NOTES -- 토큰 위반/any/storage/신규 CSS 없음. Stars는 기존 Detail/ReviewSection 패턴 재사용. (Phase 3 QA)
 
 ### 잔여 관찰
 - CriteriaPanel 닫기 버튼 text-[20px]: 정확 매핑 토큰 없음 (feature-heading 22px 근사). 시각 차이 미미하여 유지.
@@ -180,3 +186,9 @@ Django + DRF + GeoDjango. 9개 앱, 28개 모델, 20개 API 엔드포인트.
 - PopulationSection GENDER_COLORS 내 #EC4899 하드코딩: colors.ts 상수 추출 권장.
 - CHART_COLORS.bar 변경이 DongExplore 탐색 페이지에도 전파됨 (의도적이면 OK).
 - KPI 위젯 세로 높이가 컨텐츠 대비 넉넉함: 추후 KPI 추가 시 리사이징 예정.
+- Phase 3 PopularitySection: 학교별 TOP 5가 선택된 학교와 무관하게 종합 점수 폴백 (UI 안내 카피 있음). 학교별 ranking API 신규 endpoint 필요 (SPEC 9.3 5번). 별도 세션에서 사용자 보고 후 호출.
+- Phase 3 F/G 섹션 헤더 색이 모두 --color-cat-environment (민트) -- 별도 카테고리 토큰 미정. 시각 식별 약함, popularity/community 토큰 추가 검토.
+- Phase 3 ReviewDashboardSection Stars text-secondary (#4C4C4C 회색): Detail/ReviewSection과 동일 패턴 의도적 재사용. SPEC 1.3 '알록달록' 톤과 다소 충돌 -- amber/warning 전환 시 두 군데 동시 변경 필요.
+- Phase 3 PopularitySection '비슷한 동' 카드: absolute-button + 내부 Link(stopPropagation) sibling 구조로 a11y 유효. outline-offset이 음수(-2px)라 outline이 카드 안쪽에 그려짐 (의도된 디자인이면 유지).
+- Phase 3 useCountup이 KpiCard와 사실상 같은 로직 (easeOutCubic, 1.2s default) -- hooks/useCountup.ts로 추출 권장.
+- Phase 3 Badge size='sm' 내부에서 text-mono-label 사용 (Badge.tsx:32). globals.css에서 --font-mono를 Pretendard로 오버라이드해 시각 일관성은 유지되나 토큰 정리 차원에서 Badge sm을 text-caption-tight 등으로 교체 검토.

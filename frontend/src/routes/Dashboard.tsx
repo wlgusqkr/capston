@@ -1,4 +1,6 @@
-// Dashboard — Phase 2: KPI + MiniMap + Sections A~E.
+// Dashboard — Phase 3: KPI + MiniMap + Sections A~G.
+//   A: Real Estate, B: Amenities, C: Transit, D: Population, E: Safety/Economy
+//   F: Popularity (TOP10 / school / similar), G: Reviews (avg / cards / CTA)
 //
 // URL-driven dong selection via ?dong= search param. Default: "중구-필동".
 
@@ -9,46 +11,17 @@ import DashboardHeader from '@/components/Dashboard/DashboardHeader';
 import DashboardMiniMap from '@/components/Dashboard/DashboardMiniMap';
 import KpiRow from '@/components/Dashboard/KpiRow';
 import AmenitySection from '@/components/Dashboard/sections/AmenitySection';
+import PopularitySection from '@/components/Dashboard/sections/PopularitySection';
 import PopulationSection from '@/components/Dashboard/sections/PopulationSection';
 import RealEstateSection from '@/components/Dashboard/sections/RealEstateSection';
+import ReviewDashboardSection from '@/components/Dashboard/sections/ReviewDashboardSection';
 import SafetyEconomySection from '@/components/Dashboard/sections/SafetyEconomySection';
 import TransitSection from '@/components/Dashboard/sections/TransitSection';
 import Card from '@/components/ui/Card';
 import { useDongDetail, useDongGuMetrics, useDongPopulation, useDongScores, useDongSummary } from '@/hooks/useDongs';
-import type { CategoryKey } from '@/lib/colors';
 import { DEFAULT_WEIGHTS } from '@/types/api';
 
 const DEFAULT_DONG_SLUG = '중구-필동';
-
-interface SectionDef {
-  title: string;
-  category: CategoryKey;
-}
-
-/** Placeholder sections for Phase 3+ (charts, reviews). */
-const LATER_SECTIONS: SectionDef[] = [
-  { title: '인기 차트', category: 'environment' },
-  { title: '자취생 리뷰', category: 'environment' },
-];
-
-function PlaceholderSection({ title, category }: SectionDef) {
-  return (
-    <Card padding="lg">
-      <div className="flex items-center gap-3 mb-4">
-        <div
-          className="w-1 h-6 rounded-full"
-          style={{ backgroundColor: `var(--color-cat-${category})` }}
-        />
-        <h2 className="text-feature-heading font-semibold text-text">
-          {title}
-        </h2>
-      </div>
-      <div className="flex items-center justify-center h-[200px] text-text-muted text-caption">
-        위젯이 곧 추가됩니다
-      </div>
-    </Card>
-  );
-}
 
 export default function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -219,6 +192,47 @@ export default function Dashboard() {
           </section>
         )}
 
+        {/* Section F: Popularity (인기 차트) */}
+        <section aria-labelledby="section-popularity">
+          <Card padding="lg">
+            <div className="flex items-center gap-3 mb-4">
+              <div
+                className="w-1 h-6 rounded-full"
+                style={{ backgroundColor: 'var(--color-cat-environment)' }}
+              />
+              <h2 id="section-popularity" className="text-feature-heading font-semibold text-text">
+                인기 차트
+              </h2>
+            </div>
+            <PopularitySection
+              allDongs={dongs}
+              similarDongs={detail?.similar_dongs}
+              currentSlug={dongSlug}
+              onDongSelect={handleDongChange}
+            />
+          </Card>
+        </section>
+
+        {/* Section G: Reviews (자취생 리뷰) */}
+        <section aria-labelledby="section-reviews">
+          <Card padding="lg">
+            <div className="flex items-center gap-3 mb-4">
+              <div
+                className="w-1 h-6 rounded-full"
+                style={{ backgroundColor: 'var(--color-cat-environment)' }}
+              />
+              <h2 id="section-reviews" className="text-feature-heading font-semibold text-text">
+                자취생 리뷰
+              </h2>
+            </div>
+            <ReviewDashboardSection
+              reviews={detail?.reviews}
+              dongSlug={dongSlug}
+              dongName={selectedDong?.name}
+            />
+          </Card>
+        </section>
+
         {/* Loading skeleton for sections when detail is loading */}
         {detailLoading && !detail && (
           <>
@@ -233,15 +247,6 @@ export default function Dashboard() {
             ))}
           </>
         )}
-
-        {/* Placeholder sections for Phase 3+ */}
-        {LATER_SECTIONS.map((section) => (
-          <PlaceholderSection
-            key={section.title}
-            title={section.title}
-            category={section.category}
-          />
-        ))}
       </div>
     </main>
   );

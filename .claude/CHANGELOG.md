@@ -1,6 +1,8 @@
 # 변경 이력
 
 ## 2026-05-13
+- **Phase 3**: 인기 차트 섹션 (서울 TOP10 / 학교별 TOP5 / 인근 비슷한 동, 동 전환 + 비교하기 링크)
+- **Phase 3**: 자취생 리뷰 섹션 (평균 별점 카운트업 + 별 5개 / 대표 리뷰 가로 스크롤 / 리뷰 작성 CTA)
 - 대시보드 전체 폰트 Pretendard 통일 (mono-label → text-caption, --font-mono 오버라이드)
 - 대시보드 배경색 grey → green-wash 전환 (bg-surface-alt → bg-primary-soft)
 - 보증금 대역 막대그래프 색상 primary-green으로 변경
