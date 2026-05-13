@@ -4,7 +4,7 @@
 
 ## Project Status
 
-- **단계**: 디자인 시스템 v2 + Tailwind CSS 전환 완료
+- **단계**: Phase 1 완료 — 대시보드 핵심 위젯 (KPI/미니맵/부동산/편의시설/교통)
 - **활성 모드**: 프론트엔드 + 디자인 집중. 백엔드/데이터는 휴면.
 - **데이터**: 426개 행정동 실데이터 적재 완료 (RDS ETL).
 - **CSS 방식**: Tailwind CSS v4 (globals.css 단일 파일). 컴포넌트별 CSS 파일 없음.
@@ -62,7 +62,7 @@ Button, Card, Badge, Chip, Score, MetricBar, Input, Select, Slider, Modal, Toolt
 | 경로 | 컴포넌트 | 상태 |
 |---|---|---|
 | `/` | MainMap | 완성 |
-| `/dashboard` | Dashboard (lazy) | Phase 0 셸 |
+| `/dashboard` | Dashboard (lazy) | Phase 1 위젯 |
 | `/dong/:slug` | DongDetail | 완성 |
 | `/dong/:slug/explore` | DongExplore | 완성 |
 | `/compare` | Compare | 완성 |
@@ -76,8 +76,16 @@ Button, Card, Badge, Chip, Score, MetricBar, Input, Select, Slider, Modal, Toolt
 - **AiPanelContext** (`contexts/AiPanelContext.tsx`) — AI 사이드 패널 열림/닫힘 전역 상태
 - **AiSidePanel** (`components/Layout/AiSidePanel.tsx`) — 고정 우측 슬라이드인 AI 채팅 셸 (mock 응답)
 - **DongSelector** (`components/Dashboard/DongSelector.tsx`) — 426동 검색 콤보박스, 구별 그룹핑
-- **DashboardHeader** (`components/Dashboard/DashboardHeader.tsx`) — 동 셀렉터 + 선택된 동 표시
-- **Dashboard** (`routes/Dashboard.tsx`) — URL 기반 동 선택 (?dong=), 7개 섹션 placeholder
+- **DashboardHeader** (`components/Dashboard/DashboardHeader.tsx`) — 동 셀렉터 + 선택된 동 + 요약 텍스트
+- **Dashboard** (`routes/Dashboard.tsx`) — URL 기반 동 선택 (?dong=), Phase 1 위젯 조립
+
+### 신규 컴포넌트 (Phase 1)
+- **KpiCard** (`components/Dashboard/KpiCard.tsx`) — 카운트업 애니메이션 + 미니차트 슬롯
+- **KpiRow** (`components/Dashboard/KpiRow.tsx`) — KPI 4칸 그리드 (환산월세/보증금/거래건수/안전게이지)
+- **DashboardMiniMap** (`components/Dashboard/DashboardMiniMap.tsx`) — Leaflet 미니맵 + 히트맵 레이어 토글 6종 + 컬러칩 범례 + 확장 버튼
+- **RealEstateSection** (`components/Dashboard/sections/RealEstateSection.tsx`) — 4개 Recharts 차트 (라인/도넛/산점도/바)
+- **AmenitySection** (`components/Dashboard/sections/AmenitySection.tsx`) — 카테고리별 테이블 + 자취생 필수시설 칩 그리드
+- **TransitSection** (`components/Dashboard/sections/TransitSection.tsx`) — 지하철 TOP3 + 버스 통계 + placeholder 위젯
 
 ### TopNav 변경
 - 네비 탭 (맵/대시보드) NavLink 추가 (pill 스타일, active 상태 bg-primary-soft)
@@ -91,15 +99,25 @@ Button, Card, Badge, Chip, Score, MetricBar, Input, Select, Slider, Modal, Toolt
 - AiSidePanel 글로벌 배치 (AppContent 바깥, AiPanelProvider 안)
 
 ### 빌드
-- CSS: 71KB (17KB gz)
-- JS main: 980KB (292KB gz), Dashboard chunk: 6KB (3KB gz)
+- CSS: 72KB (18KB gz)
+- JS main: 982KB (292KB gz), Dashboard chunk: 47KB (15KB gz)
 - tsc + vite build 통과
 
 ### 알려진 이슈
 - weights가 글로벌 Context로 미승격
-- Recharts tooltip formatter 타입 에러 5건 (기능 영향 없음)
 - 모바일 반응형 미구현 (데스크톱 전용)
 - DongSelector가 useDongScores(DEFAULT_WEIGHTS)로 목록 페치 (실 weights 무관)
+- 미니맵 히트맵 레이어: composite 외 레이어(rent/activity/youth/studio/safety)는 per-layer score API 미구현으로 composite 점수 폴백
+
+### Phase 1 미구현 API 필요 목록
+| 위젯 | 필요 데이터 | 비고 |
+|---|---|---|
+| KPI 인구/가구 수 | `adong_population` | 신규 endpoint 필요 |
+| KPI 자취촌 지수 | 파생 지표 | 신규 endpoint 또는 프론트 계산 |
+| 섹션 C 시간대 혼잡도 | `subway_congestion`, `bus_congestion` | 신규 endpoint 필요 |
+| 섹션 C 동 성격 추정 | 혼잡도 패턴 분석 | 혼잡도 데이터 의존 |
+| 공원·도서관 | `park`, `library` | 신규 endpoint 필요 |
+| 미니맵 per-layer scores | rent/activity/youth/studio/safety 개별 점수 | DongScore 확장 또는 신규 endpoint |
 
 ## Backend (휴면)
 

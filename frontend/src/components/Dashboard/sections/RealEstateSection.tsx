@@ -1,0 +1,394 @@
+// Dashboard RealEstateSection -- SPEC 4.4 Section A.
+//
+// 4 Recharts widgets in a 2x2 grid:
+//   1. Monthly avg converted rent trend (LineChart, 4 series)
+//   2. Housing type distribution (PieChart donut)
+//   3. Area x converted rent scatter (ScatterChart)
+//   4. Deposit band distribution (BarChart)
+//
+// Data: DongDetail.real_estate
+// Does NOT modify Detail/RealEstateSection.tsx.
+
+import { Link } from 'react-router-dom';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Scatter,
+  ScatterChart,
+  Tooltip,
+  XAxis,
+  YAxis,
+  ZAxis,
+} from 'recharts';
+
+import Card from '@/components/ui/Card';
+import { CHART_COLORS } from '@/lib/colors';
+import type { DongDetail } from '@/types/api';
+
+type DealTypeKey = 'villa' | 'dagagu' | 'danok' | 'officetel';
+
+const DEAL_TYPE_FILL: Record<DealTypeKey, string> = {
+  villa: CHART_COLORS.villa,
+  dagagu: CHART_COLORS.dagagu,
+  danok: CHART_COLORS.danok,
+  officetel: CHART_COLORS.officetel,
+};
+
+const DEAL_TYPE_LABEL: Record<DealTypeKey, string> = {
+  villa: '연립다세대',
+  dagagu: '다가구',
+  danok: '단독',
+  officetel: '오피스텔',
+};
+
+const TOOLTIP_STYLE = {
+  background: 'var(--color-surface)',
+  border: '1px solid var(--color-border)',
+  borderRadius: 'var(--radius-md)',
+  fontSize: 'var(--font-caption-size)',
+};
+
+const LABEL_STYLE = { color: 'var(--color-text)' };
+
+interface RealEstateSectionProps {
+  realEstate: DongDetail['real_estate'];
+  slug: string;
+}
+
+export default function RealEstateSection({ realEstate, slug }: RealEstateSectionProps) {
+  const trend = realEstate.monthly_trend;
+
+  // Housing type distribution from type_avg (count per type)
+  const typeDistribution = realEstate.type_avg
+    .filter((t) => t.count > 0)
+    .map((t) => ({
+      name: t.label,
+      value: t.count,
+      dealType: t.deal_type as DealTypeKey,
+    }));
+
+  // Scatter by type
+  const scatterByType: Record<DealTypeKey, Array<{ x: number; y: number }>> = {
+    villa: [],
+    dagagu: [],
+    danok: [],
+    officetel: [],
+  };
+  for (const p of realEstate.scatter) {
+    scatterByType[p.deal_type as DealTypeKey]?.push({
+      x: p.area_m2,
+      y: p.converted_rent,
+    });
+  }
+
+  // Deposit bands
+  const bands = realEstate.deposit_band_avg.map((b) => ({
+    band: formatBandLabel(b.band),
+    monthly: b.avg_monthly_rent,
+  }));
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="grid grid-cols-2 gap-5">
+        {/* 1. Monthly trend line chart */}
+        <Card padding="lg">
+          <h3 className="m-0 mb-1 text-feature-heading leading-[1.3] font-semibold text-text">
+            월별 평균 환산월세 추이
+          </h3>
+          <p className="mono-label m-0 mb-3 text-text-subtle">
+            국토부 RTMS · 자취 4종 (만원)
+          </p>
+          <div className="w-full h-[220px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={trend} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
+                <CartesianGrid stroke={CHART_COLORS.grid} strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="month"
+                  stroke={CHART_COLORS.axis}
+                  tick={{ fill: CHART_COLORS.axis, fontSize: 11 }}
+                  tickMargin={6}
+                />
+                <YAxis
+                  stroke={CHART_COLORS.axis}
+                  tick={{ fill: CHART_COLORS.axis, fontSize: 11 }}
+                  tickMargin={6}
+                  width={40}
+                />
+                <Tooltip
+                  contentStyle={TOOLTIP_STYLE}
+                  labelStyle={LABEL_STYLE}
+                  formatter={(value) => {
+                    const v = value as number | null | undefined;
+                    return v == null
+                      ? (['-', ''] as [string, string])
+                      : ([`${v}만원`, ''] as [string, string]);
+                  }}
+                />
+                <Legend
+                  verticalAlign="top"
+                  height={28}
+                  iconType="circle"
+                  iconSize={8}
+                  wrapperStyle={{ fontSize: 'var(--font-caption-size)' }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="villa"
+                  name="연립다세대"
+                  stroke={CHART_COLORS.villa}
+                  strokeWidth={2}
+                  connectNulls={false}
+                  dot={{ r: 2 }}
+                  activeDot={{ r: 4 }}
+                  isAnimationActive={true}
+                  animationDuration={1200}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="dagagu"
+                  name="다가구"
+                  stroke={CHART_COLORS.dagagu}
+                  strokeWidth={2}
+                  connectNulls={false}
+                  dot={{ r: 2 }}
+                  activeDot={{ r: 4 }}
+                  isAnimationActive={true}
+                  animationDuration={1200}
+                  animationBegin={100}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="danok"
+                  name="단독"
+                  stroke={CHART_COLORS.danok}
+                  strokeWidth={2}
+                  connectNulls={false}
+                  dot={{ r: 2 }}
+                  activeDot={{ r: 4 }}
+                  isAnimationActive={true}
+                  animationDuration={1200}
+                  animationBegin={200}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="officetel"
+                  name="오피스텔"
+                  stroke={CHART_COLORS.officetel}
+                  strokeWidth={2}
+                  connectNulls={false}
+                  dot={{ r: 2 }}
+                  activeDot={{ r: 4 }}
+                  isAnimationActive={true}
+                  animationDuration={1200}
+                  animationBegin={300}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        {/* 2. Housing type distribution donut */}
+        <Card padding="lg">
+          <h3 className="m-0 mb-1 text-feature-heading leading-[1.3] font-semibold text-text">
+            주택 유형 분포
+          </h3>
+          <p className="mono-label m-0 mb-3 text-text-subtle">
+            최근 6개월 자취 거래 기준
+          </p>
+          <div className="w-full h-[220px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={typeDistribution}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius="45%"
+                  outerRadius="75%"
+                  paddingAngle={2}
+                  isAnimationActive={true}
+                  animationBegin={200}
+                  animationDuration={1000}
+                >
+                  {typeDistribution.map((entry, i) => (
+                    <Cell
+                      key={i}
+                      fill={DEAL_TYPE_FILL[entry.dealType] ?? CHART_COLORS.bar}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={TOOLTIP_STYLE}
+                  formatter={(value, name) => {
+                    const v = typeof value === 'number' ? value : Number(value);
+                    return [`${v}건`, String(name)] as [string, string];
+                  }}
+                />
+                <Legend
+                  verticalAlign="bottom"
+                  height={28}
+                  iconType="circle"
+                  iconSize={8}
+                  wrapperStyle={{ fontSize: 'var(--font-caption-size)' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        {/* 3. Area x converted rent scatter */}
+        <Card padding="lg">
+          <h3 className="m-0 mb-1 text-feature-heading leading-[1.3] font-semibold text-text">
+            면적 x 환산월세 분포
+          </h3>
+          <p className="mono-label m-0 mb-3 text-text-subtle">
+            최근 6개월 · 점 하나 = 거래 1건
+          </p>
+          <div className="w-full h-[220px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <ScatterChart margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
+                <CartesianGrid stroke={CHART_COLORS.grid} strokeDasharray="3 3" />
+                <XAxis
+                  type="number"
+                  dataKey="x"
+                  name="면적"
+                  unit="㎡"
+                  stroke={CHART_COLORS.axis}
+                  tick={{ fill: CHART_COLORS.axis, fontSize: 11 }}
+                  tickMargin={6}
+                />
+                <YAxis
+                  type="number"
+                  dataKey="y"
+                  name="환산월세"
+                  unit="만원"
+                  stroke={CHART_COLORS.axis}
+                  tick={{ fill: CHART_COLORS.axis, fontSize: 11 }}
+                  tickMargin={6}
+                  width={48}
+                />
+                <ZAxis range={[24, 24]} />
+                <Tooltip
+                  cursor={{ strokeDasharray: '3 3' }}
+                  contentStyle={TOOLTIP_STYLE}
+                  labelStyle={LABEL_STYLE}
+                  formatter={(value, name) => {
+                    const v = typeof value === 'number' ? value : Number(value);
+                    const n = String(name);
+                    if (n === '면적') return [`${v}㎡`, n] as [string, string];
+                    if (n === '환산월세') return [`${v}만원`, n] as [string, string];
+                    return [`${v}`, n] as [string, string];
+                  }}
+                />
+                <Legend
+                  verticalAlign="top"
+                  height={28}
+                  iconType="circle"
+                  iconSize={8}
+                  wrapperStyle={{ fontSize: 'var(--font-caption-size)' }}
+                />
+                {(Object.keys(scatterByType) as DealTypeKey[]).map((type) => (
+                  <Scatter
+                    key={type}
+                    name={DEAL_TYPE_LABEL[type]}
+                    data={scatterByType[type]}
+                    fill={DEAL_TYPE_FILL[type]}
+                    fillOpacity={0.7}
+                    isAnimationActive={true}
+                    animationDuration={800}
+                    animationBegin={300}
+                  />
+                ))}
+              </ScatterChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        {/* 4. Deposit band distribution */}
+        <Card padding="lg">
+          <h3 className="m-0 mb-1 text-feature-heading leading-[1.3] font-semibold text-text">
+            보증금 대역별 평균 월세
+          </h3>
+          <p className="mono-label m-0 mb-3 text-text-subtle">
+            보증금 구간별 평균 월세 (만원)
+          </p>
+          <div className="w-full h-[220px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={bands}
+                layout="vertical"
+                margin={{ top: 8, right: 24, bottom: 0, left: 8 }}
+              >
+                <CartesianGrid stroke={CHART_COLORS.grid} strokeDasharray="3 3" horizontal={false} />
+                <XAxis
+                  type="number"
+                  stroke={CHART_COLORS.axis}
+                  tick={{ fill: CHART_COLORS.axis, fontSize: 11 }}
+                  tickMargin={6}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="band"
+                  stroke={CHART_COLORS.axis}
+                  tick={{ fill: CHART_COLORS.axis, fontSize: 11 }}
+                  width={72}
+                  tickMargin={6}
+                />
+                <Tooltip
+                  contentStyle={TOOLTIP_STYLE}
+                  labelStyle={LABEL_STYLE}
+                  formatter={(value) => {
+                    const v = typeof value === 'number' ? value : Number(value);
+                    return [`${v}만원`, '평균 월세'] as [string, string];
+                  }}
+                />
+                <Bar
+                  dataKey="monthly"
+                  fill={CHART_COLORS.bar}
+                  radius={[0, 4, 4, 0]}
+                  barSize={18}
+                  isAnimationActive={true}
+                  animationDuration={1000}
+                  animationBegin={200}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      </div>
+
+      <Link
+        to={`/dong/${slug}/explore`}
+        className="self-end text-caption text-link hover:underline"
+      >
+        자세한 시세 탐색 →
+      </Link>
+    </div>
+  );
+}
+
+function formatBandLabel(band: string): string {
+  switch (band) {
+    case '0':
+      return '0~500만';
+    case '500':
+      return '500~1000만';
+    case '1000':
+      return '1000~2000만';
+    case '2000':
+      return '2000~3000만';
+    case '3000+':
+      return '3000만+';
+    default:
+      return band;
+  }
+}
