@@ -122,54 +122,60 @@ export default function Dashboard() {
 
         {/* Section A: Real Estate */}
         {detail && (
-          <Card padding="lg">
-            <div className="flex items-center gap-3 mb-4">
-              <div
-                className="w-1 h-6 rounded-full"
-                style={{ backgroundColor: 'var(--color-cat-realestate)' }}
-              />
-              <h2 className="text-feature-heading font-semibold text-text">
-                부동산 시세
-              </h2>
-            </div>
-            <RealEstateSection realEstate={detail.real_estate} slug={dongSlug} />
-          </Card>
+          <section aria-labelledby="section-realestate">
+            <Card padding="lg">
+              <div className="flex items-center gap-3 mb-4">
+                <div
+                  className="w-1 h-6 rounded-full"
+                  style={{ backgroundColor: 'var(--color-cat-realestate)' }}
+                />
+                <h2 id="section-realestate" className="text-feature-heading font-semibold text-text">
+                  부동산 시세
+                </h2>
+              </div>
+              <RealEstateSection realEstate={detail.real_estate} slug={dongSlug} />
+            </Card>
+          </section>
         )}
 
         {/* Section B: Amenities */}
         {detail && (
-          <Card padding="lg">
-            <div className="flex items-center gap-3 mb-4">
-              <div
-                className="w-1 h-6 rounded-full"
-                style={{ backgroundColor: 'var(--color-cat-amenity)' }}
+          <section aria-labelledby="section-amenity">
+            <Card padding="lg">
+              <div className="flex items-center gap-3 mb-4">
+                <div
+                  className="w-1 h-6 rounded-full"
+                  style={{ backgroundColor: 'var(--color-cat-amenity)' }}
+                />
+                <h2 id="section-amenity" className="text-feature-heading font-semibold text-text">
+                  편의시설
+                </h2>
+              </div>
+              <AmenitySection
+                amenities={detail.amenities}
+                allDongs={dongs}
+                currentAmenityScore={selectedDong?.score_amenity ?? 50}
               />
-              <h2 className="text-feature-heading font-semibold text-text">
-                편의시설
-              </h2>
-            </div>
-            <AmenitySection
-              amenities={detail.amenities}
-              allDongs={dongs}
-              currentAmenityScore={selectedDong?.score_amenity ?? 50}
-            />
-          </Card>
+            </Card>
+          </section>
         )}
 
         {/* Section C: Transit */}
         {detail && (
-          <Card padding="lg">
-            <div className="flex items-center gap-3 mb-4">
-              <div
-                className="w-1 h-6 rounded-full"
-                style={{ backgroundColor: 'var(--color-cat-transport)' }}
-              />
-              <h2 className="text-feature-heading font-semibold text-text">
-                교통
-              </h2>
-            </div>
-            <TransitSection transit={detail.transit} />
-          </Card>
+          <section aria-labelledby="section-transit">
+            <Card padding="lg">
+              <div className="flex items-center gap-3 mb-4">
+                <div
+                  className="w-1 h-6 rounded-full"
+                  style={{ backgroundColor: 'var(--color-cat-transport)' }}
+                />
+                <h2 id="section-transit" className="text-feature-heading font-semibold text-text">
+                  교통
+                </h2>
+              </div>
+              <TransitSection transit={detail.transit} />
+            </Card>
+          </section>
         )}
 
         {/* Loading skeleton for sections when detail is loading */}

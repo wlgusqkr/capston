@@ -110,7 +110,7 @@ export default function KpiCard({
     >
       <p className="mono-label m-0 text-text-subtle">{label}</p>
       <div className="flex items-end gap-3">
-        <p className="tabular m-0 text-[28px] font-semibold text-text leading-[1.1]">
+        <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
           {displayValue}
         </p>
         {subValue && (

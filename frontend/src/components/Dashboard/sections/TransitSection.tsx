@@ -98,14 +98,14 @@ export default function TransitSection({ transit }: TransitSectionProps) {
         <div className="flex flex-col gap-5">
           <Card padding="lg">
             <p className="mono-label m-0 mb-2 text-text-subtle">버스 정류장</p>
-            <p className="tabular m-0 text-[32px] font-semibold text-text leading-[1.1]">
+            <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
               {bus.stop_count}
             </p>
             <p className="m-0 mt-1 text-caption text-text-muted">개소</p>
           </Card>
           <Card padding="lg">
             <p className="mono-label m-0 mb-2 text-text-subtle">버스 노선</p>
-            <p className="tabular m-0 text-[32px] font-semibold text-text leading-[1.1]">
+            <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
               {bus.route_count}
             </p>
             <p className="m-0 mt-1 text-caption text-text-muted">개 노선</p>

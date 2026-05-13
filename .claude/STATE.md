@@ -129,7 +129,7 @@ Django + DRF + GeoDjango. 9개 앱, 28개 모델, 18개 API 엔드포인트.
 
 ## QA Notes
 
-마지막 리뷰: 2026-05-13 (Phase 0 대시보드 기반)
+마지막 리뷰: 2026-05-13 (Phase 1 대시보드 핵심 위젯)
 
 ### 해결 완료
 - explore__chip/radio/range-inputs CSS 누락 → Chip 프리미티브 + 인라인 Tailwind 전환
@@ -143,10 +143,16 @@ Django + DRF + GeoDjango. 9개 앱, 28개 모델, 18개 API 엔드포인트.
 - AiSidePanel text-white → text-surface 통일 (Phase 0 QA)
 - Dashboard setSearchParams 렌더 중 호출 → useEffect로 이동 (Phase 0 QA)
 - Dashboard CategoryKey 로컬 재정의 → lib/colors.ts에서 import (Phase 0 QA)
+- KpiCard text-[28px] → text-card-heading 토큰 전환 (Phase 1 QA)
+- TransitSection text-[32px] → text-card-heading 토큰 전환 (Phase 1 QA)
+- Dashboard 섹션 aria-labelledby 추가 (Phase 1 QA)
 
 ### 잔여 관찰
 - CriteriaPanel 닫기 버튼 text-[20px]: 정확 매핑 토큰 없음 (feature-heading 22px 근사). 시각 차이 미미하여 유지.
 - CompareChip의 중복 bg-/border- 클래스: Tailwind JIT 우선순위에 의존. 동작 정상이나 코드 정리 권장.
 - App.tsx + AiSidePanel.tsx: AI 패널 너비 400px이 두 곳에 하드코딩. CSS variable 통합 권장.
-- Card 프리미티브에 shadow-floating 미포함. Phase 1 위젯 구현 시 플로팅 카드 느낌 보강 필요.
+- Card 프리미티브에 shadow-floating 미포함. SPEC 플로팅 카드 느낌 보강 필요.
 - Gauge 쇼케이스(/design-system) 미반영.
+- DashboardMiniMap z-[1000] x3: Leaflet 스태킹 컨텍스트 내 overlay용. modal backdrop z-index와 동일하나 기능 충돌 없음.
+- Dashboard 차트 컨테이너 h-[220px] vs Detail h-[240px]: 대시보드 밀도 높은 레이아웃 의도.
+- Detail/RealEstateSection 로컬 KpiCard과 Dashboard/KpiCard 중복: 향후 통합 권장.
