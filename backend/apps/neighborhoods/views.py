@@ -10,6 +10,10 @@ Dong 관련 뷰.
   → 동네 상세 페이지 (SPEC 6.3)
 - GET /api/compare?slugs=A,B,C[&w_rent=&w_amenity=&w_transit=]
   → 동네 비교 (SPEC 6.4, 최대 3개)
+- GET /api/dongs/<slug>/population
+  → 행정동 인구 시계열 (대시보드 Phase 2)
+- GET /api/dongs/<slug>/gu-metrics
+  → 소속 구의 최신 지표 + 서울 평균 (대시보드 Phase 2)
 """
 
 from __future__ import annotations
@@ -492,4 +496,210 @@ class DongExploreView(APIView):
             raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
 
         data = build_explore_response(dong, request, today=date.today())
+        return Response(data, status=status.HTTP_200_OK)
+
+
+# ---------------------------------------------------------------------------
+# 대시보드 Phase 2 — 인구 시계열 + 구별 지표
+# ---------------------------------------------------------------------------
+
+from django.core.cache import cache
+
+from apps.regions.models import AdongPopulation, Gu
+from apps.metrics.models import GuMetric, Metric, SeoulMetric
+
+
+def _get_dong_or_404(slug: str) -> Dong:
+    """slug로 Dong을 조회. 없으면 404."""
+    try:
+        return Dong.objects.only("id", "slug", "code", "name", "gu").get(slug=slug)
+    except Dong.DoesNotExist as exc:
+        raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
+
+
+def _dong_header(dong: Dong) -> dict:
+    """공통 dong 식별 dict."""
+    return {"slug": dong.slug, "name": dong.name, "gu": dong.gu}
+
+
+@extend_schema(
+    tags=["dongs"],
+    summary="행정동 인구 시계열 (대시보드 Phase 2)",
+    description=(
+        "한 행정동의 인구·세대 시계열 전체를 반환한다. "
+        "latest는 가장 최근 행, trend는 날짜 오름차순 전체."
+    ),
+)
+class DongPopulationView(APIView):
+    """
+    GET /api/dongs/<slug>/population
+
+    응답:
+      {
+        "dong": { "slug": "...", "name": "...", "gu": "..." },
+        "latest": { "date": "...", "total_population": ..., ... },
+        "trend": [ { "date": "...", ... }, ... ]
+      }
+    """
+
+    def get(self, request: Request, slug: str) -> Response:
+        dong = _get_dong_or_404(slug)
+
+        cache_key = f"dong_population:{dong.code}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached, status=status.HTTP_200_OK)
+
+        rows = (
+            AdongPopulation.objects
+            .filter(dong=dong.code)
+            .order_by("date")
+            .values("date", "total_population", "household_count",
+                    "male_population", "female_population")
+        )
+        trend = [
+            {
+                "date": str(r["date"]),
+                "total_population": r["total_population"],
+                "household_count": r["household_count"],
+                "male_population": r["male_population"],
+                "female_population": r["female_population"],
+            }
+            for r in rows
+        ]
+
+        latest = trend[-1] if trend else None
+
+        data = {
+            "dong": _dong_header(dong),
+            "latest": latest,
+            "trend": trend,
+        }
+
+        cache.set(cache_key, data, timeout=600)  # 10분 TTL
+        return Response(data, status=status.HTTP_200_OK)
+
+
+@extend_schema(
+    tags=["dongs"],
+    summary="소속 구의 최신 지표 + 서울 평균 (대시보드 Phase 2)",
+    description=(
+        "한 행정동이 속한 자치구의 최신 GuMetric 35종을 metric_code별로 반환하고, "
+        "동일 metric_code에 대한 SeoulMetric 평균도 함께 반환한다."
+    ),
+)
+class DongGuMetricsView(APIView):
+    """
+    GET /api/dongs/<slug>/gu-metrics
+
+    응답:
+      {
+        "dong": { "slug": "...", "name": "...", "gu": "..." },
+        "gu_code": "1114000000",
+        "gu_name": "중구",
+        "date": "2024-12-31",
+        "metrics": {
+          "SAFETY_GRADE_MEAN": { "value": 3.2, "name": "...", "unit": "점", "category": "안전" },
+          ...
+        },
+        "seoul_avg": {
+          "SAFETY_GRADE_MEAN": { "value": 3.5 },
+          ...
+        }
+      }
+    """
+
+    def get(self, request: Request, slug: str) -> Response:
+        dong = _get_dong_or_404(slug)
+
+        # Dong.gu는 CharField (예: "중구"). Gu.name도 동일 값.
+        gu = Gu.objects.filter(name=dong.gu).first()
+        if gu is None:
+            raise NotFound({"detail": f"구를 찾을 수 없습니다: {dong.gu}"})
+
+        cache_key = f"dong_gu_metrics:{gu.gu_code}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            # cached 데이터에 dong 헤더만 교체 (같은 구의 다른 동에서도 재사용)
+            result = {**cached, "dong": _dong_header(dong)}
+            return Response(result, status=status.HTTP_200_OK)
+
+        # 메트릭 메타 사전 로드 (35행)
+        metric_meta = {
+            m.metric_code: m
+            for m in Metric.objects.all()
+        }
+
+        # 최신 날짜의 GuMetric 조회
+        latest_gm = (
+            GuMetric.objects
+            .filter(gu=gu)
+            .order_by("-date")
+            .values_list("date", flat=True)
+            .first()
+        )
+        if latest_gm is None:
+            data = {
+                "dong": _dong_header(dong),
+                "gu_code": gu.gu_code,
+                "gu_name": gu.name,
+                "date": None,
+                "metrics": {},
+                "seoul_avg": {},
+            }
+            return Response(data, status=status.HTTP_200_OK)
+
+        gu_rows = (
+            GuMetric.objects
+            .filter(gu=gu, date=latest_gm)
+            .select_related("metric")
+            .only("metric__metric_code", "value")
+        )
+        metrics_dict = {}
+        for row in gu_rows:
+            mc = row.metric_id  # metric_code (PK)
+            meta = metric_meta.get(mc)
+            metrics_dict[mc] = {
+                "value": float(row.value) if row.value is not None else None,
+                "name": meta.name if meta else mc,
+                "unit": meta.unit if meta else "",
+                "category": meta.category if meta else "",
+            }
+
+        # SeoulMetric — 같은 날짜를 먼저 시도, 없으면 각 metric_code 최신
+        seoul_rows = (
+            SeoulMetric.objects
+            .filter(date=latest_gm)
+            .only("metric_id", "value")
+        )
+        seoul_avg = {}
+        for row in seoul_rows:
+            seoul_avg[row.metric_id] = {
+                "value": float(row.value) if row.value is not None else None,
+            }
+
+        # 같은 날짜에 서울 데이터가 없는 metric은 가장 최근 값으로 폴백
+        missing_codes = set(metrics_dict.keys()) - set(seoul_avg.keys())
+        if missing_codes:
+            for mc in missing_codes:
+                fallback = (
+                    SeoulMetric.objects
+                    .filter(metric_id=mc)
+                    .order_by("-date")
+                    .values_list("value", flat=True)
+                    .first()
+                )
+                if fallback is not None:
+                    seoul_avg[mc] = {"value": float(fallback)}
+
+        cacheable = {
+            "gu_code": gu.gu_code,
+            "gu_name": gu.name,
+            "date": str(latest_gm),
+            "metrics": metrics_dict,
+            "seoul_avg": seoul_avg,
+        }
+        cache.set(cache_key, cacheable, timeout=300)  # 5분 TTL
+
+        data = {**cacheable, "dong": _dong_header(dong)}
         return Response(data, status=status.HTTP_200_OK)

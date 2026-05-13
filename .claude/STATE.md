@@ -112,7 +112,8 @@ Button, Card, Badge, Chip, Score, MetricBar, Input, Select, Slider, Modal, Toolt
 ### Phase 1 미구현 API 필요 목록
 | 위젯 | 필요 데이터 | 비고 |
 |---|---|---|
-| KPI 인구/가구 수 | `adong_population` | 신규 endpoint 필요 |
+| KPI 인구/가구 수 | `adong_population` | **구현 완료** (`/api/dongs/<slug>/population`) |
+| 구 지표 (안전/환경 등) | `gu_metric` + `seoul_metric` | **구현 완료** (`/api/dongs/<slug>/gu-metrics`) |
 | KPI 자취촌 지수 | 파생 지표 | 신규 endpoint 또는 프론트 계산 |
 | 섹션 C 시간대 혼잡도 | `subway_congestion`, `bus_congestion` | 신규 endpoint 필요 |
 | 섹션 C 동 성격 추정 | 혼잡도 패턴 분석 | 혼잡도 데이터 의존 |
@@ -121,7 +122,12 @@ Button, Card, Badge, Chip, Score, MetricBar, Input, Select, Slider, Modal, Toolt
 
 ## Backend (휴면)
 
-Django + DRF + GeoDjango. 9개 앱, 28개 모델, 18개 API 엔드포인트.
+Django + DRF + GeoDjango. 9개 앱, 28개 모델, 20개 API 엔드포인트.
+
+### Phase 2 추가 엔드포인트 (2026-05-13)
+- `GET /api/dongs/<slug>/population` -- AdongPopulation 시계열 (latest + trend). 캐시 10분.
+- `GET /api/dongs/<slug>/gu-metrics` -- 소속 구의 최신 GuMetric 35종 + SeoulMetric 서울 평균. 캐시 5분.
+- 스키마 변경 없음 (마이그레이션 없음). views.py + urls.py만 수정.
 
 ## Data (휴면)
 

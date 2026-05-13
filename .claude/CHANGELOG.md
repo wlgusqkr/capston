@@ -1,6 +1,7 @@
 # 변경 이력
 
 ## 2026-05-13
+- 대시보드용 인구 시계열 API (`/api/dongs/<slug>/population`)와 구별 지표 API (`/api/dongs/<slug>/gu-metrics`) 추가
 - 카테고리 컬러 토큰 6종, 히트맵 레이어 팔레트 5종 (각 5단계), shimmer 키프레임 추가
 - Gauge 원형 게이지 프리미티브 추가 (차오르는 애니메이션)
 - 대시보드 라우트(`/dashboard`) 추가, 동 셀렉터 + 섹션 placeholder 셸 구현
