@@ -582,11 +582,13 @@ class DongPopulationView(APIView):
 
 @extend_schema(
     tags=["dongs"],
-    summary="소속 구의 최신 지표 + 서울 평균 (대시보드 Phase 2)",
+    summary="소속 구의 최신 지표 + 서울 평균 + 25구 순위/평균 (대시보드 Phase 2/5)",
     description=(
         "한 행정동이 속한 자치구의 GuMetric을 metric_code별로 가장 최신 1행씩 반환하고, "
         "동일하게 metric_code별 최신 SeoulMetric도 함께 반환한다. "
-        "metric_code마다 적재 주기·최신 날짜가 다르므로 각 항목의 `date`를 함께 노출한다."
+        "각 metric에는 25개 구 중 본 구의 순위(`rank_in_seoul`), 데이터 보유 구 수(`gu_count`), "
+        "산술 평균(`gu_avg`)이 함께 포함된다. `seoul_avg`는 SeoulMetric raw로 "
+        "서울시 전체 합/대표값 의미 (25구 산술 평균이 아님 — 비교 시 `gu_avg` 사용)."
     ),
 )
 class DongGuMetricsView(APIView):
@@ -605,9 +607,11 @@ class DongGuMetricsView(APIView):
         "gu_code": "...",
         "gu_name": "중구",
         "metrics": {
-          "POP_RESIDENT":     { "value": 117760, "date": "2026-04-01", "name": "...", "unit": "명",  "category": "인구" },
-          "POP_YOUTH_19_34":  { "value": 23456,  "date": "2024-01-01", "name": "...", "unit": "명",  "category": "인구" },
-          "SAFETY_GRADE_FIRE":{ "value": 3,      "date": "2024-01-01", "name": "...", "unit": "등급", "category": "안전" },
+          "POP_RESIDENT":     {
+            "value": 117760, "date": "2026-04-01",
+            "name": "...", "unit": "명",  "category": "인구",
+            "rank_in_seoul": 18, "gu_count": 25, "gu_avg": 378271.6
+          },
           ...
         },
         "seoul_avg": {
@@ -616,8 +620,16 @@ class DongGuMetricsView(APIView):
         }
       }
 
-    프론트 주의: 기존 응답의 top-level `date` 필드는 코드별 `date`로 대체되었다.
-    캐시는 (구 단위) 5분 TTL.
+    프론트 주의:
+    - top-level `date` 필드는 코드별 `date`로 대체됨.
+    - `seoul_avg`는 SeoulMetric raw (서울시 전체 합/대표값)임. "25개 구의 평균"은
+      `metrics[code].gu_avg`를 사용. (SeoulMetric은 의미가 다름 — 라이브 검증 결과
+      합계/대표값이라 25개 구 산술 평균과 일치하지 않음.)
+    - `metrics[code].rank_in_seoul`: 같은 date 기준 25개 구 중 값이 큰 순으로 1위.
+      value=null인 구는 제외하고 rank 부여. 해당 구 value=null이면 null.
+    - `metrics[code].gu_count`: 그 date에 데이터를 가진 구 수 (값 null 제외).
+
+    캐시는 (구 단위) 5분 TTL. 응답 모양이 바뀌어 캐시 키 v2 로 갱신.
     """
 
     def get(self, request: Request, slug: str) -> Response:
@@ -628,7 +640,8 @@ class DongGuMetricsView(APIView):
         if gu is None:
             raise NotFound({"detail": f"구를 찾을 수 없습니다: {dong.gu}"})
 
-        cache_key = f"dong_gu_metrics:{gu.gu_code}"
+        # v2: 응답 모양 변경 (rank_in_seoul/gu_count/gu_avg 추가)
+        cache_key = f"dong_gu_metrics:v2:{gu.gu_code}"
         cached = cache.get(cache_key)
         if cached is not None:
             # cached 데이터에 dong 헤더만 교체 (같은 구의 다른 동에서도 재사용)
@@ -641,28 +654,80 @@ class DongGuMetricsView(APIView):
             for m in Metric.objects.all()
         }
 
-        # (gu, metric_code)별 최신 1행씩 — PostgreSQL DISTINCT ON
+        # (gu, metric_code)별 최신 1행씩 — PostgreSQL DISTINCT ON.
         # ORDER BY metric_code, -date 가 DISTINCT ON 컬럼과 정확히 매칭되어야 한다.
-        gu_rows = (
+        gu_rows = list(
             GuMetric.objects
             .filter(gu=gu)
             .order_by("metric_id", "-date")
             .distinct("metric_id")
             .values("metric_id", "date", "value")
         )
+
+        # 본 구의 (metric_code, date) 쌍을 모아서, 같은 (metric_code, date)에 대해
+        # 25개 구의 값을 한 번에 fetch → rank/gu_avg 계산.
+        # date가 None인 행은 비교 무의미하므로 제외.
+        pairs = [
+            (r["metric_id"], r["date"])
+            for r in gu_rows
+            if r["date"] is not None
+        ]
+
+        # 25개 구 × ~35 metric ≒ 875행 정도. 단일 쿼리로 처리.
+        # metric_id, date IN 조합 — PostgreSQL은 IN 튜플도 지원하지만 ORM 표현이
+        # 까다로워, metric_id IN + date IN 조합으로 over-fetch 후 in-memory 필터.
+        # 코드별 date가 코드마다 다른 한 over-fetch는 코드 수 × date 수 ≒ 작음.
+        if pairs:
+            metric_ids = sorted({mid for mid, _d in pairs})
+            dates = sorted({d for _mid, d in pairs})
+            all_rows = (
+                GuMetric.objects
+                .filter(metric_id__in=metric_ids, date__in=dates)
+                .values("metric_id", "date", "gu_id", "value")
+            )
+            # peers[(metric_id, date)] = [(gu_id, value_float_or_None), ...]
+            peers: dict[tuple, list] = {}
+            for r in all_rows:
+                key = (r["metric_id"], r["date"])
+                v = float(r["value"]) if r["value"] is not None else None
+                peers.setdefault(key, []).append((r["gu_id"], v))
+        else:
+            peers = {}
+
         metrics_dict = {}
         for row in gu_rows:
             mc = row["metric_id"]
             meta = metric_meta.get(mc)
+            v_float = float(row["value"]) if row["value"] is not None else None
+            d_str = str(row["date"]) if row["date"] is not None else None
+
+            rank_in_seoul = None
+            gu_count = 0
+            gu_avg = None
+            if row["date"] is not None:
+                same_day = peers.get((mc, row["date"]), [])
+                non_null_values = [v for (_g, v) in same_day if v is not None]
+                gu_count = len(non_null_values)
+                if non_null_values:
+                    gu_avg = sum(non_null_values) / gu_count
+                if v_float is not None and non_null_values:
+                    # 값이 큰 순으로 1위. 동률은 동일 rank 부여 (1, 2, 2, 4 식).
+                    rank_in_seoul = 1 + sum(
+                        1 for x in non_null_values if x > v_float
+                    )
+
             metrics_dict[mc] = {
-                "value": float(row["value"]) if row["value"] is not None else None,
-                "date": str(row["date"]) if row["date"] is not None else None,
+                "value": v_float,
+                "date": d_str,
                 "name": meta.name if meta else mc,
                 "unit": meta.unit if meta else "",
                 "category": meta.category if meta else "",
+                "rank_in_seoul": rank_in_seoul,
+                "gu_count": gu_count,
+                "gu_avg": gu_avg,
             }
 
-        # SeoulMetric — metric_code별 최신 1행씩 (구와 별개로 독립 적재됨)
+        # SeoulMetric — metric_code별 최신 1행씩 (서울시 전체 합/대표값. 의미 주의)
         seoul_rows = (
             SeoulMetric.objects
             .order_by("metric_id", "-date")
@@ -744,12 +809,15 @@ def _parse_series_params(request: Request) -> tuple[list[str], int]:
 
 @extend_schema(
     tags=["dongs"],
-    summary="구별 지표 시계열 (대시보드 추이 위젯용)",
+    summary="구별 지표 시계열 + 25구 평균선 (대시보드 추이 위젯용)",
     description=(
         "한 행정동이 속한 자치구의 GuMetric을 metric_code별 시계열로 반환한다. "
         "교통사고 추이, 화재 발생 추이, 지가 변동률 시계열 등 추이가 필요한 위젯용. "
         "단일 값(최신 1행)이 필요한 경우 `/gu-metrics`를 사용한다. "
-        "`codes`는 콤마 구분, 1~10개. `years`는 최근 N년 (default 10, 1~20)."
+        "`codes`는 콤마 구분, 1~10개. `years`는 최근 N년 (default 10, 1~20). "
+        "응답에는 본 구 시계열(`series`)과 함께 25개 구 산술 평균 시계열"
+        "(`gu_avg_series`), 가장 최신 시점의 25구 중 순위(`series[code].current_rank`)가 "
+        "포함된다. `seoul_series`는 SeoulMetric raw 그대로 (서울시 전체 합/대표값)."
     ),
     parameters=[
         OpenApiParameter(
@@ -782,19 +850,35 @@ class DongGuMetricsSeriesView(APIView):
             "name": "교통사고 총 발생건수",
             "unit": "건",
             "category": "교통",
-            "points": [ { "date": "2020-01-01", "value": 850.0 }, ... ]
+            "points": [ { "date": "2020-01-01", "value": 850.0 }, ... ],
+            "current_rank": {
+              "rank": 18,
+              "total": 25,
+              "value": 824.0,
+              "date": "2024-01-01"
+            }
           },
           ...
         },
         "seoul_series": {
           "ACC_TOTAL_COUNT": { "points": [...] },
           ...
+        },
+        "gu_avg_series": {
+          "ACC_TOTAL_COUNT": {
+            "points": [ { "date": "2020-01-01", "value": 1092.4 }, ... ]
+          },
+          ...
         }
       }
 
     - 요청한 codes 모두가 응답에 포함된다 (데이터 없으면 points: []).
     - points는 date 오름차순. value가 null이면 그대로 노출 (프론트 connectNulls).
-    - 캐시는 구 단위 5분 TTL.
+    - `current_rank`는 시계열 가장 최신 date 기준 25구 중 본 구의 순위 (값 큰 순 1위).
+      해당 date에 본 구 데이터가 없거나 series가 비면 null.
+    - `gu_avg_series`는 date별 25개 구 산술 평균. value=null인 구는 평균에서 제외.
+      `seoul_series` (SeoulMetric raw = 서울시 전체 합/대표값)와는 의미가 다름.
+    - 캐시는 구 단위 5분 TTL. 응답 모양 변경으로 캐시 키 v2.
     """
 
     def get(self, request: Request, slug: str) -> Response:
@@ -806,8 +890,9 @@ class DongGuMetricsSeriesView(APIView):
             raise NotFound({"detail": f"구를 찾을 수 없습니다: {dong.gu}"})
 
         # 캐시 키: (구, codes, years) 단위. codes는 정렬해서 키 안정화.
+        # v2: 응답에 current_rank / gu_avg_series 추가됨.
         codes_joined = ",".join(sorted(codes))
-        cache_key = f"dong_gu_metrics_series:{gu.gu_code}:{codes_joined}:{years}"
+        cache_key = f"dong_gu_metrics_series:v2:{gu.gu_code}:{codes_joined}:{years}"
         cached = cache.get(cache_key)
         if cached is not None:
             result = {**cached, "dong": _dong_header(dong)}
@@ -823,7 +908,7 @@ class DongGuMetricsSeriesView(APIView):
             for m in Metric.objects.filter(metric_code__in=codes)
         }
 
-        # 구 시계열 — (metric_code, date) 오름차순
+        # 본 구의 시계열 — (metric_code, date) 오름차순
         gu_rows = (
             GuMetric.objects
             .filter(gu=gu, metric_id__in=codes, date__gte=cutoff)
@@ -839,6 +924,7 @@ class DongGuMetricsSeriesView(APIView):
                 "unit": meta.unit if meta else "",
                 "category": meta.category if meta else "",
                 "points": [],
+                "current_rank": None,
             }
         for row in gu_rows:
             code = row["metric_id"]
@@ -851,7 +937,71 @@ class DongGuMetricsSeriesView(APIView):
                 "value": float(row["value"]) if row["value"] is not None else None,
             })
 
-        # 서울 시계열 — 코드별 fallback 없음. 빈 배열은 빈 채로 둠.
+        # 25개 구 전체 시계열 (gu_avg_series + current_rank 계산용).
+        # 25 구 × 코드 수 × 연 단위 ~10년 ≒ 수천 행. 단일 쿼리.
+        all_rows = (
+            GuMetric.objects
+            .filter(metric_id__in=codes, date__gte=cutoff)
+            .values("metric_id", "date", "gu_id", "value")
+        )
+        # bucket[code][date] = [value, ...]  (null 제외)
+        # bucket_with_gu[code][date] = {gu_id: value}  (null 제외, rank 산출용)
+        bucket: dict[str, dict] = {code: {} for code in codes}
+        bucket_with_gu: dict[str, dict] = {code: {} for code in codes}
+        for r in all_rows:
+            code = r["metric_id"]
+            if code not in bucket:
+                continue
+            v = r["value"]
+            if v is None:
+                continue
+            vf = float(v)
+            d = r["date"]
+            bucket[code].setdefault(d, []).append(vf)
+            bucket_with_gu[code].setdefault(d, {})[r["gu_id"]] = vf
+
+        gu_avg_series: dict[str, dict] = {code: {"points": []} for code in codes}
+        for code in codes:
+            by_date = bucket[code]
+            for d in sorted(by_date.keys()):
+                vals = by_date[d]
+                if not vals:
+                    continue
+                gu_avg_series[code]["points"].append({
+                    "date": str(d),
+                    "value": sum(vals) / len(vals),
+                })
+
+        # current_rank — 본 구의 가장 최신 point 기준
+        for code in codes:
+            points = series[code]["points"]
+            # 가장 최신 non-null point 찾기
+            latest_idx = None
+            for i in range(len(points) - 1, -1, -1):
+                if points[i]["value"] is not None and points[i]["date"] is not None:
+                    latest_idx = i
+                    break
+            if latest_idx is None:
+                continue
+            latest = points[latest_idx]
+            # latest["date"]는 문자열 — bucket key는 date 객체. 매칭 위해 변환.
+            try:
+                latest_date_obj = date.fromisoformat(latest["date"])
+            except (TypeError, ValueError):
+                continue
+            peers = bucket[code].get(latest_date_obj, [])
+            if not peers:
+                continue
+            v = float(latest["value"])
+            rank = 1 + sum(1 for x in peers if x > v)
+            series[code]["current_rank"] = {
+                "rank": rank,
+                "total": len(peers),
+                "value": v,
+                "date": latest["date"],
+            }
+
+        # 서울 시계열 — SeoulMetric raw (서울시 전체 합/대표값).
         seoul_rows = (
             SeoulMetric.objects
             .filter(metric_id__in=codes, date__gte=cutoff)
@@ -874,6 +1024,7 @@ class DongGuMetricsSeriesView(APIView):
             "gu_name": gu.name,
             "series": series,
             "seoul_series": seoul_series,
+            "gu_avg_series": gu_avg_series,
         }
         cache.set(cache_key, cacheable, timeout=300)  # 5분 TTL
 

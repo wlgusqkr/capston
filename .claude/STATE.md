@@ -169,9 +169,9 @@ PostgreSQL `DISTINCT ON (metric_code) ORDER BY metric_code, date DESC`로 35종 
   "gu_code":   "11140",
   "gu_name":   "중구",
   "metrics": {
-    "POP_RESIDENT":     { "value": 117760, "date": "2026-04-01", "name": "주민등록인구",     "unit": "명",  "category": "인구" },
-    "POP_YOUTH_19_34":  { "value": 34815,  "date": "2024-01-01", "name": "청년인구_19~34세", "unit": "명",  "category": "인구" },
-    "SAFETY_GRADE_FIRE":{ "value": 5,      "date": "2024-01-01", "name": "지역안전등급_화재",  "unit": "등급", "category": "안전" }
+    "POP_RESIDENT":     { "value": 117760, "date": "2026-04-01", "name": "주민등록인구",     "unit": "명",  "category": "인구", "rank_in_seoul": 18, "gu_count": 25, "gu_avg": 378271.6 },
+    "POP_YOUTH_19_34":  { "value": 34815,  "date": "2024-01-01", "name": "청년인구_19~34세", "unit": "명",  "category": "인구", "rank_in_seoul":  8, "gu_count": 25, "gu_avg":  86275.6 },
+    "SAFETY_GRADE_FIRE":{ "value": 5,      "date": "2024-01-01", "name": "지역안전등급_화재",  "unit": "등급", "category": "안전", "rank_in_seoul":  1, "gu_count": 25, "gu_avg": 4.0 }
   },
   "seoul_avg": {
     "POP_RESIDENT":    { "value": 9456789.0, "date": "2026-04-01" },
@@ -181,6 +181,19 @@ PostgreSQL `DISTINCT ON (metric_code) ORDER BY metric_code, date DESC`로 35종 
 ```
 
 **breaking-ish 변경**: top-level `date` 필드 제거 (코드별 `metrics[code].date` / `seoul_avg[code].date`로 대체). 프론트가 top-level `date`를 참조하지 않는 한 호환.
+
+### Phase 5 추가 (2026-05-13) — 25개 구 평균선 + 순위
+기존 `seoul_avg`는 SeoulMetric raw 그대로 (서울시 전체 합/대표값) — 라이브 검증 결과 "구의 ~33배"인 합계 케이스 다수. "다른 구 대비" 비교가 불명확하던 문제를 새 키로 해결. 캐시 키 `v2`로 무효화.
+
+- `/gu-metrics` 응답 `metrics[code]`에 3개 키 추가:
+  - `rank_in_seoul`: 같은 date 기준 25구 중 값이 큰 순으로 1위 (value=null이면 null, 동률은 같은 rank).
+  - `gu_count`: 그 date에 데이터를 가진 구 수 (값 null 제외, 일반적으로 25).
+  - `gu_avg`: 같은 date 기준 25구 산술 평균 (null 제외). SeoulMetric raw와 의미 다름.
+- `/gu-metrics/series` 응답에:
+  - `series[code].current_rank: { rank, total, value, date } | null` — series의 가장 최신 non-null point 기준 25구 중 순위.
+  - `gu_avg_series: { CODE: { points: [{date, value}] } }` — date별 25구 산술 평균 시계열. seoul_series와 alignment 동일.
+- 기존 `seoul_avg` / `seoul_series` 키 그대로 유지 (호환성). 프론트는 비교용으로는 `gu_avg`/`gu_avg_series` 사용 권장.
+- 구현: in-memory 집계 (25구 × ~35 metric ≒ 875행 / 시계열은 25구 × code × ~10년). N+1 없음, 추가 쿼리는 endpoint당 1회.
 
 ### 메트릭 카탈로그 요약 (참고)
 
