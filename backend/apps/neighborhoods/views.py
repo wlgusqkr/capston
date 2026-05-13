@@ -686,3 +686,196 @@ class DongGuMetricsView(APIView):
 
         data = {**cacheable, "dong": _dong_header(dong)}
         return Response(data, status=status.HTTP_200_OK)
+
+
+# ---------------------------------------------------------------------------
+# 대시보드 Phase 4 — 구별 지표 시계열 (추이 차트용)
+# ---------------------------------------------------------------------------
+
+# 시계열 endpoint 파라미터 상한
+SERIES_MAX_CODES = 10
+SERIES_MIN_YEARS = 1
+SERIES_MAX_YEARS = 20
+SERIES_DEFAULT_YEARS = 10
+
+
+def _parse_series_params(request: Request) -> tuple[list[str], int]:
+    """
+    /gu-metrics/series 전용 파라미터 파싱·검증.
+
+    반환: (codes, years)
+    오류:
+      - codes 없거나 빈 문자열 → 400
+      - codes 11개 이상 → 400
+      - years 정수 변환 실패 → 400
+      - years 범위 밖 (1~20) → 400
+    """
+    raw_codes = request.query_params.get("codes", "")
+    codes = [c.strip() for c in raw_codes.split(",") if c.strip()]
+    if not codes:
+        raise ValidationError({"codes": "최소 1개의 metric_code가 필요합니다."})
+    if len(codes) > SERIES_MAX_CODES:
+        raise ValidationError(
+            {"codes": f"최대 {SERIES_MAX_CODES}개까지 지원합니다 (현재 {len(codes)})."}
+        )
+    # 중복 제거 (순서 유지)
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for c in codes:
+        if c not in seen:
+            seen.add(c)
+            deduped.append(c)
+
+    raw_years = request.query_params.get("years")
+    if raw_years is None:
+        years = SERIES_DEFAULT_YEARS
+    else:
+        try:
+            years = int(raw_years)
+        except (TypeError, ValueError) as exc:
+            raise ValidationError({"years": "정수여야 합니다 (1~20)."}) from exc
+        if not SERIES_MIN_YEARS <= years <= SERIES_MAX_YEARS:
+            raise ValidationError(
+                {"years": f"{SERIES_MIN_YEARS}~{SERIES_MAX_YEARS} 범위여야 합니다."}
+            )
+
+    return deduped, years
+
+
+@extend_schema(
+    tags=["dongs"],
+    summary="구별 지표 시계열 (대시보드 추이 위젯용)",
+    description=(
+        "한 행정동이 속한 자치구의 GuMetric을 metric_code별 시계열로 반환한다. "
+        "교통사고 추이, 화재 발생 추이, 지가 변동률 시계열 등 추이가 필요한 위젯용. "
+        "단일 값(최신 1행)이 필요한 경우 `/gu-metrics`를 사용한다. "
+        "`codes`는 콤마 구분, 1~10개. `years`는 최근 N년 (default 10, 1~20)."
+    ),
+    parameters=[
+        OpenApiParameter(
+            name="codes",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            required=True,
+            description="콤마 구분 metric_code 1~10개. 예: `ACC_TOTAL_COUNT,FIRE_COUNT`",
+        ),
+        OpenApiParameter(
+            name="years",
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description="최근 N년치 (default 10, 1~20).",
+        ),
+    ],
+)
+class DongGuMetricsSeriesView(APIView):
+    """
+    GET /api/dongs/<slug>/gu-metrics/series?codes=...&years=10
+
+    응답:
+      {
+        "dong": { "slug": "...", "name": "...", "gu": "..." },
+        "gu_code": "...",
+        "gu_name": "중구",
+        "series": {
+          "ACC_TOTAL_COUNT": {
+            "name": "교통사고 총 발생건수",
+            "unit": "건",
+            "category": "교통",
+            "points": [ { "date": "2020-01-01", "value": 850.0 }, ... ]
+          },
+          ...
+        },
+        "seoul_series": {
+          "ACC_TOTAL_COUNT": { "points": [...] },
+          ...
+        }
+      }
+
+    - 요청한 codes 모두가 응답에 포함된다 (데이터 없으면 points: []).
+    - points는 date 오름차순. value가 null이면 그대로 노출 (프론트 connectNulls).
+    - 캐시는 구 단위 5분 TTL.
+    """
+
+    def get(self, request: Request, slug: str) -> Response:
+        dong = _get_dong_or_404(slug)
+        codes, years = _parse_series_params(request)
+
+        gu = Gu.objects.filter(name=dong.gu).first()
+        if gu is None:
+            raise NotFound({"detail": f"구를 찾을 수 없습니다: {dong.gu}"})
+
+        # 캐시 키: (구, codes, years) 단위. codes는 정렬해서 키 안정화.
+        codes_joined = ",".join(sorted(codes))
+        cache_key = f"dong_gu_metrics_series:{gu.gu_code}:{codes_joined}:{years}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            result = {**cached, "dong": _dong_header(dong)}
+            return Response(result, status=status.HTTP_200_OK)
+
+        # cutoff: 오늘 기준 N년 전 1월 1일 (연 단위 적재 metric에서도 경계 포함)
+        today = date.today()
+        cutoff = date(today.year - years, 1, 1)
+
+        # 메트릭 메타 사전 로드 (요청 codes 한정)
+        metric_meta = {
+            m.metric_code: m
+            for m in Metric.objects.filter(metric_code__in=codes)
+        }
+
+        # 구 시계열 — (metric_code, date) 오름차순
+        gu_rows = (
+            GuMetric.objects
+            .filter(gu=gu, metric_id__in=codes, date__gte=cutoff)
+            .order_by("metric_id", "date")
+            .values("metric_id", "date", "value")
+        )
+        # 모든 요청 코드를 키로 미리 생성 (빈 데이터도 points: [])
+        series: dict[str, dict] = {}
+        for code in codes:
+            meta = metric_meta.get(code)
+            series[code] = {
+                "name": meta.name if meta else code,
+                "unit": meta.unit if meta else "",
+                "category": meta.category if meta else "",
+                "points": [],
+            }
+        for row in gu_rows:
+            code = row["metric_id"]
+            entry = series.get(code)
+            if entry is None:
+                # 요청 codes에 없는 결과는 무시 (이론상 안 옴)
+                continue
+            entry["points"].append({
+                "date": str(row["date"]) if row["date"] is not None else None,
+                "value": float(row["value"]) if row["value"] is not None else None,
+            })
+
+        # 서울 시계열 — 코드별 fallback 없음. 빈 배열은 빈 채로 둠.
+        seoul_rows = (
+            SeoulMetric.objects
+            .filter(metric_id__in=codes, date__gte=cutoff)
+            .order_by("metric_id", "date")
+            .values("metric_id", "date", "value")
+        )
+        seoul_series: dict[str, dict] = {code: {"points": []} for code in codes}
+        for row in seoul_rows:
+            code = row["metric_id"]
+            entry = seoul_series.get(code)
+            if entry is None:
+                continue
+            entry["points"].append({
+                "date": str(row["date"]) if row["date"] is not None else None,
+                "value": float(row["value"]) if row["value"] is not None else None,
+            })
+
+        cacheable = {
+            "gu_code": gu.gu_code,
+            "gu_name": gu.name,
+            "series": series,
+            "seoul_series": seoul_series,
+        }
+        cache.set(cache_key, cacheable, timeout=300)  # 5분 TTL
+
+        data = {**cacheable, "dong": _dong_header(dong)}
+        return Response(data, status=status.HTTP_200_OK)

@@ -12,6 +12,7 @@ from .views import (
     CompareView,
     DongDetailView,
     DongExploreView,
+    DongGuMetricsSeriesView,
     DongGuMetricsView,
     DongPopulationView,
     DongScoresView,
@@ -42,6 +43,12 @@ urlpatterns = [
     path("dongs/<str:slug>/population", DongPopulationView.as_view(), name="dong-population"),
     # GET /api/dongs/<slug>/gu-metrics — 소속 구 지표 + 서울 평균 (대시보드 Phase 2)
     path("dongs/<str:slug>/gu-metrics", DongGuMetricsView.as_view(), name="dong-gu-metrics"),
+    # GET /api/dongs/<slug>/gu-metrics/series — 구별 지표 시계열 (대시보드 Phase 4 추이)
+    path(
+        "dongs/<str:slug>/gu-metrics/series",
+        DongGuMetricsSeriesView.as_view(),
+        name="dong-gu-metrics-series",
+    ),
     # GET /api/compare?slugs=A,B,C
     path("compare", CompareView.as_view(), name="compare"),
     # POST /api/score/point  (Phase 2a — 임의 지점 커널 점수, SPEC 11)

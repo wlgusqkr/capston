@@ -140,12 +140,22 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 
 ## Backend (휴면)
 
-Django + DRF + GeoDjango. 9개 앱, 28개 모델, 20개 API 엔드포인트.
+Django + DRF + GeoDjango. 9개 앱, 28개 모델, 21개 API 엔드포인트.
 
 ### Phase 2 추가 엔드포인트 (2026-05-13)
 - `GET /api/dongs/<slug>/population` -- AdongPopulation 시계열 (latest + trend). 캐시 10분.
 - `GET /api/dongs/<slug>/gu-metrics` -- 소속 구의 GuMetric을 metric_code별 최신 1행씩 + SeoulMetric도 metric_code별 최신. 캐시 5분.
 - 스키마 변경 없음 (마이그레이션 없음). views.py + urls.py만 수정.
+
+### Phase 4 추가 엔드포인트 (2026-05-13)
+- `GET /api/dongs/<slug>/gu-metrics/series?codes=A,B,...&years=10` -- 구별 지표 시계열 (추이 차트용).
+  - `codes` 콤마 구분 1~10개, `years` 1~20 (default 10). 잘못된 파라미터 400, 미존재 slug 404.
+  - 응답: `{dong, gu_code, gu_name, series: {code: {name,unit,category,points:[{date,value}]}}, seoul_series: {code: {points:[...]}}}`.
+  - cutoff = `date(today.year - years, 1, 1)`. points는 date 오름차순, value null은 그대로 노출(프론트 connectNulls).
+  - 요청한 모든 code가 응답 키로 포함됨 (데이터 없으면 빈 points 배열) — 프론트 분기 단순화 목적.
+  - 캐시: `dong_gu_metrics_series:{gu_code}:{sorted_codes_joined}:{years}` 5분 TTL. dong 헤더는 캐시 외부에서 합성하여 같은 구 다른 동 재사용.
+  - 기존 `/gu-metrics`는 그대로 유지 (KPI/단일값용). 추이 차트는 신규 endpoint 사용.
+- 스키마 변경 없음 (마이그레이션 없음). views.py + urls.py만 수정. `python manage.py check` / `makemigrations --dry-run` PASS.
 
 ### gu-metrics 응답 스키마 (2026-05-13 수정)
 metric_code마다 적재 주기가 다르므로 "구의 최신 1개 날짜" 잡는 방식 폐기.
