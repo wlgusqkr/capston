@@ -119,7 +119,7 @@ export default function RealEstateSection({ realEstate, slug, guMetrics }: RealE
       {guMetrics && (landPriceChange != null || housingCount != null) && (
         <div className="grid grid-cols-2 gap-5">
           {/* B5. 지가 변동률 */}
-          <Card padding="md">
+          <Card padding="lg">
             <div className="flex items-center gap-2 mb-1">
               <p className="text-caption m-0 text-text-subtle">지가 변동률</p>
               <Badge variant="neutral" size="sm">
@@ -152,7 +152,7 @@ export default function RealEstateSection({ realEstate, slug, guMetrics }: RealE
           </Card>
 
           {/* B6. 주택 수 */}
-          <Card padding="md">
+          <Card padding="lg">
             <div className="flex items-center gap-2 mb-1">
               <p className="text-caption m-0 text-text-subtle">주택 수</p>
               <Badge variant="neutral" size="sm">

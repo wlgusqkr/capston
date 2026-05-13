@@ -370,6 +370,7 @@ export default function PopulationSection({
                 )}
               </div>
               {seoulMeanAge != null && meanAgeDiff != null && (
+                // 대학생 타겟에서 평균 연령이 낮을수록 또래·자취생이 많다고 가정하여 success.
                 <p className="m-0 mt-2 text-caption text-text-muted">
                   서울 {seoulMeanAge.toFixed(1)}세
                   <span className={`ml-1 font-medium ${meanAgeDiff <= 0 ? 'text-success' : 'text-danger'}`}>

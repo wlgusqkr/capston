@@ -51,6 +51,10 @@
   --color-danger-soft:    #FEE2E2;
   --color-warning:        #FFD82A;
   --color-warning-soft:   #FFF8E1;
+  /* Deeper warning swatch — for chart series where the lighter yellow lacks
+     contrast against backgrounds (e.g. 음주/뺑소니 비율 막대). Semantically
+     a "주의" signal that sits between warning(#FFD82A) and danger(#FB6666). */
+  --color-warning-deep:   #F59E0B;
   --color-success:        #059669;
   --color-success-soft:   #ECFDF5;
   --color-info:           #5570F1;

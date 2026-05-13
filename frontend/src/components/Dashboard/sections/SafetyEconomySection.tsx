@@ -189,7 +189,7 @@ export default function SafetyEconomySection({
     ...(accDrunkRatio != null ? [{ name: '음주사고 비율', value: accDrunkRatio }] : []),
     ...(accHitrunRatio != null ? [{ name: '뺑소니 비율', value: accHitrunRatio }] : []),
   ];
-  const accBarColors = [CATEGORY_COLORS.realestate, CATEGORY_COLORS.safety];
+  const accBarColors = [CHART_COLORS.warningDeep, CATEGORY_COLORS.safety];
 
   // 3. Green area metrics — AREA_GREEN, AREA_URBAN, POP_RESIDENT
   const areaGreen = mv(metrics, 'AREA_GREEN');
@@ -336,13 +336,13 @@ export default function SafetyEconomySection({
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div className="p-3 rounded-card border border-divider bg-surface">
               <p className="text-caption m-0 mb-1 text-text-subtle">총 발생건수</p>
-              <p className="tabular m-0 text-feature-heading font-semibold text-text">
+              <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
                 {accTotal != null ? `${accTotal.toLocaleString()}건` : '-'}
               </p>
             </div>
             <div className="p-3 rounded-card border border-divider bg-surface">
               <p className="text-caption m-0 mb-1 text-text-subtle">부상자수</p>
-              <p className="tabular m-0 text-feature-heading font-semibold text-danger">
+              <p className="tabular m-0 text-card-heading font-semibold text-danger leading-[1.1]">
                 {accInjury != null ? `${accInjury.toLocaleString()}명` : '-'}
               </p>
             </div>

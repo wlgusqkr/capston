@@ -144,7 +144,7 @@ export default function TransitSection({ transit, guMetrics }: TransitSectionPro
 
       {/* B4. 1인당 차량 등록 (보행 친화도 시그널) */}
       {vehiclePerCapita != null && guMetrics && (
-        <Card padding="md">
+        <Card padding="lg">
           <div className="flex items-start justify-between gap-4">
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">

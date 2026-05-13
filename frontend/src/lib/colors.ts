@@ -169,6 +169,17 @@ export const CHART_COLORS = {
   axis: '#75758a',
   /** Recharts grid line color — Divider. */
   grid: '#d9d9dd',
+  /**
+   * Warning swatch — mirrors `--color-warning`. For chart series that carry a
+   * mild "주의" signal (not bad enough for danger red).
+   */
+  warning: '#FFD82A',
+  /**
+   * Deeper warning swatch — mirrors `--color-warning-deep`. For chart series
+   * that need more contrast than the pale `warning` yellow (e.g. 음주운전·뺑소니
+   * 비율 막대). Sits between warning and danger in semantic weight.
+   */
+  warningDeep: '#F59E0B',
 } as const;
 
 /* -------------------------------------------------------------------------- */

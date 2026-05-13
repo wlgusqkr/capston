@@ -20,7 +20,7 @@
 - **Text**: --color-text (#212121), --color-text-muted (#75758a), --color-text-subtle (#93939f)
 - **Border**: --color-border (#e5e7eb), --color-divider (#d9d9dd)
 - **Accent**: --color-accent (#ff7759), --color-link (#1863dc)
-- **Status/MetricBar**: danger (#FB6666), warning (#FFD82A), success (#059669), info (#5570F1) + soft + metric-4/5
+- **Status/MetricBar**: danger (#FB6666), warning (#FFD82A), warning-deep (#F59E0B, **NEW**), success (#059669), info (#5570F1) + soft + metric-4/5
 - **Focus**: --color-focus-ring (primary 40%)
 - **히트맵 종합**: 5분위 (불변), **지하철**: 1~9호선 (불변)
 - **Category (NEW)**: realestate (#F59E0B), transport (#3B82F6), amenity (#10B981), safety (#EF4444), population (#8B5CF6), environment (#14B8A6) -- 대시보드 섹션 헤더/아이콘용
@@ -44,15 +44,18 @@
 - **Heatmap layer palettes**: 5종 x 5단계 -- 레이어별 히트맵 팔레트
 - **shimmer-border keyframe** -- AI 검색창 등 shimmer 효과용
 - **--font-sans, --font-mono**: Tailwind 내장 유틸리티를 Pretendard로 오버라이드
+- **--color-warning-deep (#F59E0B, NEW)**: 차트용 '주의' 시그널. warning(#FFD82A)보다 진하고 danger(#FB6666)보다 약함. 음주/뺑소니 비율 같은 부정 시그널용. CHART_COLORS.warning(#FFD82A) / CHART_COLORS.warningDeep(#F59E0B) 키로 JS 미러 노출.
 
 ### JS 미러 (colors.ts)
 - HEATMAP_COLORS, HEATMAP_COLORS_ORDERED, scoreToHeatmapBucket, scoreToHeatmapColor
 - MAP_POLYGON_STROKE, MAP_PIN
-- CHART_COLORS
-- CATEGORY_COLORS (NEW), HEATMAP_LAYER_COLORS (NEW), scoreToLayerColor (NEW)
+- CHART_COLORS (villa/dagagu/danok/officetel/apt/bar/axis/grid + **warning/warningDeep NEW**)
+- CATEGORY_COLORS, HEATMAP_LAYER_COLORS, scoreToLayerColor
 
 ### 프리미티브 (ui/)
 Button, Card, Badge, Chip, Score, MetricBar, Input, Select, Slider, Modal, Tooltip, Gauge -- 12개 완성.
+
+Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking, normal case). 기존 sm의 `text-mono-label`(13px uppercase 0.26px) 은 mono 잔재라 제거. uppercase/tracking은 `variant="mono"` 에서만 유지.
 
 ### 쇼케이스
 `/design-system` 라우트. 모든 토큰 + 프리미티브 시각 확인. (Gauge 아직 쇼케이스 미반영)
@@ -223,7 +226,6 @@ PostgreSQL `DISTINCT ON (metric_code) ORDER BY metric_code, date DESC`로 35종 
 - Phase 3 ReviewDashboardSection Stars text-secondary (#4C4C4C 회색): Detail/ReviewSection과 동일 패턴 의도적 재사용. SPEC 1.3 '알록달록' 톤과 다소 충돌 -- amber/warning 전환 시 두 군데 동시 변경 필요.
 - Phase 3 PopularitySection '비슷한 동' 카드: absolute-button + 내부 Link(stopPropagation) sibling 구조로 a11y 유효. outline-offset이 음수(-2px)라 outline이 카드 안쪽에 그려짐 (의도된 디자인이면 유지).
 - Phase 3 useCountup이 KpiCard와 사실상 같은 로직 (easeOutCubic, 1.2s default) -- hooks/useCountup.ts로 추출 권장.
-- Phase 3 Badge size='sm' 내부에서 text-mono-label 사용 (Badge.tsx:32). globals.css에서 --font-mono를 Pretendard로 오버라이드해 시각 일관성은 유지되나 토큰 정리 차원에서 Badge sm을 text-caption-tight 등으로 교체 검토.
 
 ### Phase 4 QA (2026-05-13 — metric 35종 데이터 확장 + 새 위젯 7개)
 - Verdict: **PASS WITH NOTES**. 블로커 없음.
@@ -233,7 +235,7 @@ PostgreSQL `DISTINCT ON (metric_code) ORDER BY metric_code, date DESC`로 35종 
 - Section A·C·D·E 모두 `text-feature-heading leading-[1.3] font-semibold` h3, TOOLTIP_STYLE, MetricCard 푸터 패턴 일관.
 - 관찰 (note-level):
   - SafetyEconomySection 교통사고 카드의 내부 KPI 숫자(총 발생건수/부상자수)가 `text-feature-heading`(22px) — 다른 KPI 위치(card-heading 28px)와 사이즈 다름. 2열 좁은 그리드 안 sub-KPI라 의도된 다운사이즈로 보임.
-  - accBarColors가 `CATEGORY_COLORS.realestate`(amber)+`CATEGORY_COLORS.safety`(red) 조합. realestate 토큰을 'warning' 의미로 재활용 — CHART_COLORS에 warning swatch 부재로 인한 우회. 차후 차트용 warning 토큰 도입 검토.
+  - accBarColors가 `CATEGORY_COLORS.realestate`(amber) 우회 사용. 차트용 warning 토큰(`CHART_COLORS.warning` / `CHART_COLORS.warningDeep` + `--color-warning-deep`) 추가 완료 — frontend-engineer가 다음 단계에 색 교체할 것.
   - PopulationSection 평균연령 카드의 색 로직 `meanAgeDiff <= 0 ? success : danger` — '서울보다 젊으면 좋음'으로 단정. 학생 타겟에선 합리적이나 의견성 derivation.
   - PopulationSection `singleHouseholdPct` = round((2 - avgPersonsPerHousehold) * 100)는 거친 추정. 카드 하단에 "추정값" 주석 있어 OK이나 SPEC 통계와 다를 수 있음.
   - greenRatio 계산 `AREA_GREEN / (AREA_GREEN + AREA_URBAN)` — 도시면적이 총면적을 포함하는지 별개인지 메트릭 카탈로그 정의 미확인. 결과값 자체는 합리적 범위로 보이나 정의 검증 권장.
