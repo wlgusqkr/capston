@@ -18,7 +18,7 @@ import ReviewDashboardSection from '@/components/Dashboard/sections/ReviewDashbo
 import SafetyEconomySection from '@/components/Dashboard/sections/SafetyEconomySection';
 import TransitSection from '@/components/Dashboard/sections/TransitSection';
 import Card from '@/components/ui/Card';
-import { useDongDetail, useDongGuMetrics, useDongGuMetricsSeries, useDongParks, useDongPopulation, useDongScores, useDongSummary, useDongTransitCongestion } from '@/hooks/useDongs';
+import { useDongDerivedIndices, useDongDetail, useDongGuMetrics, useDongGuMetricsSeries, useDongParks, useDongPopulation, useDongScores, useDongSummary, useDongTransitCongestion } from '@/hooks/useDongs';
 import { DEFAULT_WEIGHTS } from '@/types/api';
 
 const DEFAULT_DONG_SLUG = '중구-필동';
@@ -46,6 +46,8 @@ export default function Dashboard() {
   const { data: parks } = useDongParks(dongSlug);
   // Section C 보강: 시간대 혼잡도 + 동 성격 추정.
   const { data: congestion } = useDongTransitCongestion(dongSlug);
+  // KPI 보강: SPEC §4.5 자취촌 지수 + 계약 활발도 (백엔드 일일 갱신, staleTime 30분).
+  const { data: derived } = useDongDerivedIndices(dongSlug);
 
   const selectedDong = useMemo(
     () => dongs?.find((d) => d.slug === dongSlug) ?? null,
@@ -90,6 +92,7 @@ export default function Dashboard() {
           <KpiRow
             detail={detail}
             summary={summary}
+            derived={derived}
             isLoading={detailLoading}
           />
           <DashboardMiniMap

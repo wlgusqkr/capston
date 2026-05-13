@@ -85,7 +85,7 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 
 ### 신규 컴포넌트 (Phase 1)
 - **KpiCard** (`components/Dashboard/KpiCard.tsx`) — 카운트업 애니메이션 + 미니차트 슬롯
-- **KpiRow** (`components/Dashboard/KpiRow.tsx`) — KPI 4칸 그리드 (환산월세/보증금/거래건수/안전게이지)
+- **KpiRow** (`components/Dashboard/KpiRow.tsx`) — KPI 2행 그리드. Row 1: 4칸(환산월세/보증금/거래건수/안전게이지). Row 2: 자취촌 지수 게이지(col-span-2) + 계약 활발도(col-span-2). 2행은 `useDongDerivedIndices`(SPEC §4.5) 의존.
 - **DashboardMiniMap** (`components/Dashboard/DashboardMiniMap.tsx`) — Leaflet 미니맵 + 히트맵 레이어 토글 6종 + 컬러칩 범례 + 확장 버튼
 - **RealEstateSection** (`components/Dashboard/sections/RealEstateSection.tsx`) — 4개 Recharts 차트 (라인/도넛/산점도/바)
 - **AmenitySection** (`components/Dashboard/sections/AmenitySection.tsx`) — 카테고리별 테이블 + 자취생 필수시설 칩 그리드 + **대형 공원 카드 리스트(TOP 6, id dedupe, area_m2 desc, ha/㎡ 포맷, 도보 분 환산)** + **도서관 placeholder (opacity-60)**. props에 `parks?: DongParksResponse` 추가.
@@ -111,6 +111,19 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 - **ReviewDashboardSection** (`components/Dashboard/sections/ReviewDashboardSection.tsx`) — 평균 별점 (avg_rating 카운트업 + 별 5개) + 리뷰 수 + 대표 리뷰 가로 스크롤 카드 (line-clamp-2) + 리뷰 작성 CTA (Detail 페이지로 이동).
 - Dashboard.tsx: LATER_SECTIONS / PlaceholderSection / CategoryKey import 제거. Section F·G 추가 (둘 다 environment 색).
 
+### KPI 행 확장 (2026-05-13 — SPEC §4.5 자취촌 지수 + 계약 활발도)
+- **KpiRow** 2행 구조로 확장 (`grid-cols-4` 두 번, gap-4). Row 1 = 기존 4 KPI(환산월세/보증금/거래/안전 게이지) 그대로. Row 2 = 자취촌 지수 게이지 카드(col-span-2) + 계약 활발도 카드(col-span-2).
+  - **자취촌 지수**: 좌측 `Gauge size=sm`(score 0~100) + 우측 메타. `상위 {100-percentile}%` Badge(primary-soft) + `{rank}/{total_dongs}위` tabular. breakdown 1줄(`비아파트 X% · 소형 Y% · 월세 활발 Z%`). 보조 텍스트 "비아파트·소형·월세 가중평균". score=null → "데이터 부족" 폴백.
+  - **계약 활발도**: 우측 상단 `상위 {100-percentile}%` Badge. 큰 숫자 `deals_per_1000.toFixed(1)` + "회/천명" 단위. 부가 텍스트 "최근 12개월 거래 N건 · 인구 N명". population=null → "데이터 부족" 폴백.
+- **types/api.ts**: `StudioIndexBreakdown` / `StudioIndex` / `ActivityIndex` / `DongDerivedIndicesResponse` 4개 신설.
+- **lib/api.ts**: `getDongDerivedIndices(slug)` 추가.
+- **hooks/useDongs.ts**: `useDongDerivedIndices(slug)` 추가. staleTime 30분(1_800_000ms) — 백엔드가 일일 갱신.
+- **Dashboard.tsx**: 훅 호출 후 `derived` prop으로 KpiRow에 전달. KPI 영역 세로 길이 증가(2행).
+- 신림동 score ~64 / rank 21위, 필동 score ~45 / rank 152위, 역삼1동 활발도 deals_per_1000 큰 값 표시되도록 라이브 데이터 그대로 매핑.
+
+### 알려진 이슈 (KPI 행 확장 추가분)
+- KPI 보조 카드(자취촌/활발도)의 skeleton 펄스 트리거가 `!derived`(undefined) 기준. detailLoading과 분리되어 두 영역이 동시에 끝나지 않으면 시각적으로 살짝 튐. 무해.
+
 ### TopNav 변경
 - 네비 탭 (맵/대시보드) NavLink 추가 (pill 스타일, active 상태 bg-primary-soft)
 - 컨텍스트 타이틀 (동네 비교, 동 이름 등) 탭 우측 middot 구분
@@ -124,7 +137,7 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 
 ### 빌드
 - CSS: 73KB (18KB gz)
-- JS main: 984KB (293KB gz), Dashboard chunk: 134KB (32.4KB gz) — Section C 혼잡도 라인 2개 + 동 성격 카드 +5.6KB
+- JS main: 985KB (293KB gz), Dashboard chunk: 138KB (33.1KB gz) — KPI 2행(자취촌 지수 게이지 + 계약 활발도) 추가 +4KB
 - tsc + vite build 통과
 
 ### Phase 5 정정 (2026-05-13) — SeoulMetric raw → 25구 평균 / 순위
@@ -146,7 +159,7 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 |---|---|---|
 | KPI 인구/가구 수 | `adong_population` | **구현 완료** (`/api/dongs/<slug>/population`) |
 | 구 지표 (안전/환경 등) | `gu_metric` + `seoul_metric` | **구현 완료** (`/api/dongs/<slug>/gu-metrics`) |
-| KPI 자취촌 지수 | 파생 지표 | 신규 endpoint 또는 프론트 계산 |
+| KPI 자취촌 지수 | 파생 지표 | **구현 완료** (`/api/dongs/<slug>/derived-indices`, KpiRow Row 2 연동) |
 | 섹션 C 시간대 혼잡도 | `subway_congestion`, `bus_congestion` | **구현 완료** (`/api/dongs/<slug>/transit-congestion`) |
 | 섹션 C 동 성격 추정 | 혼잡도 패턴 분석 | **구현 완료** (위 endpoint 응답 `personality` 필드) |
 | 공원 | `park`, `park_adong` | **구현 완료** (`/api/dongs/<slug>/parks`) |

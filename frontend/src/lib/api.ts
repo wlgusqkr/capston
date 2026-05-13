@@ -6,6 +6,7 @@ import type { AxiosInstance } from 'axios';
 import type {
   Bbox,
   CompareResponse,
+  DongDerivedIndicesResponse,
   DongDetail,
   DongGuMetricsResponse,
   DongParksResponse,
@@ -258,6 +259,18 @@ export async function getDongGuMetricsSeries(
   const { data } = await api.get<GuMetricSeriesResponse>(
     `/dongs/${slug}/gu-metrics/series`,
     { params },
+  );
+  return data;
+}
+
+/** GET /api/dongs/:slug/derived-indices — 자취촌 지수 + 계약 활발도 (SPEC §4.5).
+ *  Backend pre-computes all 426 dongs in one pass and caches the dict 5 h
+ *  (daily refresh). Warm hits 7~30 ms; cold ~2 s. */
+export async function getDongDerivedIndices(
+  slug: string,
+): Promise<DongDerivedIndicesResponse> {
+  const { data } = await api.get<DongDerivedIndicesResponse>(
+    `/dongs/${slug}/derived-indices`,
   );
   return data;
 }

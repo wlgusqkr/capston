@@ -342,6 +342,49 @@ export interface TransitCongestionResponse {
   };
 }
 
+// -------- Dashboard §4.5 — Derived indices (자취촌 지수 + 계약 활발도) ---
+// GET /api/dongs/:slug/derived-indices
+// Backend computes 426 dongs in one pass and caches the dict 5h (daily refresh).
+
+/** Breakdown of the 자취촌 지수 sub-scores (each 0~1). */
+export interface StudioIndexBreakdown {
+  non_apt_ratio: number;
+  small_area_ratio: number;
+  monthly_deal_normalized: number;
+}
+
+/** 자취촌 지수 — SPEC §4.5 formula:
+ *  0.5 × 비아파트 비율 + 0.3 × ≤25㎡ 비율 + 0.2 × 월세 계약 건수 정규화. 0~100.
+ *  Null fields when the dong has 0 deals in the last 365 days. */
+export interface StudioIndex {
+  score: number | null;
+  /** 1~100, higher = better (round(100 - (rank-1)/N × 100)). */
+  percentile: number | null;
+  /** 1~total_dongs, 1 = top. */
+  rank: number | null;
+  total_dongs: number;
+  breakdown: StudioIndexBreakdown | null;
+  /** Human-readable formula string from the backend. */
+  formula: string;
+}
+
+/** 계약 활발도 — 12개월 거래수 / 인구 × 1000.
+ *  All fields nullable when population is 0/null. */
+export interface ActivityIndex {
+  deals_per_1000: number | null;
+  deals_12m: number;
+  population: number | null;
+  percentile: number | null;
+  rank: number | null;
+}
+
+/** Response of GET /api/dongs/:slug/derived-indices. */
+export interface DongDerivedIndicesResponse {
+  dong: { slug: string; name: string; gu: string };
+  studio_index: StudioIndex;
+  activity: ActivityIndex;
+}
+
 // -------- Dashboard Section B — Parks (SPEC 4.4 Section B) --------------
 
 /** Single park row in GET /api/dongs/:slug/parks. */

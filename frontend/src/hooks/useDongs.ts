@@ -2,9 +2,10 @@
 import { useQuery } from '@tanstack/react-query';
 import type { UseQueryResult } from '@tanstack/react-query';
 
-import { getCompare, getDongDetail, getDongGuMetrics, getDongGuMetricsSeries, getDongParks, getDongPopulation, getDongScores, getDongSummary, getDongTransitCongestion } from '@/lib/api';
+import { getCompare, getDongDerivedIndices, getDongDetail, getDongGuMetrics, getDongGuMetricsSeries, getDongParks, getDongPopulation, getDongScores, getDongSummary, getDongTransitCongestion } from '@/lib/api';
 import type {
   CompareResponse,
+  DongDerivedIndicesResponse,
   DongDetail,
   DongGuMetricsResponse,
   DongParksResponse,
@@ -167,6 +168,19 @@ export function useDongTransitCongestion(
     queryFn: () => getDongTransitCongestion(slug as string),
     enabled: !!slug,
     staleTime: 300_000, // 5 min — matches backend cache TTL
+  });
+}
+
+/** Subscribe to /api/dongs/:slug/derived-indices — 자취촌 지수 + 계약 활발도
+ *  (SPEC §4.5). Backend pre-computes all 426 dongs daily so staleTime 30 min. */
+export function useDongDerivedIndices(
+  slug: string | null | undefined,
+): UseQueryResult<DongDerivedIndicesResponse> {
+  return useQuery({
+    queryKey: ['dongs', 'derived-indices', slug] as const,
+    queryFn: () => getDongDerivedIndices(slug as string),
+    enabled: !!slug,
+    staleTime: 1_800_000, // 30 min — backend refreshes once a day
   });
 }
 
