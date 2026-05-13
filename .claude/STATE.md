@@ -150,7 +150,16 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 
 ## Backend (휴면)
 
-Django + DRF + GeoDjango. 9개 앱, 28개 모델, 21개 API 엔드포인트.
+Django + DRF + GeoDjango. 9개 앱, 28개 모델, 22개 API 엔드포인트.
+
+### 대시보드 §4.4 섹션 B 추가 엔드포인트 (2026-05-13)
+- `GET /api/dongs/<slug>/parks` -- park_adong 매핑을 통한 행정동 공원 목록. 면적 내림차순(null 뒤). 캐시 5분(`dong_parks:v1:<slug>`). 스키마 변경 없음.
+  - 응답: `{dong, count, parks:[{id, name, category, area_m2, lat, lng, distance_m}]}`.
+  - `distance_m`: `ST_DistanceSphere(park.location, dong.centroid)` 미터, 좌표 누락 시 null. 프로젝트 표준 패턴(geography cast 없이 GiST 활용).
+  - 0건이어도 200 + `count:0` + `parks:[]`, 미존재 slug 404.
+  - view 파일: `apps/parks/views.py` 신설 (`DongParksView`). URL은 `apps/neighborhoods/urls.py` 의 dong-scoped 패턴에 추가.
+  - 라이브 검증: `중구-필동` 4건(남산 도시자연공원 2건 등), `강남구-역삼1동` 8건. 정렬·거리 정상.
+  - 도서관 모델 미존재 → 도서관 위젯용 endpoint는 이번 작업 범위 밖.
 
 ### Phase 2 추가 엔드포인트 (2026-05-13)
 - `GET /api/dongs/<slug>/population` -- AdongPopulation 시계열 (latest + trend). 캐시 10분.

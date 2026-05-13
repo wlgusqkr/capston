@@ -7,6 +7,8 @@ neighborhoods 앱 URL.
 
 from django.urls import path
 
+from apps.parks.views import DongParksView
+
 from .match import DongMatchCountsView, DongMatchDetailView
 from .views import (
     CompareView,
@@ -49,6 +51,8 @@ urlpatterns = [
         DongGuMetricsSeriesView.as_view(),
         name="dong-gu-metrics-series",
     ),
+    # GET /api/dongs/<slug>/parks — 행정동에 매핑된 공원 목록 (대시보드 §4.4 섹션 B)
+    path("dongs/<str:slug>/parks", DongParksView.as_view(), name="dong-parks"),
     # GET /api/compare?slugs=A,B,C
     path("compare", CompareView.as_view(), name="compare"),
     # POST /api/score/point  (Phase 2a — 임의 지점 커널 점수, SPEC 11)
