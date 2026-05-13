@@ -13,6 +13,7 @@ import type {
   DongPopulationResponse,
   DongScore,
   DongSummary,
+  TransitCongestionResponse,
   ExploreFilters,
   ExploreResponse,
   MatchCountsResponse,
@@ -257,6 +258,18 @@ export async function getDongGuMetricsSeries(
   const { data } = await api.get<GuMetricSeriesResponse>(
     `/dongs/${slug}/gu-metrics/series`,
     { params },
+  );
+  return data;
+}
+
+/** GET /api/dongs/:slug/transit-congestion — time-of-day congestion patterns
+ *  for subway (TOP 3 nearby stations) + bus (mapped BusStops) + derived dong
+ *  personality estimate (SPEC 4.4 Section C). Backend caches 5 min. */
+export async function getDongTransitCongestion(
+  slug: string,
+): Promise<TransitCongestionResponse> {
+  const { data } = await api.get<TransitCongestionResponse>(
+    `/dongs/${slug}/transit-congestion`,
   );
   return data;
 }

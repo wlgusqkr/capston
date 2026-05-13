@@ -4,18 +4,39 @@
 //   1. Nearest subway stations TOP 3 (card list with line colors)
 //   2. Bus stats (stop_count, route_count) as big number cards
 //   3. Per-capita vehicle registration KPI (gu_metric — B4)
-//   4. Time-of-day congestion (placeholder — API not yet available)
-//   5. Dong personality estimate (placeholder — depends on congestion)
+//   4. Subway time-of-day congestion line (weekday / saturday / sunday)
+//   5. Bus time-of-day congestion line (weekday / weekend)
+//   6. Dong personality estimate (label + reason + pattern bars)
 //
-// Data: DongDetail.transit + DongGuMetricsResponse (optional)
+// Data: DongDetail.transit + DongGuMetricsResponse + TransitCongestionResponse
+
+import {
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 
 import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
-import type { DongDetail, DongGuMetricsResponse } from '@/types/api';
+import { CATEGORY_COLORS, CHART_COLORS } from '@/lib/colors';
+import type {
+  CongestionPoint,
+  DongDetail,
+  DongGuMetricsResponse,
+  TransitCongestionResponse,
+} from '@/types/api';
 
 interface TransitSectionProps {
   transit: DongDetail['transit'];
   guMetrics?: DongGuMetricsResponse;
+  /** Optional congestion + personality payload. May be undefined while loading;
+   *  charts render empty state when arrays are empty / bus stop_count = 0. */
+  congestion?: TransitCongestionResponse;
 }
 
 /** Format ISO date "YYYY-MM-DD" → "YYYY년 기준". */
@@ -35,7 +56,111 @@ function lineColor(line: string): string {
   return 'var(--color-text-muted)';
 }
 
-export default function TransitSection({ transit, guMetrics }: TransitSectionProps) {
+const TOOLTIP_STYLE = {
+  background: 'var(--color-surface)',
+  border: '1px solid var(--color-border)',
+  borderRadius: 'var(--radius-md)',
+  fontSize: 'var(--font-caption-size)',
+};
+
+/** Row shape used by the subway congestion line chart. */
+interface SubwayRow {
+  hour: number;
+  평일: number | null;
+  토요일: number | null;
+  일요일: number | null;
+}
+
+/** Row shape used by the bus congestion line chart. */
+interface BusRow {
+  hour: number;
+  평일: number | null;
+  주말: number | null;
+}
+
+/** Build a hour-indexed lookup so the 3-series merge ignores ordering. */
+function toHourMap(points: CongestionPoint[]): Map<number, number | null> {
+  const m = new Map<number, number | null>();
+  points.forEach((p) => m.set(p.hour, p.congestion));
+  return m;
+}
+
+/** Merge weekday / saturday / sunday into one dataset keyed by hour. */
+function mergeSubwayRows(by: TransitCongestionResponse['subway']['by_day']): SubwayRow[] {
+  const wk = toHourMap(by.평일);
+  const sa = toHourMap(by.토요일);
+  const su = toHourMap(by.일요일);
+  return Array.from({ length: 24 }, (_, h) => ({
+    hour: h,
+    평일: wk.get(h) ?? null,
+    토요일: sa.get(h) ?? null,
+    일요일: su.get(h) ?? null,
+  }));
+}
+
+function mergeBusRows(by: TransitCongestionResponse['bus']['by_pattern']): BusRow[] {
+  const wk = toHourMap(by.평일);
+  const we = toHourMap(by.주말);
+  return Array.from({ length: 24 }, (_, h) => ({
+    hour: h,
+    평일: wk.get(h) ?? null,
+    주말: we.get(h) ?? null,
+  }));
+}
+
+/** Convert background category color into a soft inline-bar fill. */
+function personalityTone(label: TransitCongestionResponse['personality']['label']): {
+  bg: string;
+  accent: string;
+} {
+  switch (label) {
+    case '주거 중심':
+      // 그린워시 (primary-soft) + primary accent
+      return { bg: 'var(--color-primary-soft)', accent: CATEGORY_COLORS.amenity };
+    case '상업·업무 중심':
+      // amber 톤 (realestate)
+      return { bg: 'var(--color-warning-soft)', accent: CATEGORY_COLORS.realestate };
+    case '유동인구 많음':
+      // 보라 톤 (population) — soft 토큰 없어 info-soft 폴백 (보라 인접)
+      return { bg: 'var(--color-info-soft)', accent: CATEGORY_COLORS.population };
+    default:
+      // null/모름 — 그린워시 (메인 배경과 동일 톤)
+      return { bg: 'var(--color-primary-soft)', accent: 'var(--color-text-muted)' };
+  }
+}
+
+/** Pattern score bar — bg is a flat track, fill is proportional. */
+function PatternBar({
+  label,
+  value,
+  max,
+  accent,
+}: {
+  label: string;
+  value: number | null;
+  max: number;
+  accent: string;
+}) {
+  const pct = value != null && max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-baseline justify-between">
+        <span className="text-caption text-text-muted">{label}</span>
+        <span className="tabular text-caption font-medium text-text">
+          {value != null ? value.toFixed(1) : '-'}
+        </span>
+      </div>
+      <div className="h-2 w-full rounded-full bg-divider overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-700"
+          style={{ width: `${pct}%`, backgroundColor: accent }}
+        />
+      </div>
+    </div>
+  );
+}
+
+export default function TransitSection({ transit, guMetrics, congestion }: TransitSectionProps) {
   const stations = transit.nearest_stations;
   const bus = transit.bus;
 
@@ -62,6 +187,35 @@ export default function TransitSection({ transit, guMetrics }: TransitSectionPro
       ? vehiclePerCapita - guAvgVehiclePerCapita
       : null;
   const vehicleDate = formatMetricDate(guMetrics?.metrics['VEHICLE_REGISTERED']?.date);
+
+  // -- Congestion rows --------------------------------------------------------
+  const subwayRows = congestion ? mergeSubwayRows(congestion.subway.by_day) : [];
+  const busRows = congestion ? mergeBusRows(congestion.bus.by_pattern) : [];
+  const hasSubwayCongestion =
+    congestion != null &&
+    subwayRows.some((r) => r.평일 != null || r.토요일 != null || r.일요일 != null);
+  const busStopCount = congestion?.bus.stop_count ?? 0;
+  const hasBusCongestion =
+    congestion != null && busStopCount > 0 && busRows.some((r) => r.평일 != null || r.주말 != null);
+
+  const stationLabel =
+    congestion && congestion.subway.stations.length > 0
+      ? congestion.subway.stations.map((s) => s.name).join(', ')
+      : '';
+
+  // Personality + pattern scores -------------------------------------------
+  const personality = congestion?.personality;
+  const tone = personalityTone(personality?.label ?? null);
+  const patternMax = (() => {
+    if (!personality) return 0;
+    const vals = [
+      personality.scores.morning_peak,
+      personality.scores.midday,
+      personality.scores.evening_peak,
+      personality.scores.weekend,
+    ].filter((v): v is number => v != null);
+    return vals.length > 0 ? Math.max(...vals) : 0;
+  })();
 
   return (
     <div className="flex flex-col gap-5">
@@ -192,17 +346,225 @@ export default function TransitSection({ transit, guMetrics }: TransitSectionPro
         </Card>
       )}
 
-      {/* 4. Congestion placeholder */}
-      <Card padding="lg" className="opacity-60">
-        <div className="flex items-center justify-center h-[80px] text-text-muted text-caption">
-          시간대 혼잡도 위젯은 데이터 준비 중입니다
-        </div>
-      </Card>
+      {/* Row: 시간대 혼잡도 — 지하철 + 버스 라인 차트 */}
+      <div className="grid grid-cols-2 gap-5">
+        {/* 지하철 시간대 혼잡도 */}
+        <Card padding="lg">
+          <h3 className="m-0 mb-3 text-feature-heading leading-[1.3] font-semibold text-text">
+            지하철 시간대 혼잡도
+          </h3>
+          {hasSubwayCongestion ? (
+            <div className="h-[220px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={subwayRows} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+                  <XAxis
+                    dataKey="hour"
+                    type="number"
+                    domain={[0, 23]}
+                    ticks={[0, 6, 12, 18, 23]}
+                    tick={{ fontSize: 10, fill: CHART_COLORS.axis }}
+                    tickFormatter={(v: number) => `${v}시`}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: CHART_COLORS.axis }}
+                    tickFormatter={(v: number) => v.toFixed(0)}
+                  />
+                  <Tooltip
+                    contentStyle={TOOLTIP_STYLE}
+                    labelFormatter={(label) => `${label}시`}
+                    formatter={(value, name) => {
+                      if (value == null) return ['-', name];
+                      const v = value as number;
+                      return [v.toFixed(2), name];
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Line
+                    name="평일"
+                    type="monotone"
+                    dataKey="평일"
+                    stroke={CATEGORY_COLORS.transport}
+                    strokeWidth={2}
+                    dot={{ r: 2, fill: CATEGORY_COLORS.transport }}
+                    activeDot={{ r: 5 }}
+                    connectNulls
+                    isAnimationActive
+                    animationDuration={1200}
+                  />
+                  <Line
+                    name="토요일"
+                    type="monotone"
+                    dataKey="토요일"
+                    stroke={CHART_COLORS.warningDeep}
+                    strokeWidth={1.5}
+                    dot={false}
+                    connectNulls
+                    isAnimationActive
+                    animationDuration={1200}
+                    animationBegin={200}
+                  />
+                  <Line
+                    name="일요일"
+                    type="monotone"
+                    dataKey="일요일"
+                    stroke={CHART_COLORS.warning}
+                    strokeWidth={1.5}
+                    dot={false}
+                    connectNulls
+                    isAnimationActive
+                    animationDuration={1200}
+                    animationBegin={400}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-[220px] text-text-muted text-caption">
+              인근 지하철역 혼잡도 데이터가 부족합니다
+            </div>
+          )}
+          <p className="m-0 mt-2 text-caption text-text-subtle">
+            {stationLabel
+              ? `인근 ${congestion?.subway.stations.length ?? 0}개역 평균 — ${stationLabel}`
+              : '인근 지하철역 평균'}
+          </p>
+        </Card>
 
-      {/* 5. Dong personality placeholder */}
-      <Card padding="lg" className="opacity-60">
-        <div className="flex items-center justify-center h-[80px] text-text-muted text-caption">
-          동 성격 추정 위젯은 데이터 준비 중입니다
+        {/* 버스 시간대 혼잡도 */}
+        <Card padding="lg">
+          <h3 className="m-0 mb-3 text-feature-heading leading-[1.3] font-semibold text-text">
+            버스 시간대 혼잡도
+          </h3>
+          {hasBusCongestion ? (
+            <div className="h-[220px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={busRows} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+                  <XAxis
+                    dataKey="hour"
+                    type="number"
+                    domain={[0, 23]}
+                    ticks={[0, 6, 12, 18, 23]}
+                    tick={{ fontSize: 10, fill: CHART_COLORS.axis }}
+                    tickFormatter={(v: number) => `${v}시`}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: CHART_COLORS.axis }}
+                    tickFormatter={(v: number) => v.toFixed(2)}
+                  />
+                  <Tooltip
+                    contentStyle={TOOLTIP_STYLE}
+                    labelFormatter={(label) => `${label}시`}
+                    formatter={(value, name) => {
+                      if (value == null) return ['-', name];
+                      const v = value as number;
+                      return [v.toFixed(3), name];
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Line
+                    name="평일"
+                    type="monotone"
+                    dataKey="평일"
+                    stroke={CATEGORY_COLORS.transport}
+                    strokeWidth={2}
+                    dot={{ r: 2, fill: CATEGORY_COLORS.transport }}
+                    activeDot={{ r: 5 }}
+                    connectNulls
+                    isAnimationActive
+                    animationDuration={1200}
+                  />
+                  <Line
+                    name="주말"
+                    type="monotone"
+                    dataKey="주말"
+                    stroke={CHART_COLORS.warningDeep}
+                    strokeWidth={1.5}
+                    dot={false}
+                    connectNulls
+                    isAnimationActive
+                    animationDuration={1200}
+                    animationBegin={200}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-[220px] text-text-muted text-caption">
+              {busStopCount === 0
+                ? '동에 매핑된 버스 정류장 데이터가 부족합니다'
+                : '버스 시간대 혼잡도 데이터가 없습니다'}
+            </div>
+          )}
+          <p className="m-0 mt-2 text-caption text-text-subtle">
+            {busStopCount > 0
+              ? `동 내 ${busStopCount}개 정류장 평균 · 최근 30~60일`
+              : '동 내 버스 정류장 평균 · 최근 30~60일'}
+          </p>
+        </Card>
+      </div>
+
+      {/* 동 성격 추정 카드 (full width) */}
+      <Card padding="lg" className={personality?.label == null ? 'opacity-70' : ''}>
+        <div
+          className="rounded-card p-5 flex flex-col gap-4"
+          style={{ backgroundColor: tone.bg }}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col gap-1">
+              <p className="text-caption m-0 text-text-subtle">동 성격 추정</p>
+              <p
+                className="m-0 text-card-heading font-semibold leading-[1.2]"
+                style={{ color: personality?.label != null ? tone.accent : 'var(--color-text-muted)' }}
+              >
+                {personality?.label ?? '특징 추정 보류'}
+              </p>
+              {personality?.reason && (
+                <p className="m-0 mt-1 text-caption text-text-muted max-w-[640px]">
+                  {personality.reason}
+                </p>
+              )}
+              {personality?.label == null && !personality?.reason && (
+                <p className="m-0 mt-1 text-caption text-text-muted">
+                  혼잡도 패턴이 뚜렷한 특징을 보이지 않습니다
+                </p>
+              )}
+            </div>
+            <Badge variant="neutral" size="sm">
+              혼잡도 패턴 기반
+            </Badge>
+          </div>
+
+          {/* Pattern score bars */}
+          {personality && (
+            <div className="grid grid-cols-4 gap-4">
+              <PatternBar
+                label="출근 (7~9시)"
+                value={personality.scores.morning_peak}
+                max={patternMax}
+                accent={tone.accent}
+              />
+              <PatternBar
+                label="낮 (11~14시)"
+                value={personality.scores.midday}
+                max={patternMax}
+                accent={tone.accent}
+              />
+              <PatternBar
+                label="퇴근 (18~20시)"
+                value={personality.scores.evening_peak}
+                max={patternMax}
+                accent={tone.accent}
+              />
+              <PatternBar
+                label="주말 평균"
+                value={personality.scores.weekend}
+                max={patternMax}
+                accent={tone.accent}
+              />
+            </div>
+          )}
         </div>
       </Card>
     </div>

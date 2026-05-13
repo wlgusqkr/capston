@@ -94,11 +94,13 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 ### 신규 컴포넌트 (Phase 2)
 - **PopulationSection** (`components/Dashboard/sections/PopulationSection.tsx`) — 남녀 비율 도넛 + 인구 추이 AreaChart + 청년 비율 카드 (구 단위, POP_YOUTH_19_34÷POP_TOTAL_YOUTH_BASE 계산) + **평균 연령 카드 (B1: 전체/남/여 칩)** + **고령 인구 비율 도넛 (B2: POP_ELDERLY_RATIO)** + 1인 가구 추정 도넛
 - **SafetyEconomySection** (`components/Dashboard/sections/SafetyEconomySection.tsx`) — 안전 등급 6분야 레이더 (TRAFFIC/CRIME/FIRE/DISEASE/LIFE/SUICIDE, 종합 평균 텍스트) + 교통사고 통계 (ACC_TOTAL_COUNT/INJURY/DRUNK/HITRUN, 비율 계산) + **교통사고 추이 LineChart (Phase 4, ACC_TOTAL_COUNT 시계열, 구 + 서울 평균, safety 색)** + **화재 발생 추이 LineChart (Phase 4, FIRE_COUNT 시계열, warningDeep 색)** + **교통문화지수 레이더 (B3)** + GRDP 총액+1인당 + 녹지비율/1인당녹지/화재 MetricCard. 모든 카드에 metric date 푸터. props에 `series?: GuMetricSeriesResponse` 추가.
-- **TransitSection** (`components/Dashboard/sections/TransitSection.tsx`) — 지하철 TOP3 + 버스 통계 + **1인당 차량 등록 KPI (B4: VEHICLE_REGISTERED÷POP_RESIDENT, 보행 친화도 시그널)** + placeholder 위젯 (혼잡도/동 성격)
+- **TransitSection** (`components/Dashboard/sections/TransitSection.tsx`) — 지하철 TOP3 + 버스 통계 + **1인당 차량 등록 KPI (B4: VEHICLE_REGISTERED÷POP_RESIDENT, 보행 친화도 시그널)** + **지하철 시간대 혼잡도 LineChart (평일/토/일 3시리즈, transport·warningDeep·warning 색, ticks 0/6/12/18/23, connectNulls)** + **버스 시간대 혼잡도 LineChart (평일/주말, stop_count=0이면 빈 상태)** + **동 성격 추정 카드 (label/reason + 4개 패턴 막대: 출근/낮/퇴근/주말). 라벨별 톤: 주거 중심→primary-soft, 상업·업무 중심→warning-soft, 유동인구 많음→info-soft, null→primary-soft dimmed)**
 - **RealEstateSection** (`components/Dashboard/sections/RealEstateSection.tsx`) — **지가 변동률 (B5: LAND_PRICE_CHANGE_RATE)** + **주택 수 (B6: HOUSING_COUNT)** KPI 행 추가, 그 아래 기존 4개 Recharts 차트
 - **useDongPopulation** (`hooks/useDongs.ts`) — /api/dongs/:slug/population 훅 (staleTime 10min)
 - **useDongGuMetrics** (`hooks/useDongs.ts`) — /api/dongs/:slug/gu-metrics 훅 (staleTime 5min)
 - **useDongParks** (`hooks/useDongs.ts`) — /api/dongs/:slug/parks 훅 (staleTime 10min). Dashboard.tsx에서 호출 → AmenitySection `parks` prop.
+- **useDongTransitCongestion** (`hooks/useDongs.ts`) — /api/dongs/:slug/transit-congestion 훅 (staleTime 5min, 백엔드 캐시와 동일). Dashboard.tsx에서 호출 → TransitSection `congestion` prop.
+- **CongestionPoint, TransitCongestionResponse** (`types/api.ts`) — Section C 시간대 혼잡도 응답 타입. subway.by_day(평일/토/일), bus.by_pattern(평일/주말), personality(label|null + reason + 4 scores).
 - **DongPark, DongParksResponse** (`types/api.ts`) — 공원 API 응답 타입 (id/name/category/area_m2/lat/lng/distance_m). RDS 중복 행 → 프론트 dedupe.
 - **useDongGuMetricsSeries** (`hooks/useDongs.ts`, **Phase 4**) — /api/dongs/:slug/gu-metrics/series 훅. `(slug, codes, years?)` 인자. codes 정렬 후 queryKey에 join (백엔드 캐시 키와 일치). staleTime 5min. enabled=codes.length>0. Dashboard에서 ACC_TOTAL_COUNT/FIRE_COUNT 2개 코드로 10년치 시계열 페치.
 - **DongPopulationResponse, DongGuMetricsResponse, GuMetricValue.date, SeoulAvgValue** (`types/api.ts`) — Phase 2 API 타입. gu-metrics 응답이 35종으로 확장되어 metric_code별 date 필드 추가, top-level date는 optional로 deprecated.
@@ -122,7 +124,7 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 
 ### 빌드
 - CSS: 73KB (18KB gz)
-- JS main: 984KB (293KB gz), Dashboard chunk: 128KB (31.3KB gz) — Section B 공원 위젯 추가 +2.4KB
+- JS main: 984KB (293KB gz), Dashboard chunk: 134KB (32.4KB gz) — Section C 혼잡도 라인 2개 + 동 성격 카드 +5.6KB
 - tsc + vite build 통과
 
 ### Phase 5 정정 (2026-05-13) — SeoulMetric raw → 25구 평균 / 순위
@@ -145,8 +147,8 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 | KPI 인구/가구 수 | `adong_population` | **구현 완료** (`/api/dongs/<slug>/population`) |
 | 구 지표 (안전/환경 등) | `gu_metric` + `seoul_metric` | **구현 완료** (`/api/dongs/<slug>/gu-metrics`) |
 | KPI 자취촌 지수 | 파생 지표 | 신규 endpoint 또는 프론트 계산 |
-| 섹션 C 시간대 혼잡도 | `subway_congestion`, `bus_congestion` | 신규 endpoint 필요 |
-| 섹션 C 동 성격 추정 | 혼잡도 패턴 분석 | 혼잡도 데이터 의존 |
+| 섹션 C 시간대 혼잡도 | `subway_congestion`, `bus_congestion` | **구현 완료** (`/api/dongs/<slug>/transit-congestion`) |
+| 섹션 C 동 성격 추정 | 혼잡도 패턴 분석 | **구현 완료** (위 endpoint 응답 `personality` 필드) |
 | 공원 | `park`, `park_adong` | **구현 완료** (`/api/dongs/<slug>/parks`) |
 | 도서관 | `library`, `library_hours` | DB 모델 미존재 — placeholder 유지 |
 | 미니맵 per-layer scores | rent/activity/youth/studio/safety 개별 점수 | DongScore 확장 또는 신규 endpoint |

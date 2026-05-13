@@ -18,7 +18,7 @@ import ReviewDashboardSection from '@/components/Dashboard/sections/ReviewDashbo
 import SafetyEconomySection from '@/components/Dashboard/sections/SafetyEconomySection';
 import TransitSection from '@/components/Dashboard/sections/TransitSection';
 import Card from '@/components/ui/Card';
-import { useDongDetail, useDongGuMetrics, useDongGuMetricsSeries, useDongParks, useDongPopulation, useDongScores, useDongSummary } from '@/hooks/useDongs';
+import { useDongDetail, useDongGuMetrics, useDongGuMetricsSeries, useDongParks, useDongPopulation, useDongScores, useDongSummary, useDongTransitCongestion } from '@/hooks/useDongs';
 import { DEFAULT_WEIGHTS } from '@/types/api';
 
 const DEFAULT_DONG_SLUG = '중구-필동';
@@ -44,6 +44,8 @@ export default function Dashboard() {
   );
   // Section B 보강: 대형 공원 리스트 (행정동 매핑).
   const { data: parks } = useDongParks(dongSlug);
+  // Section C 보강: 시간대 혼잡도 + 동 성격 추정.
+  const { data: congestion } = useDongTransitCongestion(dongSlug);
 
   const selectedDong = useMemo(
     () => dongs?.find((d) => d.slug === dongSlug) ?? null,
@@ -160,7 +162,7 @@ export default function Dashboard() {
                   교통
                 </h2>
               </div>
-              <TransitSection transit={detail.transit} guMetrics={guMetrics} />
+              <TransitSection transit={detail.transit} guMetrics={guMetrics} congestion={congestion} />
             </Card>
           </section>
         )}

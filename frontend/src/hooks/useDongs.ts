@@ -2,7 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import type { UseQueryResult } from '@tanstack/react-query';
 
-import { getCompare, getDongDetail, getDongGuMetrics, getDongGuMetricsSeries, getDongParks, getDongPopulation, getDongScores, getDongSummary } from '@/lib/api';
+import { getCompare, getDongDetail, getDongGuMetrics, getDongGuMetricsSeries, getDongParks, getDongPopulation, getDongScores, getDongSummary, getDongTransitCongestion } from '@/lib/api';
 import type {
   CompareResponse,
   DongDetail,
@@ -12,6 +12,7 @@ import type {
   DongPopulationResponse,
   DongScore,
   DongSummary,
+  TransitCongestionResponse,
   Weights,
 } from '@/types/api';
 
@@ -151,6 +152,20 @@ export function useDongGuMetricsSeries(
     ] as const,
     queryFn: () => getDongGuMetricsSeries(slug as string, codes, years),
     enabled: !!slug && codes.length > 0,
+    staleTime: 300_000, // 5 min — matches backend cache TTL
+  });
+}
+
+/** Subscribe to /api/dongs/:slug/transit-congestion — time-of-day congestion
+ *  patterns (subway TOP3 + bus) + derived dong personality (SPEC 4.4 §C).
+ *  Disabled until slug is truthy. Backend caches 5 min. */
+export function useDongTransitCongestion(
+  slug: string | null | undefined,
+): UseQueryResult<TransitCongestionResponse> {
+  return useQuery({
+    queryKey: ['dongs', 'transit-congestion', slug] as const,
+    queryFn: () => getDongTransitCongestion(slug as string),
+    enabled: !!slug,
     staleTime: 300_000, // 5 min — matches backend cache TTL
   });
 }

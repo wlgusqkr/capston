@@ -292,6 +292,56 @@ export interface GuMetricSeriesResponse {
   gu_avg_series?: Record<string, { points: GuMetricSeriesPoint[] }>;
 }
 
+// -------- Dashboard Section C — Transit Congestion (SPEC 4.4 Section C) ----
+// GET /api/dongs/:slug/transit-congestion
+// Backend computes congestion patterns from SubwayCongestion (TOP3 nearby
+// stations, averaged) + BusCongestion (all BusStops mapped to the dong).
+// Personality estimate derived from morning_peak / midday / evening_peak /
+// weekend averages. See STATE.md Backend section for full schema notes.
+
+/** Single hour bucket (0~23) congestion value. `null` for missing slots. */
+export interface CongestionPoint {
+  hour: number;
+  /** Raw congestion (not normalized). Subway range ~0~67 (occasional spikes to
+   *  ~390); bus range typically 0~1+. Frontend renders both as-is with
+   *  connectNulls on the chart layer. */
+  congestion: number | null;
+}
+
+/** Response of GET /api/dongs/:slug/transit-congestion. */
+export interface TransitCongestionResponse {
+  dong: { slug: string; name: string; gu: string };
+  subway: {
+    /** TOP 3 nearest stations whose congestion is averaged for the curves. */
+    stations: { name: string; line: string }[];
+    by_day: {
+      평일: CongestionPoint[];
+      토요일: CongestionPoint[];
+      일요일: CongestionPoint[];
+    };
+  };
+  bus: {
+    /** Number of BusStops mapped to the dong (sample size). 0 → no bus data. */
+    stop_count: number;
+    by_pattern: {
+      평일: CongestionPoint[];
+      주말: CongestionPoint[];
+    };
+  };
+  personality: {
+    label: '주거 중심' | '상업·업무 중심' | '유동인구 많음' | null;
+    reason: string | null;
+    /** Pattern aggregates used to derive the label (0~range). null when data
+     *  for the corresponding bucket is missing. */
+    scores: {
+      morning_peak: number | null;
+      midday: number | null;
+      evening_peak: number | null;
+      weekend: number | null;
+    };
+  };
+}
+
 // -------- Dashboard Section B — Parks (SPEC 4.4 Section B) --------------
 
 /** Single park row in GET /api/dongs/:slug/parks. */
