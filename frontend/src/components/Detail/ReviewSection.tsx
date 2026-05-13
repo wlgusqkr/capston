@@ -17,7 +17,7 @@ function Stars({ rating, ariaLabel }: { rating: number; ariaLabel?: string }) {
       {[1, 2, 3, 4, 5].map((i) => (
         <span
           key={i}
-          className={i <= filled ? 'text-secondary' : 'text-divider'}
+          className={i <= filled ? 'text-warning' : 'text-divider'}
           aria-hidden="true"
         >
           ★
