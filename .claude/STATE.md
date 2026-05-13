@@ -88,7 +88,7 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 - **KpiRow** (`components/Dashboard/KpiRow.tsx`) — KPI 4칸 그리드 (환산월세/보증금/거래건수/안전게이지)
 - **DashboardMiniMap** (`components/Dashboard/DashboardMiniMap.tsx`) — Leaflet 미니맵 + 히트맵 레이어 토글 6종 + 컬러칩 범례 + 확장 버튼
 - **RealEstateSection** (`components/Dashboard/sections/RealEstateSection.tsx`) — 4개 Recharts 차트 (라인/도넛/산점도/바)
-- **AmenitySection** (`components/Dashboard/sections/AmenitySection.tsx`) — 카테고리별 테이블 + 자취생 필수시설 칩 그리드
+- **AmenitySection** (`components/Dashboard/sections/AmenitySection.tsx`) — 카테고리별 테이블 + 자취생 필수시설 칩 그리드 + **대형 공원 카드 리스트(TOP 6, id dedupe, area_m2 desc, ha/㎡ 포맷, 도보 분 환산)** + **도서관 placeholder (opacity-60)**. props에 `parks?: DongParksResponse` 추가.
 - **TransitSection** (`components/Dashboard/sections/TransitSection.tsx`) — 지하철 TOP3 + 버스 통계 + placeholder 위젯
 
 ### 신규 컴포넌트 (Phase 2)
@@ -98,6 +98,8 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 - **RealEstateSection** (`components/Dashboard/sections/RealEstateSection.tsx`) — **지가 변동률 (B5: LAND_PRICE_CHANGE_RATE)** + **주택 수 (B6: HOUSING_COUNT)** KPI 행 추가, 그 아래 기존 4개 Recharts 차트
 - **useDongPopulation** (`hooks/useDongs.ts`) — /api/dongs/:slug/population 훅 (staleTime 10min)
 - **useDongGuMetrics** (`hooks/useDongs.ts`) — /api/dongs/:slug/gu-metrics 훅 (staleTime 5min)
+- **useDongParks** (`hooks/useDongs.ts`) — /api/dongs/:slug/parks 훅 (staleTime 10min). Dashboard.tsx에서 호출 → AmenitySection `parks` prop.
+- **DongPark, DongParksResponse** (`types/api.ts`) — 공원 API 응답 타입 (id/name/category/area_m2/lat/lng/distance_m). RDS 중복 행 → 프론트 dedupe.
 - **useDongGuMetricsSeries** (`hooks/useDongs.ts`, **Phase 4**) — /api/dongs/:slug/gu-metrics/series 훅. `(slug, codes, years?)` 인자. codes 정렬 후 queryKey에 join (백엔드 캐시 키와 일치). staleTime 5min. enabled=codes.length>0. Dashboard에서 ACC_TOTAL_COUNT/FIRE_COUNT 2개 코드로 10년치 시계열 페치.
 - **DongPopulationResponse, DongGuMetricsResponse, GuMetricValue.date, SeoulAvgValue** (`types/api.ts`) — Phase 2 API 타입. gu-metrics 응답이 35종으로 확장되어 metric_code별 date 필드 추가, top-level date는 optional로 deprecated.
 - **GuMetricSeriesPoint, GuMetricSeries, GuMetricSeriesResponse** (`types/api.ts`, **Phase 4**) — gu-metrics/series 응답 타입. series + seoul_series 두 맵 (code→points). points는 date ASC, value nullable.
@@ -120,7 +122,7 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 
 ### 빌드
 - CSS: 73KB (18KB gz)
-- JS main: 984KB (293KB gz), Dashboard chunk: 125KB (30.7KB gz) — Phase 5 25구 평균/순위 정정 +0.5KB
+- JS main: 984KB (293KB gz), Dashboard chunk: 128KB (31.3KB gz) — Section B 공원 위젯 추가 +2.4KB
 - tsc + vite build 통과
 
 ### Phase 5 정정 (2026-05-13) — SeoulMetric raw → 25구 평균 / 순위
@@ -145,7 +147,8 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 | KPI 자취촌 지수 | 파생 지표 | 신규 endpoint 또는 프론트 계산 |
 | 섹션 C 시간대 혼잡도 | `subway_congestion`, `bus_congestion` | 신규 endpoint 필요 |
 | 섹션 C 동 성격 추정 | 혼잡도 패턴 분석 | 혼잡도 데이터 의존 |
-| 공원·도서관 | `park`, `library` | 신규 endpoint 필요 |
+| 공원 | `park`, `park_adong` | **구현 완료** (`/api/dongs/<slug>/parks`) |
+| 도서관 | `library`, `library_hours` | DB 모델 미존재 — placeholder 유지 |
 | 미니맵 per-layer scores | rent/activity/youth/studio/safety 개별 점수 | DongScore 확장 또는 신규 endpoint |
 
 ## Backend (휴면)

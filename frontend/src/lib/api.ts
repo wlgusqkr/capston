@@ -8,6 +8,7 @@ import type {
   CompareResponse,
   DongDetail,
   DongGuMetricsResponse,
+  DongParksResponse,
   GuMetricSeriesResponse,
   DongPopulationResponse,
   DongScore,
@@ -257,6 +258,14 @@ export async function getDongGuMetricsSeries(
     `/dongs/${slug}/gu-metrics/series`,
     { params },
   );
+  return data;
+}
+
+/** GET /api/dongs/:slug/parks — parks mapped to the dong (SPEC 4.4 Section B).
+ *  Backend orders by area_m2 desc (nulls last). RDS 원본에 동일 공원 중복 행이
+ *  존재하므로 호출부에서 id 기준 dedupe 처리 권장. 캐시 5분(서버측). */
+export async function getDongParks(slug: string): Promise<DongParksResponse> {
+  const { data } = await api.get<DongParksResponse>(`/dongs/${slug}/parks`);
   return data;
 }
 

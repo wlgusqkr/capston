@@ -292,6 +292,30 @@ export interface GuMetricSeriesResponse {
   gu_avg_series?: Record<string, { points: GuMetricSeriesPoint[] }>;
 }
 
+// -------- Dashboard Section B — Parks (SPEC 4.4 Section B) --------------
+
+/** Single park row in GET /api/dongs/:slug/parks. */
+export interface DongPark {
+  id: string;
+  name: string;
+  /** 공원 분류 (예: 근린공원, 어린이공원, 도시자연공원). */
+  category: string;
+  /** 면적 (m²). null 가능. */
+  area_m2: number | null;
+  lat: number | null;
+  lng: number | null;
+  /** 행정동 중심점 ↔ 공원 위치 거리 (미터). 좌표 누락 시 null. */
+  distance_m: number | null;
+}
+
+/** Response of GET /api/dongs/:slug/parks.
+ *  RDS 원본에 동일 공원 중복 행이 있어 클라이언트에서 id 기준 dedupe 필요. */
+export interface DongParksResponse {
+  dong: { slug: string; name: string; gu: string };
+  count: number;
+  parks: DongPark[];
+}
+
 // -------- Explore (Phase 4.8 — 자취 시세 BI 대시보드) --------------------
 // GET /api/dongs/:slug/explore?<filters>
 

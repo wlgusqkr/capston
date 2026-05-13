@@ -1,6 +1,7 @@
 # 변경 이력
 
 ## 2026-05-13
+- 대시보드 편의시설 섹션에 '대형 공원' 카드 리스트 추가 — 면적 내림차순 TOP 6, ha/㎡ 자동 환산 + 도보 분 표기, 중복 공원 행 자동 정리, 도서관은 "데이터 준비 중" placeholder 유지
 - 대시보드 §4.4 섹션 B '대형 공원' 위젯용 API (`GET /api/dongs/<slug>/parks`) 추가 — 행정동에 매핑된 공원 전체를 면적 내림차순으로 반환, 거리(m)는 행정동 중심점↔공원 위치 ST_DistanceSphere
 - 동·구 비교를 SeoulMetric raw → 25구 평균/순위로 정정. 추이 차트 스케일 정상화 + 카드에 자치구 순위 노출
 - 구별 지표 API(`/gu-metrics`, `/gu-metrics/series`) 응답에 25개 자치구 산술 평균 + 본 구의 25구 중 순위를 추가 (`rank_in_seoul`/`gu_count`/`gu_avg`, `gu_avg_series`, `current_rank`) — 기존 `seoul_avg`는 서울시 전체 합/대표값이라 "다른 구 대비" 비교가 불명확하던 문제 해결, 응답 캐시 키 v2로 갱신

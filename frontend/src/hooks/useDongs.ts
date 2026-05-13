@@ -2,11 +2,12 @@
 import { useQuery } from '@tanstack/react-query';
 import type { UseQueryResult } from '@tanstack/react-query';
 
-import { getCompare, getDongDetail, getDongGuMetrics, getDongGuMetricsSeries, getDongPopulation, getDongScores, getDongSummary } from '@/lib/api';
+import { getCompare, getDongDetail, getDongGuMetrics, getDongGuMetricsSeries, getDongParks, getDongPopulation, getDongScores, getDongSummary } from '@/lib/api';
 import type {
   CompareResponse,
   DongDetail,
   DongGuMetricsResponse,
+  DongParksResponse,
   GuMetricSeriesResponse,
   DongPopulationResponse,
   DongScore,
@@ -151,5 +152,18 @@ export function useDongGuMetricsSeries(
     queryFn: () => getDongGuMetricsSeries(slug as string, codes, years),
     enabled: !!slug && codes.length > 0,
     staleTime: 300_000, // 5 min — matches backend cache TTL
+  });
+}
+
+/** Subscribe to /api/dongs/:slug/parks — parks mapped to the dong.
+ *  Disabled until slug is truthy. Parks rarely change so staleTime 10 min. */
+export function useDongParks(
+  slug: string | null | undefined,
+): UseQueryResult<DongParksResponse> {
+  return useQuery({
+    queryKey: ['dongs', 'parks', slug] as const,
+    queryFn: () => getDongParks(slug as string),
+    enabled: !!slug,
+    staleTime: 600_000, // 10 min
   });
 }
