@@ -8,6 +8,7 @@ neighborhoods 앱 URL.
 from django.urls import path
 
 from apps.parks.views import DongParksView
+from apps.realestate.views import DongDerivedIndicesView
 from apps.transit.views import DongTransitCongestionView
 
 from .match import DongMatchCountsView, DongMatchDetailView
@@ -59,6 +60,12 @@ urlpatterns = [
         "dongs/<str:slug>/transit-congestion",
         DongTransitCongestionView.as_view(),
         name="dong-transit-congestion",
+    ),
+    # GET /api/dongs/<slug>/derived-indices — 자취촌 지수 + 계약 활발도 (대시보드 §4.5)
+    path(
+        "dongs/<str:slug>/derived-indices",
+        DongDerivedIndicesView.as_view(),
+        name="dong-derived-indices",
     ),
     # GET /api/compare?slugs=A,B,C
     path("compare", CompareView.as_view(), name="compare"),

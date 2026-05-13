@@ -155,7 +155,22 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 
 ## Backend (휴면)
 
-Django + DRF + GeoDjango. 9개 앱, 28개 모델, 23개 API 엔드포인트.
+Django + DRF + GeoDjango. 9개 앱, 28개 모델, 24개 API 엔드포인트.
+
+### 대시보드 §4.5 파생 지표 엔드포인트 (2026-05-13)
+- `GET /api/dongs/<slug>/derived-indices` — 자취촌 지수 + 계약 활발도. 426동 통째 계산 후 dict 캐시.
+  - **자취촌 지수**: SPEC §4.5 공식 그대로 `0.5×비아파트 비율 + 0.3×≤25㎡ 비율 + 0.2×월세 계약 건수 정규화(서울 동별 min-max)` × 100. 입력은 `rent_deal` 최근 365일.
+    - **비아파트 비율** = `housing_type != '아파트'` 카운트 / 전체. housing_type 분포: 아파트 246K, 다세대 122K, 오피스텔 91K, 다가구 91K, 단독 55K, 연립 9K, 연립다세대 762 (지난 12개월 614K행 기준).
+    - **소형 면적 비율** = `area_m2 <= 25` 카운트 / 전체.
+    - **월세 계약 건수 정규화** = `monthly_rent > 0` 카운트의 426동 min-max. 전세(monthly_rent=0)는 분자 제외 (SPEC "월세 계약 건수").
+    - 0~100 score → 동률은 같은 rank, percentile = round(100 - (rank-1)/N × 100).
+  - **계약 활발도**: 12개월 전체 계약 건수 / `AdongPopulation` 최신 인구 × 1000. 인구 0/null이면 score/rank/percentile 모두 null.
+  - 캐시 키 `derived_indices_all_dongs:v1:{YYYY-MM-DD}`, TTL 5시간. 매일 자동 갱신.
+  - 응답시간: **cold 1.9~2.2s** (RentDeal 3개 conditional Count + AdongPopulation DISTINCT ON, 단일 요청만 계산), **warm 7~30ms** (Redis dict 조회).
+  - 라이브 검증: 신림동 score 63.78 rank 21/426 (백분위 95) — 비아파트 82%, 소형 67%로 자취촌 명확. 역삼1동 score 58.59 rank 50 (오피스텔 많아 비아파트 82%, 소형 38%). 합정동 score 55.81 rank 66 (비아파트 95%). 필동 score 45.48 rank 152 (거래량 적어 monthly_norm=0.04).
+  - view 파일: `apps/realestate/views.py` (`DongDerivedIndicesView` + `_compute_all_dongs_derived` 함수). URL은 `apps/neighborhoods/urls.py`의 dong-scoped 패턴에 추가.
+  - 주의: RentDeal.dong은 Dong.id(int) FK이지만 AdongPopulation.dong은 `to_field='code'`라 dong_id에 code 문자열이 들어감. `_compute_all_dongs_derived`에서 `code_to_dong` 매핑으로 정렬.
+  - 스키마 변경 없음. `python manage.py check` / `makemigrations --dry-run` PASS.
 
 ### 대시보드 §4.4 섹션 C / §4.5 추가 엔드포인트 (2026-05-13)
 - `GET /api/dongs/<slug>/transit-congestion` -- 시간대 혼잡도 + 동 성격 추정. 캐시 5분 (`dong_transit_congestion:v1:<slug>`). 스키마 변경 없음.
