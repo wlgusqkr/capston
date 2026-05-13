@@ -1,6 +1,6 @@
 // Dashboard — Phase 2: KPI + MiniMap + Sections A~E.
 //
-// URL-driven dong selection via ?dong= search param. Default: "pildong".
+// URL-driven dong selection via ?dong= search param. Default: "중구-필동".
 
 import { useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -18,7 +18,7 @@ import { useDongDetail, useDongGuMetrics, useDongPopulation, useDongScores, useD
 import type { CategoryKey } from '@/lib/colors';
 import { DEFAULT_WEIGHTS } from '@/types/api';
 
-const DEFAULT_DONG_SLUG = 'pildong';
+const DEFAULT_DONG_SLUG = '중구-필동';
 
 interface SectionDef {
   title: string;
