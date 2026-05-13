@@ -8,6 +8,7 @@ import type {
   CompareResponse,
   DongDetail,
   DongGuMetricsResponse,
+  GuMetricSeriesResponse,
   DongPopulationResponse,
   DongScore,
   DongSummary,
@@ -232,6 +233,29 @@ export async function getDongGuMetrics(
 ): Promise<DongGuMetricsResponse> {
   const { data } = await api.get<DongGuMetricsResponse>(
     `/dongs/${slug}/gu-metrics`,
+  );
+  return data;
+}
+
+/** GET /api/dongs/:slug/gu-metrics/series — gu-level metric time series.
+ *
+ *  - `codes` is sent as a comma-joined whitelist (backend caps at 10).
+ *  - `years` defaults backend-side to 10 (clamp 1~20).
+ *  - All requested codes are present in the response (empty points array
+ *    when no data) — frontend can iterate without per-code existence checks.
+ */
+export async function getDongGuMetricsSeries(
+  slug: string,
+  codes: string[],
+  years?: number,
+): Promise<GuMetricSeriesResponse> {
+  const params: Record<string, string | number> = {
+    codes: codes.join(','),
+  };
+  if (years != null) params.years = years;
+  const { data } = await api.get<GuMetricSeriesResponse>(
+    `/dongs/${slug}/gu-metrics/series`,
+    { params },
   );
   return data;
 }

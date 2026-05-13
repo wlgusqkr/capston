@@ -250,6 +250,33 @@ export interface DongGuMetricsResponse {
   seoul_avg: Record<string, SeoulAvgValue>;
 }
 
+/** Single time-series point in the gu-metrics series response.
+ *  `value` may be null for missing entries — chart layer uses connectNulls. */
+export interface GuMetricSeriesPoint {
+  date: string;
+  value: number | null;
+}
+
+/** A single metric series (one metric_code) in the gu-metrics series response. */
+export interface GuMetricSeries {
+  name: string;
+  unit: string;
+  category: string;
+  points: GuMetricSeriesPoint[];
+}
+
+/** Response of GET /api/dongs/:slug/gu-metrics/series?codes=...&years=N.
+ *  `series` keyed by metric_code; same keys mirrored under `seoul_series`
+ *  (Seoul-wide averages). All requested codes are always present (empty
+ *  points array when no data) — simplifies the frontend branching. */
+export interface GuMetricSeriesResponse {
+  dong: { slug: string; name: string; gu: string };
+  gu_code: string;
+  gu_name: string;
+  series: Record<string, GuMetricSeries>;
+  seoul_series: Record<string, { points: GuMetricSeriesPoint[] }>;
+}
+
 // -------- Explore (Phase 4.8 — 자취 시세 BI 대시보드) --------------------
 // GET /api/dongs/:slug/explore?<filters>
 

@@ -16,6 +16,9 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  Legend,
+  Line,
+  LineChart,
   PolarAngleAxis,
   PolarGrid,
   PolarRadiusAxis,
@@ -30,10 +33,49 @@ import {
 import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
 import { CATEGORY_COLORS, CHART_COLORS } from '@/lib/colors';
-import type { DongGuMetricsResponse } from '@/types/api';
+import type {
+  DongGuMetricsResponse,
+  GuMetricSeriesPoint,
+  GuMetricSeriesResponse,
+} from '@/types/api';
 
 interface SafetyEconomySectionProps {
   guMetrics: DongGuMetricsResponse;
+  /** Optional time-series payload (ACC_TOTAL_COUNT / FIRE_COUNT) for the
+   *  trend line charts. May be undefined while loading; charts render an
+   *  empty state when the corresponding code has zero points. */
+  series?: GuMetricSeriesResponse;
+}
+
+/** One row in the combined trend chart dataset (gu + Seoul). */
+interface SeriesRow {
+  date: string;
+  gu: number | null;
+  seoul: number | null;
+}
+
+/** Combine gu points + Seoul points into a single dataset keyed by date.
+ *  Both source arrays are date-ASC (backend invariant), but use null-fills
+ *  rather than assuming exact date alignment. */
+function mergeSeries(
+  guPoints: GuMetricSeriesPoint[] | undefined,
+  seoulPoints: GuMetricSeriesPoint[] | undefined,
+): SeriesRow[] {
+  const guMap = new Map<string, number | null>();
+  (guPoints ?? []).forEach((p) => guMap.set(p.date, p.value));
+  const seoulMap = new Map<string, number | null>();
+  (seoulPoints ?? []).forEach((p) => seoulMap.set(p.date, p.value));
+  const dates = Array.from(new Set([...guMap.keys(), ...seoulMap.keys()])).sort();
+  return dates.map((date) => ({
+    date,
+    gu: guMap.get(date) ?? null,
+    seoul: seoulMap.get(date) ?? null,
+  }));
+}
+
+/** 'YYYY-MM-DD' → 'YYYY' (annual data ticks). */
+function formatYearTick(date: string): string {
+  return date.slice(0, 4);
 }
 
 const TOOLTIP_STYLE = {
@@ -144,8 +186,19 @@ const TRAFFIC_CULTURE_FIELDS = [
 
 export default function SafetyEconomySection({
   guMetrics,
+  series,
 }: SafetyEconomySectionProps) {
   const { metrics, seoul_avg, gu_name } = guMetrics;
+
+  // Phase 4: 추이 차트 데이터 (교통사고 / 화재)
+  const accSeries = series?.series['ACC_TOTAL_COUNT'];
+  const fireSeries = series?.series['FIRE_COUNT'];
+  const accSeoulSeries = series?.seoul_series['ACC_TOTAL_COUNT'];
+  const fireSeoulSeries = series?.seoul_series['FIRE_COUNT'];
+  const accTrendData = mergeSeries(accSeries?.points, accSeoulSeries?.points);
+  const fireTrendData = mergeSeries(fireSeries?.points, fireSeoulSeries?.points);
+  const hasAccTrend = (accSeries?.points.length ?? 0) > 0;
+  const hasFireTrend = (fireSeries?.points.length ?? 0) > 0;
 
   // 1. Safety radar data — 1~5 scale, higher is safer
   const radarData = SAFETY_FIELDS.map((f) => ({
@@ -391,6 +444,143 @@ export default function SafetyEconomySection({
           {accDate && (
             <p className="m-0 mt-2 text-caption text-text-subtle">{accDate}</p>
           )}
+        </Card>
+      </div>
+
+      {/* Row 1.5 (Phase 4): 교통사고 추이 + 화재 추이 라인 차트 */}
+      <div className="grid grid-cols-2 gap-5">
+        {/* 교통사고 추이 라인 */}
+        <Card padding="lg">
+          <h3 className="m-0 mb-3 text-feature-heading leading-[1.3] font-semibold text-text">
+            교통사고 추이
+          </h3>
+          {hasAccTrend ? (
+            <div className="h-[220px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={accTrendData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 10, fill: CHART_COLORS.axis }}
+                    tickFormatter={formatYearTick}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: CHART_COLORS.axis }}
+                    tickFormatter={(v: number) => v.toLocaleString()}
+                  />
+                  <Tooltip
+                    contentStyle={TOOLTIP_STYLE}
+                    labelFormatter={(label) => formatYearTick(String(label))}
+                    formatter={(value, name) => {
+                      if (value == null) return ['-', name];
+                      const v = value as number;
+                      return [`${v.toLocaleString()}건`, name];
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Line
+                    name={gu_name}
+                    type="monotone"
+                    dataKey="gu"
+                    stroke={CATEGORY_COLORS.safety}
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: CATEGORY_COLORS.safety }}
+                    activeDot={{ r: 5 }}
+                    connectNulls
+                    isAnimationActive
+                    animationDuration={1200}
+                  />
+                  <Line
+                    name="서울 평균"
+                    type="monotone"
+                    dataKey="seoul"
+                    stroke={CHART_COLORS.axis}
+                    strokeWidth={1.5}
+                    strokeDasharray="4 4"
+                    dot={false}
+                    connectNulls
+                    isAnimationActive
+                    animationDuration={1200}
+                    animationBegin={300}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-[220px] text-text-muted text-caption">
+              교통사고 추이 데이터가 없습니다
+            </div>
+          )}
+          <p className="m-0 mt-2 text-caption text-text-subtle">
+            {accSeries?.name ?? '교통사고 총 발생건수'} · 연간 {accSeries?.unit ?? '건'}
+          </p>
+        </Card>
+
+        {/* 화재 추이 라인 */}
+        <Card padding="lg">
+          <h3 className="m-0 mb-3 text-feature-heading leading-[1.3] font-semibold text-text">
+            화재 발생 추이
+          </h3>
+          {hasFireTrend ? (
+            <div className="h-[220px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={fireTrendData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 10, fill: CHART_COLORS.axis }}
+                    tickFormatter={formatYearTick}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: CHART_COLORS.axis }}
+                    tickFormatter={(v: number) => v.toLocaleString()}
+                  />
+                  <Tooltip
+                    contentStyle={TOOLTIP_STYLE}
+                    labelFormatter={(label) => formatYearTick(String(label))}
+                    formatter={(value, name) => {
+                      if (value == null) return ['-', name];
+                      const v = value as number;
+                      return [`${v.toLocaleString()}건`, name];
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Line
+                    name={gu_name}
+                    type="monotone"
+                    dataKey="gu"
+                    stroke={CHART_COLORS.warningDeep}
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: CHART_COLORS.warningDeep }}
+                    activeDot={{ r: 5 }}
+                    connectNulls
+                    isAnimationActive
+                    animationDuration={1200}
+                  />
+                  <Line
+                    name="서울 평균"
+                    type="monotone"
+                    dataKey="seoul"
+                    stroke={CHART_COLORS.axis}
+                    strokeWidth={1.5}
+                    strokeDasharray="4 4"
+                    dot={false}
+                    connectNulls
+                    isAnimationActive
+                    animationDuration={1200}
+                    animationBegin={300}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-[220px] text-text-muted text-caption">
+              화재 추이 데이터가 없습니다
+            </div>
+          )}
+          <p className="m-0 mt-2 text-caption text-text-subtle">
+            {fireSeries?.name ?? '화재 발생건수'} · 연간 {fireSeries?.unit ?? '건'}
+          </p>
         </Card>
       </div>
 

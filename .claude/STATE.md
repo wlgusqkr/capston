@@ -93,12 +93,14 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 
 ### 신규 컴포넌트 (Phase 2)
 - **PopulationSection** (`components/Dashboard/sections/PopulationSection.tsx`) — 남녀 비율 도넛 + 인구 추이 AreaChart + 청년 비율 카드 (구 단위, POP_YOUTH_19_34÷POP_TOTAL_YOUTH_BASE 계산) + **평균 연령 카드 (B1: 전체/남/여 칩)** + **고령 인구 비율 도넛 (B2: POP_ELDERLY_RATIO)** + 1인 가구 추정 도넛
-- **SafetyEconomySection** (`components/Dashboard/sections/SafetyEconomySection.tsx`) — 안전 등급 6분야 레이더 (TRAFFIC/CRIME/FIRE/DISEASE/LIFE/SUICIDE, 종합 평균 텍스트) + 교통사고 통계 (ACC_TOTAL_COUNT/INJURY/DRUNK/HITRUN, 비율 계산) + **교통문화지수 레이더 (B3)** + GRDP 총액+1인당 + 녹지비율/1인당녹지/화재 MetricCard. 모든 카드에 metric date 푸터.
+- **SafetyEconomySection** (`components/Dashboard/sections/SafetyEconomySection.tsx`) — 안전 등급 6분야 레이더 (TRAFFIC/CRIME/FIRE/DISEASE/LIFE/SUICIDE, 종합 평균 텍스트) + 교통사고 통계 (ACC_TOTAL_COUNT/INJURY/DRUNK/HITRUN, 비율 계산) + **교통사고 추이 LineChart (Phase 4, ACC_TOTAL_COUNT 시계열, 구 + 서울 평균, safety 색)** + **화재 발생 추이 LineChart (Phase 4, FIRE_COUNT 시계열, warningDeep 색)** + **교통문화지수 레이더 (B3)** + GRDP 총액+1인당 + 녹지비율/1인당녹지/화재 MetricCard. 모든 카드에 metric date 푸터. props에 `series?: GuMetricSeriesResponse` 추가.
 - **TransitSection** (`components/Dashboard/sections/TransitSection.tsx`) — 지하철 TOP3 + 버스 통계 + **1인당 차량 등록 KPI (B4: VEHICLE_REGISTERED÷POP_RESIDENT, 보행 친화도 시그널)** + placeholder 위젯 (혼잡도/동 성격)
 - **RealEstateSection** (`components/Dashboard/sections/RealEstateSection.tsx`) — **지가 변동률 (B5: LAND_PRICE_CHANGE_RATE)** + **주택 수 (B6: HOUSING_COUNT)** KPI 행 추가, 그 아래 기존 4개 Recharts 차트
 - **useDongPopulation** (`hooks/useDongs.ts`) — /api/dongs/:slug/population 훅 (staleTime 10min)
 - **useDongGuMetrics** (`hooks/useDongs.ts`) — /api/dongs/:slug/gu-metrics 훅 (staleTime 5min)
+- **useDongGuMetricsSeries** (`hooks/useDongs.ts`, **Phase 4**) — /api/dongs/:slug/gu-metrics/series 훅. `(slug, codes, years?)` 인자. codes 정렬 후 queryKey에 join (백엔드 캐시 키와 일치). staleTime 5min. enabled=codes.length>0. Dashboard에서 ACC_TOTAL_COUNT/FIRE_COUNT 2개 코드로 10년치 시계열 페치.
 - **DongPopulationResponse, DongGuMetricsResponse, GuMetricValue.date, SeoulAvgValue** (`types/api.ts`) — Phase 2 API 타입. gu-metrics 응답이 35종으로 확장되어 metric_code별 date 필드 추가, top-level date는 optional로 deprecated.
+- **GuMetricSeriesPoint, GuMetricSeries, GuMetricSeriesResponse** (`types/api.ts`, **Phase 4**) — gu-metrics/series 응답 타입. series + seoul_series 두 맵 (code→points). points는 date ASC, value nullable.
 
 ### 신규 컴포넌트 (Phase 3)
 - **PopularitySection** (`components/Dashboard/sections/PopularitySection.tsx`) — 서울 자취 TOP 10 리스트 (현재 동 하이라이트) + 학교별 TOP 5 (KERNEL_SCHOOL_OPTIONS Select, 현재는 종합 점수 폴백) + 인근 비슷한 동 카드 3장 (similarity_pct + 비교하기 링크). 동 클릭 → handleDongChange (대시보드 내 전환).
@@ -118,7 +120,7 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 
 ### 빌드
 - CSS: 73KB (18KB gz)
-- JS main: 984KB (293KB gz), Dashboard chunk: 119KB (29.7KB gz) — Phase 4 D/E 확장 +11KB (35종 gu-metric 위젯)
+- JS main: 984KB (293KB gz), Dashboard chunk: 123KB (30.2KB gz) — Phase 4 추이 차트 2종 (교통사고/화재) +4KB
 - tsc + vite build 통과
 
 ### 알려진 이슈

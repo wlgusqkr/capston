@@ -2,11 +2,12 @@
 import { useQuery } from '@tanstack/react-query';
 import type { UseQueryResult } from '@tanstack/react-query';
 
-import { getCompare, getDongDetail, getDongGuMetrics, getDongPopulation, getDongScores, getDongSummary } from '@/lib/api';
+import { getCompare, getDongDetail, getDongGuMetrics, getDongGuMetricsSeries, getDongPopulation, getDongScores, getDongSummary } from '@/lib/api';
 import type {
   CompareResponse,
   DongDetail,
   DongGuMetricsResponse,
+  GuMetricSeriesResponse,
   DongPopulationResponse,
   DongScore,
   DongSummary,
@@ -123,6 +124,32 @@ export function useDongGuMetrics(
     queryKey: ['dongs', 'gu-metrics', slug] as const,
     queryFn: () => getDongGuMetrics(slug as string),
     enabled: !!slug,
+    staleTime: 300_000, // 5 min — matches backend cache TTL
+  });
+}
+
+/** Subscribe to /api/dongs/:slug/gu-metrics/series — time-series for chart
+ *  widgets (e.g. 교통사고/화재 추이). Disabled until slug + non-empty codes.
+ *  Backend caches 5min per (gu, codes, years).
+ */
+export function useDongGuMetricsSeries(
+  slug: string | null | undefined,
+  codes: string[],
+  years?: number,
+): UseQueryResult<GuMetricSeriesResponse> {
+  // Sort codes so [A,B] and [B,A] share a cache entry — matches the backend
+  // cache key (sorted_codes_joined) and de-dupes identical requests.
+  const sortedCodes = [...codes].sort();
+  return useQuery({
+    queryKey: [
+      'dongs',
+      'gu-metrics-series',
+      slug,
+      sortedCodes.join(','),
+      years ?? null,
+    ] as const,
+    queryFn: () => getDongGuMetricsSeries(slug as string, codes, years),
+    enabled: !!slug && codes.length > 0,
     staleTime: 300_000, // 5 min — matches backend cache TTL
   });
 }

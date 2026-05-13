@@ -18,10 +18,13 @@ import ReviewDashboardSection from '@/components/Dashboard/sections/ReviewDashbo
 import SafetyEconomySection from '@/components/Dashboard/sections/SafetyEconomySection';
 import TransitSection from '@/components/Dashboard/sections/TransitSection';
 import Card from '@/components/ui/Card';
-import { useDongDetail, useDongGuMetrics, useDongPopulation, useDongScores, useDongSummary } from '@/hooks/useDongs';
+import { useDongDetail, useDongGuMetrics, useDongGuMetricsSeries, useDongPopulation, useDongScores, useDongSummary } from '@/hooks/useDongs';
 import { DEFAULT_WEIGHTS } from '@/types/api';
 
 const DEFAULT_DONG_SLUG = '중구-필동';
+
+/** gu-metrics/series codes for Section E trend charts (교통사고 / 화재). */
+const SAFETY_SERIES_CODES = ['ACC_TOTAL_COUNT', 'FIRE_COUNT'];
 
 export default function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -33,6 +36,12 @@ export default function Dashboard() {
   const { data: summary } = useDongSummary(dongSlug, DEFAULT_WEIGHTS);
   const { data: population } = useDongPopulation(dongSlug);
   const { data: guMetrics } = useDongGuMetrics(dongSlug);
+  // Phase 4: 교통사고 + 화재 시계열 (Section E 추이 차트). 10년치.
+  const { data: safetySeries } = useDongGuMetricsSeries(
+    dongSlug,
+    SAFETY_SERIES_CODES,
+    10,
+  );
 
   const selectedDong = useMemo(
     () => dongs?.find((d) => d.slug === dongSlug) ?? null,
@@ -187,7 +196,7 @@ export default function Dashboard() {
                   안전·환경·경제
                 </h2>
               </div>
-              <SafetyEconomySection guMetrics={guMetrics} />
+              <SafetyEconomySection guMetrics={guMetrics} series={safetySeries} />
             </Card>
           </section>
         )}
