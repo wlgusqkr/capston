@@ -584,29 +584,40 @@ class DongPopulationView(APIView):
     tags=["dongs"],
     summary="소속 구의 최신 지표 + 서울 평균 (대시보드 Phase 2)",
     description=(
-        "한 행정동이 속한 자치구의 최신 GuMetric 35종을 metric_code별로 반환하고, "
-        "동일 metric_code에 대한 SeoulMetric 평균도 함께 반환한다."
+        "한 행정동이 속한 자치구의 GuMetric을 metric_code별로 가장 최신 1행씩 반환하고, "
+        "동일하게 metric_code별 최신 SeoulMetric도 함께 반환한다. "
+        "metric_code마다 적재 주기·최신 날짜가 다르므로 각 항목의 `date`를 함께 노출한다."
     ),
 )
 class DongGuMetricsView(APIView):
     """
     GET /api/dongs/<slug>/gu-metrics
 
+    `gu_metric`은 metric_code마다 적재 주기/최신 날짜가 다르다 (예: POP_RESIDENT*는
+    월간 ~2026-04, SAFETY_GRADE_*·POP_YOUTH_*는 연간 ~2024-01). 따라서 "구의 가장
+    최신 날짜 1개"로 잡으면 그 날짜에 적재된 코드만 응답에 포함되어 다른 코드가
+    누락된다. 이를 막기 위해 (gu, metric_code) 단위로 가장 최신 1행씩을 가져온다
+    (PostgreSQL `DISTINCT ON (metric_code) ... ORDER BY metric_code, date DESC`).
+
     응답:
       {
         "dong": { "slug": "...", "name": "...", "gu": "..." },
-        "gu_code": "1114000000",
+        "gu_code": "...",
         "gu_name": "중구",
-        "date": "2024-12-31",
         "metrics": {
-          "SAFETY_GRADE_MEAN": { "value": 3.2, "name": "...", "unit": "점", "category": "안전" },
+          "POP_RESIDENT":     { "value": 117760, "date": "2026-04-01", "name": "...", "unit": "명",  "category": "인구" },
+          "POP_YOUTH_19_34":  { "value": 23456,  "date": "2024-01-01", "name": "...", "unit": "명",  "category": "인구" },
+          "SAFETY_GRADE_FIRE":{ "value": 3,      "date": "2024-01-01", "name": "...", "unit": "등급", "category": "안전" },
           ...
         },
         "seoul_avg": {
-          "SAFETY_GRADE_MEAN": { "value": 3.5 },
+          "POP_RESIDENT":     { "value": 9456789.0, "date": "2026-04-01" },
           ...
         }
       }
+
+    프론트 주의: 기존 응답의 top-level `date` 필드는 코드별 `date`로 대체되었다.
+    캐시는 (구 단위) 5분 TTL.
     """
 
     def get(self, request: Request, slug: str) -> Response:
@@ -630,72 +641,44 @@ class DongGuMetricsView(APIView):
             for m in Metric.objects.all()
         }
 
-        # 최신 날짜의 GuMetric 조회
-        latest_gm = (
-            GuMetric.objects
-            .filter(gu=gu)
-            .order_by("-date")
-            .values_list("date", flat=True)
-            .first()
-        )
-        if latest_gm is None:
-            data = {
-                "dong": _dong_header(dong),
-                "gu_code": gu.gu_code,
-                "gu_name": gu.name,
-                "date": None,
-                "metrics": {},
-                "seoul_avg": {},
-            }
-            return Response(data, status=status.HTTP_200_OK)
-
+        # (gu, metric_code)별 최신 1행씩 — PostgreSQL DISTINCT ON
+        # ORDER BY metric_code, -date 가 DISTINCT ON 컬럼과 정확히 매칭되어야 한다.
         gu_rows = (
             GuMetric.objects
-            .filter(gu=gu, date=latest_gm)
-            .select_related("metric")
-            .only("metric__metric_code", "value")
+            .filter(gu=gu)
+            .order_by("metric_id", "-date")
+            .distinct("metric_id")
+            .values("metric_id", "date", "value")
         )
         metrics_dict = {}
         for row in gu_rows:
-            mc = row.metric_id  # metric_code (PK)
+            mc = row["metric_id"]
             meta = metric_meta.get(mc)
             metrics_dict[mc] = {
-                "value": float(row.value) if row.value is not None else None,
+                "value": float(row["value"]) if row["value"] is not None else None,
+                "date": str(row["date"]) if row["date"] is not None else None,
                 "name": meta.name if meta else mc,
                 "unit": meta.unit if meta else "",
                 "category": meta.category if meta else "",
             }
 
-        # SeoulMetric — 같은 날짜를 먼저 시도, 없으면 각 metric_code 최신
+        # SeoulMetric — metric_code별 최신 1행씩 (구와 별개로 독립 적재됨)
         seoul_rows = (
             SeoulMetric.objects
-            .filter(date=latest_gm)
-            .only("metric_id", "value")
+            .order_by("metric_id", "-date")
+            .distinct("metric_id")
+            .values("metric_id", "date", "value")
         )
         seoul_avg = {}
         for row in seoul_rows:
-            seoul_avg[row.metric_id] = {
-                "value": float(row.value) if row.value is not None else None,
+            seoul_avg[row["metric_id"]] = {
+                "value": float(row["value"]) if row["value"] is not None else None,
+                "date": str(row["date"]) if row["date"] is not None else None,
             }
-
-        # 같은 날짜에 서울 데이터가 없는 metric은 가장 최근 값으로 폴백
-        missing_codes = set(metrics_dict.keys()) - set(seoul_avg.keys())
-        if missing_codes:
-            for mc in missing_codes:
-                fallback = (
-                    SeoulMetric.objects
-                    .filter(metric_id=mc)
-                    .order_by("-date")
-                    .values_list("value", flat=True)
-                    .first()
-                )
-                if fallback is not None:
-                    seoul_avg[mc] = {"value": float(fallback)}
 
         cacheable = {
             "gu_code": gu.gu_code,
             "gu_name": gu.name,
-            "date": str(latest_gm),
             "metrics": metrics_dict,
             "seoul_avg": seoul_avg,
         }

@@ -139,8 +139,38 @@ Django + DRF + GeoDjango. 9개 앱, 28개 모델, 20개 API 엔드포인트.
 
 ### Phase 2 추가 엔드포인트 (2026-05-13)
 - `GET /api/dongs/<slug>/population` -- AdongPopulation 시계열 (latest + trend). 캐시 10분.
-- `GET /api/dongs/<slug>/gu-metrics` -- 소속 구의 최신 GuMetric 35종 + SeoulMetric 서울 평균. 캐시 5분.
+- `GET /api/dongs/<slug>/gu-metrics` -- 소속 구의 GuMetric을 metric_code별 최신 1행씩 + SeoulMetric도 metric_code별 최신. 캐시 5분.
 - 스키마 변경 없음 (마이그레이션 없음). views.py + urls.py만 수정.
+
+### gu-metrics 응답 스키마 (2026-05-13 수정)
+metric_code마다 적재 주기가 다르므로 "구의 최신 1개 날짜" 잡는 방식 폐기.
+PostgreSQL `DISTINCT ON (metric_code) ORDER BY metric_code, date DESC`로 35종 모두 채움.
+
+```json
+{
+  "dong":      { "slug": "...", "name": "...", "gu": "..." },
+  "gu_code":   "11140",
+  "gu_name":   "중구",
+  "metrics": {
+    "POP_RESIDENT":     { "value": 117760, "date": "2026-04-01", "name": "주민등록인구",     "unit": "명",  "category": "인구" },
+    "POP_YOUTH_19_34":  { "value": 34815,  "date": "2024-01-01", "name": "청년인구_19~34세", "unit": "명",  "category": "인구" },
+    "SAFETY_GRADE_FIRE":{ "value": 5,      "date": "2024-01-01", "name": "지역안전등급_화재",  "unit": "등급", "category": "안전" }
+  },
+  "seoul_avg": {
+    "POP_RESIDENT":    { "value": 9456789.0, "date": "2026-04-01" },
+    "POP_YOUTH_19_34": { "value": 2156890.0, "date": "2024-01-01" }
+  }
+}
+```
+
+**breaking-ish 변경**: top-level `date` 필드 제거 (코드별 `metrics[code].date` / `seoul_avg[code].date`로 대체). 프론트가 top-level `date`를 참조하지 않는 한 호환.
+
+### 메트릭 카탈로그 요약 (참고)
+
+총 35종, 카테고리: 인구(13) / 안전(7) / 교통(10) / 환경(2) / 경제(4). 적재 범위:
+- 월간 (M): `POP_RESIDENT*` (~2026-04), `POP_TOTAL` / `POP_ELDERLY_RATIO` (~2026-03), `LAND_PRICE_CHANGE_RATE` (~2026-03)
+- 연간 (A): `SAFETY_GRADE_*` / `POP_YOUTH_*` / `POP_MEAN_AGE*` / `ACC_*` / `VEHICLE_REGISTERED` / `HOUSING_COUNT` (~2024-01), `TRAFFIC_CULTURE_*` / `FIRE_COUNT` (~2025-01), `AREA_GREEN` / `AREA_URBAN` (~2024-01), `GRDP_*` (~2022-01)
+- 모든 35종이 25개 구 전체에 적재됨 (gu_metric에서 누락 코드 없음).
 
 ## Data (휴면)
 
