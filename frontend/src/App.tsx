@@ -1,5 +1,6 @@
 // Top-level router. Screens registered here per SPEC section 8.
 //   /                       → MainMap (4단계)
+//   /dashboard              → Dashboard (Phase 0 shell)
 //   /dong/:slug             → DongDetail (6단계)
 //   /compare?dongs=A,B,C    → Compare (8단계)
 //   /login                  → Login (9단계, username/password)
@@ -10,9 +11,15 @@
 // Stage 3: <TopNav> renders above every route. <PageTitleProvider> lets
 // individual pages publish their title to the contextual TopNav center
 // zone (D-2 + R-2 design-polish-v2 plan).
+//
+// AiPanelProvider wraps AppContent + AiSidePanel so that the main content
+// area can shift left when the AI panel opens (margin-right transition).
+import { lazy, Suspense } from 'react';
 import { Route, Routes } from 'react-router-dom';
 
+import AiSidePanel from './components/Layout/AiSidePanel';
 import TopNav from './components/Layout/TopNav';
+import { AiPanelProvider, useAiPanel } from './contexts/AiPanelContext';
 import { PageTitleProvider } from './contexts/PageTitleContext';
 import Compare from './routes/Compare';
 import DesignSystem from './routes/DesignSystem';
@@ -24,12 +31,33 @@ import MyPage from './routes/MyPage';
 import NotFound from './routes/NotFound';
 import Register from './routes/Register';
 
-export default function App() {
+const Dashboard = lazy(() => import('./routes/Dashboard'));
+
+function AppContent() {
+  const { isOpen } = useAiPanel();
   return (
-    <PageTitleProvider>
+    <div
+      className={`transition-[margin] duration-300 ease-out ${isOpen ? 'mr-[400px]' : ''}`}
+    >
       <TopNav />
       <Routes>
         <Route path="/" element={<MainMap />} />
+        <Route
+          path="/dashboard"
+          element={
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center h-[calc(100vh-var(--space-14))]">
+                  <span className="text-text-muted text-caption">
+                    로딩 중...
+                  </span>
+                </div>
+              }
+            >
+              <Dashboard />
+            </Suspense>
+          }
+        />
         <Route path="/dong/:slug" element={<DongDetail />} />
         <Route path="/dong/:slug/explore" element={<DongExplore />} />
         <Route path="/compare" element={<Compare />} />
@@ -39,6 +67,17 @@ export default function App() {
         <Route path="/design-system" element={<DesignSystem />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <PageTitleProvider>
+      <AiPanelProvider>
+        <AppContent />
+        <AiSidePanel />
+      </AiPanelProvider>
     </PageTitleProvider>
   );
 }

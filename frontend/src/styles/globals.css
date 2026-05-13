@@ -85,6 +85,49 @@
   --color-subway-8: #E6186C;
   --color-subway-9: #BDB092;
 
+  /* ----- COLOR — Category (dashboard section headers / icons) ----- */
+  --color-cat-realestate: #F59E0B;
+  --color-cat-transport:  #3B82F6;
+  --color-cat-amenity:    #10B981;
+  --color-cat-safety:     #EF4444;
+  --color-cat-population: #8B5CF6;
+  --color-cat-environment:#14B8A6;
+
+  /* ----- COLOR — Heatmap Layer: Rent (yellow → orange) ----- */
+  --color-hm-rent-1: #FEF3C7;
+  --color-hm-rent-2: #FDE68A;
+  --color-hm-rent-3: #FBBF24;
+  --color-hm-rent-4: #F59E0B;
+  --color-hm-rent-5: #D97706;
+
+  /* ----- COLOR — Heatmap Layer: Activity (pink → purple) ----- */
+  --color-hm-activity-1: #FCE7F3;
+  --color-hm-activity-2: #F9A8D4;
+  --color-hm-activity-3: #EC4899;
+  --color-hm-activity-4: #BE185D;
+  --color-hm-activity-5: #831843;
+
+  /* ----- COLOR — Heatmap Layer: Youth (light violet → deep violet) ----- */
+  --color-hm-youth-1: #EDE9FE;
+  --color-hm-youth-2: #C4B5FD;
+  --color-hm-youth-3: #8B5CF6;
+  --color-hm-youth-4: #6D28D9;
+  --color-hm-youth-5: #4C1D95;
+
+  /* ----- COLOR — Heatmap Layer: Studio (mint → teal) ----- */
+  --color-hm-studio-1: #CCFBF1;
+  --color-hm-studio-2: #99F6E4;
+  --color-hm-studio-3: #2DD4BF;
+  --color-hm-studio-4: #0D9488;
+  --color-hm-studio-5: #115E59;
+
+  /* ----- COLOR — Heatmap Layer: Safety (red → yellow → green, diverging) ----- */
+  --color-hm-safety-1: #EF4444;
+  --color-hm-safety-2: #FB923C;
+  --color-hm-safety-3: #FBBF24;
+  --color-hm-safety-4: #84CC16;
+  --color-hm-safety-5: #22C55E;
+
   /* ----- FONT FAMILY ----- */
   --font-family-base:
     'Pretendard', 'Pretendard Variable', -apple-system, BlinkMacSystemFont,
@@ -468,6 +511,11 @@
 @keyframes match-kpi-pulse {
   0%, 100% { opacity: 0.6; }
   50%      { opacity: 1; }
+}
+
+@keyframes shimmer-border {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
 }
 
 /* ==========================================================================

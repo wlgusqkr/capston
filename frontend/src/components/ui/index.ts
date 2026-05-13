@@ -41,3 +41,6 @@ export type { ModalProps } from './Modal';
 
 export { default as Tooltip } from './Tooltip';
 export type { TooltipProps, TooltipPlacement } from './Tooltip';
+
+export { default as Gauge } from './Gauge';
+export type { GaugeProps } from './Gauge';

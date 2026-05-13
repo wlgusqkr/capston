@@ -1,0 +1,42 @@
+// DashboardHeader — dong selector + selected dong display for the dashboard page.
+
+import DongSelector from './DongSelector';
+
+export interface DashboardHeaderProps {
+  selectedDong: { slug: string; name: string; gu: string } | null;
+  onDongChange: (slug: string) => void;
+}
+
+export default function DashboardHeader({
+  selectedDong,
+  onDongChange,
+}: DashboardHeaderProps) {
+  return (
+    <div className="flex items-center justify-between gap-6">
+      {/* Left: dong selector */}
+      <DongSelector
+        value={selectedDong?.slug ?? null}
+        onChange={onDongChange}
+        className="w-[280px]"
+      />
+
+      {/* Right: selected dong display */}
+      <div className="flex items-center gap-3 min-w-0">
+        {selectedDong ? (
+          <div className="flex items-baseline gap-2 min-w-0">
+            <h1 className="text-feature-heading font-semibold text-text whitespace-nowrap">
+              {selectedDong.gu} {selectedDong.name}
+            </h1>
+            <span className="text-caption text-text-muted whitespace-nowrap">
+              면적·인구 정보는 곧 추가됩니다
+            </span>
+          </div>
+        ) : (
+          <span className="text-caption text-text-muted">
+            동네를 선택하세요
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}

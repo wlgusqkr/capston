@@ -172,6 +172,50 @@ export const CHART_COLORS = {
 } as const;
 
 /* -------------------------------------------------------------------------- */
+/* Category colors — dashboard section headers / icons                         */
+/* -------------------------------------------------------------------------- */
+
+export const CATEGORY_COLORS = {
+  realestate: '#F59E0B',
+  transport:  '#3B82F6',
+  amenity:    '#10B981',
+  safety:     '#EF4444',
+  population: '#8B5CF6',
+  environment:'#14B8A6',
+} as const;
+
+export type CategoryKey = keyof typeof CATEGORY_COLORS;
+
+/* -------------------------------------------------------------------------- */
+/* Heatmap layer colors — per-layer 5-stop palettes (SPEC 4.6)                */
+/* -------------------------------------------------------------------------- */
+
+export type HeatmapLayerKey = 'composite' | 'rent' | 'activity' | 'youth' | 'studio' | 'safety';
+
+export const HEATMAP_LAYER_COLORS: Record<HeatmapLayerKey, readonly [string, string, string, string, string]> = {
+  composite: ['#edfce9', '#b9dfb6', '#6fa985', '#2c7559', '#003c33'],
+  rent:      ['#FEF3C7', '#FDE68A', '#FBBF24', '#F59E0B', '#D97706'],
+  activity:  ['#FCE7F3', '#F9A8D4', '#EC4899', '#BE185D', '#831843'],
+  youth:     ['#EDE9FE', '#C4B5FD', '#8B5CF6', '#6D28D9', '#4C1D95'],
+  studio:    ['#CCFBF1', '#99F6E4', '#2DD4BF', '#0D9488', '#115E59'],
+  safety:    ['#EF4444', '#FB923C', '#FBBF24', '#84CC16', '#22C55E'],
+} as const;
+
+/**
+ * Map a 0-100 score to the appropriate color for a given heatmap layer.
+ * Uses the same quintile bucket boundaries as scoreToHeatmapBucket.
+ */
+export function scoreToLayerColor(score: number, layer: HeatmapLayerKey): string {
+  const s = clamp(score, 0, 100);
+  const colors = HEATMAP_LAYER_COLORS[layer];
+  if (s < 20) return colors[0];
+  if (s < 40) return colors[1];
+  if (s < 60) return colors[2];
+  if (s < 80) return colors[3];
+  return colors[4];
+}
+
+/* -------------------------------------------------------------------------- */
 /* Internal                                                                   */
 /* -------------------------------------------------------------------------- */
 
