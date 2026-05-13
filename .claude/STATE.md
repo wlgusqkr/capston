@@ -153,7 +153,17 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 
 ## Backend (휴면)
 
-Django + DRF + GeoDjango. 9개 앱, 28개 모델, 22개 API 엔드포인트.
+Django + DRF + GeoDjango. 9개 앱, 28개 모델, 23개 API 엔드포인트.
+
+### 대시보드 §4.4 섹션 C / §4.5 추가 엔드포인트 (2026-05-13)
+- `GET /api/dongs/<slug>/transit-congestion` -- 시간대 혼잡도 + 동 성격 추정. 캐시 5분 (`dong_transit_congestion:v1:<slug>`). 스키마 변경 없음.
+  - subway: `NearestSubway` 사전계산된 TOP 3 역의 `SubwayCongestion` 평균. day_type=`평일/토요일/일요일` x hour 0~23 배열. `direction`(상선/하선/내선/외선)과 `express_yn`(일반/급행)은 전부 합산 평균. `휴일` day_type 행은 `일요일` 버킷에 가중평균(행 수 n 기준)으로 합쳐서 일요일 평균 계산. 30분 단위 raw 행은 같은 hour로 추가 평균.
+  - bus: `BusStop.dong` FK 매핑된 정류장 전체의 `BusCongestion`. **주의: BusStop.dong은 `to_field='code'`라 `dong_id`(컬럼)에 code 값이 들어감. 반드시 `BusStop.objects.filter(dong__id=dong.id)` 조인** (`dong_id=dong.id`로 필터하면 0건). 평일/주말은 `EXTRACT(DOW FROM date) IN (0,6)` 분기. 최근 60일 윈도우 (현재 RDS 적재 31일치라 사실상 전체). `congestion IS NOT NULL` 필터.
+  - personality: subway 우선(데이터 있으면), 없으면 bus. 평일 morning_peak(7~9)/midday(11~14)/evening_peak(18~20) + weekend 평균. 우선순위: 1) `weekend/평일 > 1.2` → 유동인구 많음, 2) `midday/morning > 0.8` → 상업·업무 중심, 3) `morning/midday > 1.5 && evening/midday > 1.3` → 주거 중심. 모두 빗나가면 label=null.
+  - hour 데이터 없는 슬롯은 `{hour: H, congestion: null}`. 24슬롯 길이 보장.
+  - 응답시간: cold 400~440ms (subway 23ms + bus 35ms 집계, 나머지는 Django 오버헤드), warm 170~200ms.
+  - 라이브 검증: 중구-필동 → "상업·업무 중심", 관악구-신림동 → "주거 중심"(1.8배), 마포구-합정동 → "주거 중심"(1.5배), 강남구-역삼1동 → null(경계지, midday/morning=0.73 임계 미달).
+  - view 파일: `apps/transit/views.py` 신설 (`DongTransitCongestionView`). URL은 `apps/neighborhoods/urls.py`의 dong-scoped 패턴에 추가.
 
 ### 대시보드 §4.4 섹션 B 추가 엔드포인트 (2026-05-13)
 - `GET /api/dongs/<slug>/parks` -- park_adong 매핑을 통한 행정동 공원 목록. 면적 내림차순(null 뒤). 캐시 5분(`dong_parks:v1:<slug>`). 스키마 변경 없음.
