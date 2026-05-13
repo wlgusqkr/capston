@@ -47,29 +47,29 @@ interface SafetyEconomySectionProps {
   series?: GuMetricSeriesResponse;
 }
 
-/** One row in the combined trend chart dataset (gu + Seoul). */
+/** One row in the combined trend chart dataset (gu + 25구 평균). */
 interface SeriesRow {
   date: string;
   gu: number | null;
-  seoul: number | null;
+  guAvg: number | null;
 }
 
-/** Combine gu points + Seoul points into a single dataset keyed by date.
+/** Combine gu points + 25구 평균 points into a single dataset keyed by date.
  *  Both source arrays are date-ASC (backend invariant), but use null-fills
  *  rather than assuming exact date alignment. */
 function mergeSeries(
   guPoints: GuMetricSeriesPoint[] | undefined,
-  seoulPoints: GuMetricSeriesPoint[] | undefined,
+  guAvgPoints: GuMetricSeriesPoint[] | undefined,
 ): SeriesRow[] {
   const guMap = new Map<string, number | null>();
   (guPoints ?? []).forEach((p) => guMap.set(p.date, p.value));
-  const seoulMap = new Map<string, number | null>();
-  (seoulPoints ?? []).forEach((p) => seoulMap.set(p.date, p.value));
-  const dates = Array.from(new Set([...guMap.keys(), ...seoulMap.keys()])).sort();
+  const avgMap = new Map<string, number | null>();
+  (guAvgPoints ?? []).forEach((p) => avgMap.set(p.date, p.value));
+  const dates = Array.from(new Set([...guMap.keys(), ...avgMap.keys()])).sort();
   return dates.map((date) => ({
     date,
     gu: guMap.get(date) ?? null,
-    seoul: seoulMap.get(date) ?? null,
+    guAvg: avgMap.get(date) ?? null,
   }));
 }
 
@@ -107,12 +107,20 @@ function mDate(
   return metrics[code]?.date;
 }
 
-/** Helper to get Seoul average value. */
-function sa(
-  seoulAvg: DongGuMetricsResponse['seoul_avg'],
+/** Helper to get 25-구 average value for a code. */
+function ga(
+  metrics: DongGuMetricsResponse['metrics'],
   code: string,
 ): number | null {
-  return seoulAvg[code]?.value ?? null;
+  return metrics[code]?.gu_avg ?? null;
+}
+
+/** Helper to get rank in Seoul (25구 중 N위). */
+function rank(
+  metrics: DongGuMetricsResponse['metrics'],
+  code: string,
+): number | null {
+  return metrics[code]?.rank_in_seoul ?? null;
 }
 
 function formatNumber(n: number): string {
@@ -121,26 +129,29 @@ function formatNumber(n: number): string {
   return n.toFixed(1);
 }
 
-/** Render a metric card with value, Seoul comparison, unit, optional date footer. */
+/** Render a metric card with value, 25-구 평균 비교, unit, optional date footer.
+ *  rank: 25구 중 순위 (작을수록 값이 큼). 표기는 "N위 / 25구". */
 function MetricCard({
   label,
   value,
-  seoulValue,
+  guAvg,
   unit,
   date,
+  rank,
   higherIsBetter = true,
   formatter,
 }: {
   label: string;
   value: number | null;
-  seoulValue: number | null;
+  guAvg: number | null;
   unit: string;
   date?: string | null;
+  rank?: number | null;
   higherIsBetter?: boolean;
   formatter?: (n: number) => string;
 }) {
   const fmt = formatter ?? formatNumber;
-  const diff = value != null && seoulValue != null ? value - seoulValue : null;
+  const diff = value != null && guAvg != null ? value - guAvg : null;
   const isGood = diff != null ? (higherIsBetter ? diff >= 0 : diff <= 0) : null;
   const dateText = formatMetricDate(date);
 
@@ -150,14 +161,17 @@ function MetricCard({
       <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
         {value != null ? `${fmt(value)}${unit}` : '-'}
       </p>
-      {seoulValue != null && diff != null && (
+      {guAvg != null && diff != null && (
         <p className="m-0 mt-1 text-caption text-text-muted">
-          서울 {fmt(seoulValue)}{unit}
+          25구 평균 {fmt(guAvg)}{unit}
           <span className={`ml-1 font-medium ${isGood ? 'text-success' : 'text-danger'}`}>
             {diff >= 0 ? '▲' : '▼'}
             {fmt(Math.abs(diff))}{unit}
           </span>
         </p>
+      )}
+      {rank != null && (
+        <p className="m-0 mt-1 text-caption text-text-subtle">25구 중 {rank}위</p>
       )}
       {dateText && (
         <p className="m-0 mt-1 text-caption text-text-subtle">{dateText}</p>
@@ -188,23 +202,25 @@ export default function SafetyEconomySection({
   guMetrics,
   series,
 }: SafetyEconomySectionProps) {
-  const { metrics, seoul_avg, gu_name } = guMetrics;
+  const { metrics, gu_name } = guMetrics;
 
-  // Phase 4: 추이 차트 데이터 (교통사고 / 화재)
+  // Phase 4: 추이 차트 데이터 (교통사고 / 화재). 비교선은 25구 평균.
   const accSeries = series?.series['ACC_TOTAL_COUNT'];
   const fireSeries = series?.series['FIRE_COUNT'];
-  const accSeoulSeries = series?.seoul_series['ACC_TOTAL_COUNT'];
-  const fireSeoulSeries = series?.seoul_series['FIRE_COUNT'];
-  const accTrendData = mergeSeries(accSeries?.points, accSeoulSeries?.points);
-  const fireTrendData = mergeSeries(fireSeries?.points, fireSeoulSeries?.points);
+  const accGuAvgSeries = series?.gu_avg_series?.['ACC_TOTAL_COUNT'];
+  const fireGuAvgSeries = series?.gu_avg_series?.['FIRE_COUNT'];
+  const accTrendData = mergeSeries(accSeries?.points, accGuAvgSeries?.points);
+  const fireTrendData = mergeSeries(fireSeries?.points, fireGuAvgSeries?.points);
   const hasAccTrend = (accSeries?.points.length ?? 0) > 0;
   const hasFireTrend = (fireSeries?.points.length ?? 0) > 0;
+  const accRank = accSeries?.current_rank ?? null;
+  const fireRank = fireSeries?.current_rank ?? null;
 
-  // 1. Safety radar data — 1~5 scale, higher is safer
+  // 1. Safety radar data — 1~5 scale, higher is safer. 비교선은 25구 평균.
   const radarData = SAFETY_FIELDS.map((f) => ({
     subject: f.label,
     구: mv(metrics, f.code),
-    서울: sa(seoul_avg, f.code),
+    평균: ga(metrics, f.code),
   }));
   const hasRadarData = radarData.some((d) => d.구 != null);
 
@@ -216,12 +232,12 @@ export default function SafetyEconomySection({
     safetyValues.length > 0
       ? safetyValues.reduce((a, b) => a + b, 0) / safetyValues.length
       : null;
-  const seoulSafetyValues = SAFETY_FIELDS.map((f) => sa(seoul_avg, f.code)).filter(
+  const guAvgSafetyValues = SAFETY_FIELDS.map((f) => ga(metrics, f.code)).filter(
     (v): v is number => v != null,
   );
-  const seoulSafetyMean =
-    seoulSafetyValues.length > 0
-      ? seoulSafetyValues.reduce((a, b) => a + b, 0) / seoulSafetyValues.length
+  const guAvgSafetyMean =
+    guAvgSafetyValues.length > 0
+      ? guAvgSafetyValues.reduce((a, b) => a + b, 0) / guAvgSafetyValues.length
       : null;
   const safetyDate = formatMetricDate(mDate(metrics, 'SAFETY_GRADE_TRAFFIC'));
 
@@ -244,13 +260,13 @@ export default function SafetyEconomySection({
   ];
   const accBarColors = [CHART_COLORS.warningDeep, CATEGORY_COLORS.safety];
 
-  // 3. Green area metrics — AREA_GREEN, AREA_URBAN, POP_RESIDENT
+  // 3. Green area metrics — AREA_GREEN, AREA_URBAN, POP_RESIDENT (25구 평균 비교)
   const areaGreen = mv(metrics, 'AREA_GREEN');
   const areaUrban = mv(metrics, 'AREA_URBAN');
   const popResident = mv(metrics, 'POP_RESIDENT');
-  const seoulAreaGreen = sa(seoul_avg, 'AREA_GREEN');
-  const seoulAreaUrban = sa(seoul_avg, 'AREA_URBAN');
-  const seoulPopResident = sa(seoul_avg, 'POP_RESIDENT');
+  const guAvgAreaGreen = ga(metrics, 'AREA_GREEN');
+  const guAvgAreaUrban = ga(metrics, 'AREA_URBAN');
+  const guAvgPopResident = ga(metrics, 'POP_RESIDENT');
 
   const greenRatio =
     areaGreen != null && areaUrban != null && areaGreen + areaUrban > 0
@@ -260,42 +276,44 @@ export default function SafetyEconomySection({
     areaGreen != null && popResident != null && popResident > 0
       ? areaGreen / popResident
       : null;
-  const seoulGreenRatio =
-    seoulAreaGreen != null && seoulAreaUrban != null && seoulAreaGreen + seoulAreaUrban > 0
-      ? (seoulAreaGreen / (seoulAreaGreen + seoulAreaUrban)) * 100
+  const guAvgGreenRatio =
+    guAvgAreaGreen != null && guAvgAreaUrban != null && guAvgAreaGreen + guAvgAreaUrban > 0
+      ? (guAvgAreaGreen / (guAvgAreaGreen + guAvgAreaUrban)) * 100
       : null;
-  const seoulGreenPerCapita =
-    seoulAreaGreen != null && seoulPopResident != null && seoulPopResident > 0
-      ? seoulAreaGreen / seoulPopResident
+  const guAvgGreenPerCapita =
+    guAvgAreaGreen != null && guAvgPopResident != null && guAvgPopResident > 0
+      ? guAvgAreaGreen / guAvgPopResident
       : null;
 
-  // 4. GRDP — GRDP_CURRENT (백만원 단위) ÷ POP_RESIDENT
+  // 4. GRDP — GRDP_CURRENT (백만원 단위) ÷ POP_RESIDENT (25구 평균 비교)
   const grdpCurrent = mv(metrics, 'GRDP_CURRENT');
-  const seoulGrdpCurrent = sa(seoul_avg, 'GRDP_CURRENT');
+  const guAvgGrdpCurrent = ga(metrics, 'GRDP_CURRENT');
   const grdpPerCapita =
     grdpCurrent != null && popResident != null && popResident > 0
       ? grdpCurrent / popResident
       : null;
-  const seoulGrdpPerCapita =
-    seoulGrdpCurrent != null && seoulPopResident != null && seoulPopResident > 0
-      ? seoulGrdpCurrent / seoulPopResident
+  const guAvgGrdpPerCapita =
+    guAvgGrdpCurrent != null && guAvgPopResident != null && guAvgPopResident > 0
+      ? guAvgGrdpCurrent / guAvgPopResident
       : null;
   const grdpDate = formatMetricDate(mDate(metrics, 'GRDP_CURRENT'));
+  const grdpRank = rank(metrics, 'GRDP_CURRENT');
 
   // GRDP 총액 — 백만원 → 조원 (÷ 1,000,000)
   const grdpTotalJo = grdpCurrent != null ? grdpCurrent / 1_000_000 : null;
 
-  // 5. Fire count
+  // 5. Fire count (25구 평균 비교)
   const fireCount = mv(metrics, 'FIRE_COUNT');
-  const seoulFireCount = sa(seoul_avg, 'FIRE_COUNT');
+  const guAvgFireCount = ga(metrics, 'FIRE_COUNT');
 
-  // B3. Traffic culture radar
+  // B3. Traffic culture radar (25구 평균 비교)
   const trafficCultureIndex = mv(metrics, 'TRAFFIC_CULTURE_INDEX');
-  const seoulTrafficCultureIndex = sa(seoul_avg, 'TRAFFIC_CULTURE_INDEX');
+  const guAvgTrafficCultureIndex = ga(metrics, 'TRAFFIC_CULTURE_INDEX');
+  const trafficCultureRank = rank(metrics, 'TRAFFIC_CULTURE_INDEX');
   const trafficRadarData = TRAFFIC_CULTURE_FIELDS.map((f) => ({
     subject: f.label,
     구: mv(metrics, f.code),
-    서울: sa(seoul_avg, f.code),
+    평균: ga(metrics, f.code),
   }));
   const hasTrafficRadar = trafficRadarData.some((d) => d.구 != null);
   const trafficCultureDate = formatMetricDate(mDate(metrics, 'TRAFFIC_CULTURE_INDEX'));
@@ -326,8 +344,8 @@ export default function SafetyEconomySection({
                 <span className="text-body-base font-semibold text-text">
                   {safetyMean.toFixed(1)}
                 </span>
-                {seoulSafetyMean != null && (
-                  <span className="ml-1">/ 서울 {seoulSafetyMean.toFixed(1)}</span>
+                {guAvgSafetyMean != null && (
+                  <span className="ml-1">/ 25구 평균 {guAvgSafetyMean.toFixed(1)}</span>
                 )}
               </p>
             )}
@@ -357,8 +375,8 @@ export default function SafetyEconomySection({
                     animationDuration={1200}
                   />
                   <Radar
-                    name="서울 평균"
-                    dataKey="서울"
+                    name="25구 평균"
+                    dataKey="평균"
                     stroke={CHART_COLORS.axis}
                     fill={CHART_COLORS.axis}
                     fillOpacity={0.08}
@@ -451,9 +469,16 @@ export default function SafetyEconomySection({
       <div className="grid grid-cols-2 gap-5">
         {/* 교통사고 추이 라인 */}
         <Card padding="lg">
-          <h3 className="m-0 mb-3 text-feature-heading leading-[1.3] font-semibold text-text">
-            교통사고 추이
-          </h3>
+          <div className="flex items-baseline justify-between mb-3">
+            <h3 className="m-0 text-feature-heading leading-[1.3] font-semibold text-text">
+              교통사고 추이
+            </h3>
+            {accRank && (
+              <Badge variant="neutral" size="sm">
+                {accRank.rank}위 / {accRank.total}구
+              </Badge>
+            )}
+          </div>
           {hasAccTrend ? (
             <div className="h-[220px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -491,9 +516,9 @@ export default function SafetyEconomySection({
                     animationDuration={1200}
                   />
                   <Line
-                    name="서울 평균"
+                    name="25구 평균"
                     type="monotone"
-                    dataKey="seoul"
+                    dataKey="guAvg"
                     stroke={CHART_COLORS.axis}
                     strokeWidth={1.5}
                     strokeDasharray="4 4"
@@ -518,9 +543,16 @@ export default function SafetyEconomySection({
 
         {/* 화재 추이 라인 */}
         <Card padding="lg">
-          <h3 className="m-0 mb-3 text-feature-heading leading-[1.3] font-semibold text-text">
-            화재 발생 추이
-          </h3>
+          <div className="flex items-baseline justify-between mb-3">
+            <h3 className="m-0 text-feature-heading leading-[1.3] font-semibold text-text">
+              화재 발생 추이
+            </h3>
+            {fireRank && (
+              <Badge variant="neutral" size="sm">
+                {fireRank.rank}위 / {fireRank.total}구
+              </Badge>
+            )}
+          </div>
           {hasFireTrend ? (
             <div className="h-[220px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -558,9 +590,9 @@ export default function SafetyEconomySection({
                     animationDuration={1200}
                   />
                   <Line
-                    name="서울 평균"
+                    name="25구 평균"
                     type="monotone"
-                    dataKey="seoul"
+                    dataKey="guAvg"
                     stroke={CHART_COLORS.axis}
                     strokeWidth={1.5}
                     strokeDasharray="4 4"
@@ -593,15 +625,22 @@ export default function SafetyEconomySection({
               교통문화지수
             </h3>
             {trafficCultureIndex != null && (
-              <p className="m-0 tabular text-caption text-text-muted">
-                종합{' '}
-                <span className="text-body-base font-semibold text-text">
-                  {trafficCultureIndex.toFixed(1)}
-                </span>
-                {seoulTrafficCultureIndex != null && (
-                  <span className="ml-1">/ 서울 {seoulTrafficCultureIndex.toFixed(1)}</span>
+              <div className="flex items-center gap-2">
+                <p className="m-0 tabular text-caption text-text-muted">
+                  종합{' '}
+                  <span className="text-body-base font-semibold text-text">
+                    {trafficCultureIndex.toFixed(1)}
+                  </span>
+                  {guAvgTrafficCultureIndex != null && (
+                    <span className="ml-1">/ 25구 평균 {guAvgTrafficCultureIndex.toFixed(1)}</span>
+                  )}
+                </p>
+                {trafficCultureRank != null && (
+                  <Badge variant="neutral" size="sm">
+                    {trafficCultureRank}위 / 25구
+                  </Badge>
                 )}
-              </p>
+              </div>
             )}
           </div>
           {hasTrafficRadar ? (
@@ -629,8 +668,8 @@ export default function SafetyEconomySection({
                     animationDuration={1200}
                   />
                   <Radar
-                    name="서울 평균"
-                    dataKey="서울"
+                    name="25구 평균"
+                    dataKey="평균"
                     stroke={CHART_COLORS.axis}
                     fill={CHART_COLORS.axis}
                     fillOpacity={0.08}
@@ -660,7 +699,14 @@ export default function SafetyEconomySection({
           </h3>
           <div className="flex flex-col gap-3">
             <div className="p-4 rounded-card border border-divider bg-surface">
-              <p className="text-caption m-0 mb-1 text-text-subtle">{gu_name} GRDP 총액</p>
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-caption m-0 text-text-subtle">{gu_name} GRDP 총액</p>
+                {grdpRank != null && (
+                  <Badge variant="neutral" size="sm">
+                    {grdpRank}위 / 25구
+                  </Badge>
+                )}
+              </div>
               <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
                 {grdpTotalJo != null ? `${grdpTotalJo.toFixed(1)}조원` : '-'}
               </p>
@@ -673,16 +719,16 @@ export default function SafetyEconomySection({
               <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
                 {grdpPerCapita != null ? `${grdpPerCapita.toFixed(1)}백만원` : '-'}
               </p>
-              {seoulGrdpPerCapita != null && grdpPerCapita != null && (
+              {guAvgGrdpPerCapita != null && grdpPerCapita != null && (
                 <p className="m-0 mt-1 text-caption text-text-muted">
-                  서울 {seoulGrdpPerCapita.toFixed(1)}백만원
+                  25구 평균 {guAvgGrdpPerCapita.toFixed(1)}백만원
                   <span
                     className={`ml-1 font-medium ${
-                      grdpPerCapita >= seoulGrdpPerCapita ? 'text-success' : 'text-danger'
+                      grdpPerCapita >= guAvgGrdpPerCapita ? 'text-success' : 'text-danger'
                     }`}
                   >
-                    {grdpPerCapita >= seoulGrdpPerCapita ? '▲' : '▼'}
-                    {Math.abs(grdpPerCapita - seoulGrdpPerCapita).toFixed(1)}백만원
+                    {grdpPerCapita >= guAvgGrdpPerCapita ? '▲' : '▼'}
+                    {Math.abs(grdpPerCapita - guAvgGrdpPerCapita).toFixed(1)}백만원
                   </span>
                 </p>
               )}
@@ -696,16 +742,17 @@ export default function SafetyEconomySection({
         <MetricCard
           label="녹지 비율"
           value={greenRatio}
-          seoulValue={seoulGreenRatio}
+          guAvg={guAvgGreenRatio}
           unit="%"
           date={mDate(metrics, 'AREA_GREEN')}
+          rank={rank(metrics, 'AREA_GREEN')}
           higherIsBetter={true}
           formatter={(n) => n.toFixed(1)}
         />
         <MetricCard
           label="1인당 녹지"
           value={greenPerCapita}
-          seoulValue={seoulGreenPerCapita}
+          guAvg={guAvgGreenPerCapita}
           unit="㎡"
           date={mDate(metrics, 'AREA_GREEN')}
           higherIsBetter={true}
@@ -714,9 +761,10 @@ export default function SafetyEconomySection({
         <MetricCard
           label="화재 발생"
           value={fireCount}
-          seoulValue={seoulFireCount}
+          guAvg={guAvgFireCount}
           unit="건"
           date={mDate(metrics, 'FIRE_COUNT')}
+          rank={rank(metrics, 'FIRE_COUNT')}
           higherIsBetter={false}
         />
       </div>

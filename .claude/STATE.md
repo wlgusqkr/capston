@@ -120,8 +120,16 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 
 ### 빌드
 - CSS: 73KB (18KB gz)
-- JS main: 984KB (293KB gz), Dashboard chunk: 123KB (30.2KB gz) — Phase 4 추이 차트 2종 (교통사고/화재) +4KB
+- JS main: 984KB (293KB gz), Dashboard chunk: 125KB (30.7KB gz) — Phase 5 25구 평균/순위 정정 +0.5KB
 - tsc + vite build 통과
+
+### Phase 5 정정 (2026-05-13) — SeoulMetric raw → 25구 평균 / 순위
+대시보드 모든 동·구 비교 라벨을 SeoulMetric raw(서울 합계/대표값)에서 신규 응답 키 `gu_avg`/`gu_avg_series`/`rank_in_seoul`/`current_rank` 기반으로 교체. 합계 raw와의 비교는 "구의 ~33배"인 케이스(예: 중구 824건 vs SeoulMetric 27000건)가 많아 의미가 약했음.
+- **types/api.ts**: `GuMetricValue`에 `rank_in_seoul`/`gu_count`/`gu_avg` 추가, `GuMetricSeries`에 `current_rank` 추가, `GuMetricSeriesResponse`에 `gu_avg_series` 추가. 기존 `seoul_avg`/`seoul_series` 키는 타입 유지하되 대시보드 코드에서 참조 제거.
+- **SafetyEconomySection.tsx**: 안전 레이더·교통문화 레이더의 비교 시리즈 dataKey `서울` → `평균`, 라벨 `서울 평균` → `25구 평균`. 종합 텍스트 "서울 X" → "25구 평균 X". 교통사고·화재 추이 라인 차트의 비교선을 `seoul_series` → `gu_avg_series`로 교체, dataKey `seoul` → `guAvg`, 우상단에 `N위 / 25구` Badge 추가. MetricCard prop `seoulValue` → `guAvg` + `rank` 추가. 녹지/화재/GRDP/교통문화지수에 순위 노출.
+- **PopulationSection.tsx**: 청년 비율(19~34, 19~39)·평균 연령·고령 비율 비교를 SeoulMetric raw 기반 비율 계산(`seoul_avg.X / seoul_avg.Y`)에서 `gu_avg.X / gu_avg.Y`로 교체. 모든 카드에 `25구 중 N위` 노출.
+- **RealEstateSection.tsx**: 지가 변동률·주택 수 KPI 비교를 `gu_avg`로 교체, 순위 노출.
+- **TransitSection.tsx**: 1인당 차량 등록 비교를 `gu_avg` 1인당으로 교체. 순위는 raw 차량 등록 절대량 기준이라 "차량 등록 총량 기준" 주석 추가.
 
 ### 알려진 이슈
 - weights가 글로벌 Context로 미승격

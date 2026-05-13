@@ -39,23 +39,27 @@ export default function TransitSection({ transit, guMetrics }: TransitSectionPro
   const stations = transit.nearest_stations;
   const bus = transit.bus;
 
-  // B4. 1인당 차량 등록 (보행 친화도 시그널)
+  // B4. 1인당 차량 등록 (보행 친화도 시그널) — 25구 평균값과 비교.
+  //   순위는 1인당 비율 기준이 더 의미 있으나 백엔드 rank는 raw 값 기준이라
+  //   여기서는 raw VEHICLE_REGISTERED 순위를 그대로 표시 (구 전체 차량 절대량).
   const vehicleRegistered = guMetrics?.metrics['VEHICLE_REGISTERED']?.value ?? null;
   const popResident = guMetrics?.metrics['POP_RESIDENT']?.value ?? null;
-  const seoulVehicleRegistered = guMetrics?.seoul_avg['VEHICLE_REGISTERED']?.value ?? null;
-  const seoulPopResident = guMetrics?.seoul_avg['POP_RESIDENT']?.value ?? null;
+  const guAvgVehicleRegistered = guMetrics?.metrics['VEHICLE_REGISTERED']?.gu_avg ?? null;
+  const guAvgPopResident = guMetrics?.metrics['POP_RESIDENT']?.gu_avg ?? null;
+  const vehicleRank = guMetrics?.metrics['VEHICLE_REGISTERED']?.rank_in_seoul ?? null;
 
   const vehiclePerCapita =
     vehicleRegistered != null && popResident != null && popResident > 0
       ? vehicleRegistered / popResident
       : null;
-  const seoulVehiclePerCapita =
-    seoulVehicleRegistered != null && seoulPopResident != null && seoulPopResident > 0
-      ? seoulVehicleRegistered / seoulPopResident
+  // 25구 평균의 1인당 차량 = (Σ vehicle ÷ 25) / (Σ pop ÷ 25) = 25구 합산비와 동일.
+  const guAvgVehiclePerCapita =
+    guAvgVehicleRegistered != null && guAvgPopResident != null && guAvgPopResident > 0
+      ? guAvgVehicleRegistered / guAvgPopResident
       : null;
   const vehicleDiff =
-    vehiclePerCapita != null && seoulVehiclePerCapita != null
-      ? vehiclePerCapita - seoulVehiclePerCapita
+    vehiclePerCapita != null && guAvgVehiclePerCapita != null
+      ? vehiclePerCapita - guAvgVehiclePerCapita
       : null;
   const vehicleDate = formatMetricDate(guMetrics?.metrics['VEHICLE_REGISTERED']?.date);
 
@@ -159,9 +163,9 @@ export default function TransitSection({ transit, guMetrics }: TransitSectionPro
                 {vehiclePerCapita.toFixed(2)}
                 <span className="ml-1 text-body-base font-medium text-text-muted">대 / 명</span>
               </p>
-              {seoulVehiclePerCapita != null && vehicleDiff != null && (
+              {guAvgVehiclePerCapita != null && vehicleDiff != null && (
                 <p className="m-0 text-caption text-text-muted">
-                  서울 {seoulVehiclePerCapita.toFixed(2)}대
+                  25구 평균 {guAvgVehiclePerCapita.toFixed(2)}대
                   <span
                     className={`ml-1 font-medium ${
                       vehicleDiff <= 0 ? 'text-success' : 'text-danger'
@@ -170,6 +174,11 @@ export default function TransitSection({ transit, guMetrics }: TransitSectionPro
                     {vehicleDiff >= 0 ? '▲' : '▼'}
                     {Math.abs(vehicleDiff).toFixed(2)}대
                   </span>
+                </p>
+              )}
+              {vehicleRank != null && (
+                <p className="m-0 text-caption text-text-subtle">
+                  25구 중 {vehicleRank}위 (차량 등록 총량 기준)
                 </p>
               )}
               {vehicleDate && (

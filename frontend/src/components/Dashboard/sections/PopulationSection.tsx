@@ -83,13 +83,17 @@ export default function PopulationSection({
     }));
   })();
 
-  // 3. Youth ratio — compute from POP_YOUTH_19_34/39 ÷ POP_TOTAL_YOUTH_BASE × 100
+  // 3. Youth ratio — compute from POP_YOUTH_19_34/39 ÷ POP_TOTAL_YOUTH_BASE × 100.
+  //    비교는 25구 평균값(gu_avg)으로 계산. SeoulMetric raw는 서울 전체 합계라
+  //    동·구 단위 비교 의미가 약함.
   const youth19_34 = guMetrics?.metrics['POP_YOUTH_19_34']?.value ?? null;
   const youth19_39 = guMetrics?.metrics['POP_YOUTH_19_39']?.value ?? null;
   const youthBase = guMetrics?.metrics['POP_TOTAL_YOUTH_BASE']?.value ?? null;
-  const seoulYouth19_34 = guMetrics?.seoul_avg['POP_YOUTH_19_34']?.value ?? null;
-  const seoulYouth19_39 = guMetrics?.seoul_avg['POP_YOUTH_19_39']?.value ?? null;
-  const seoulYouthBase = guMetrics?.seoul_avg['POP_TOTAL_YOUTH_BASE']?.value ?? null;
+  const guAvgYouth19_34 = guMetrics?.metrics['POP_YOUTH_19_34']?.gu_avg ?? null;
+  const guAvgYouth19_39 = guMetrics?.metrics['POP_YOUTH_19_39']?.gu_avg ?? null;
+  const guAvgYouthBase = guMetrics?.metrics['POP_TOTAL_YOUTH_BASE']?.gu_avg ?? null;
+  const youthRank19_34 = guMetrics?.metrics['POP_YOUTH_19_34']?.rank_in_seoul ?? null;
+  const youthRank19_39 = guMetrics?.metrics['POP_YOUTH_19_39']?.rank_in_seoul ?? null;
 
   const youthRatio19_34 =
     youth19_34 != null && youthBase != null && youthBase > 0
@@ -99,27 +103,29 @@ export default function PopulationSection({
     youth19_39 != null && youthBase != null && youthBase > 0
       ? (youth19_39 / youthBase) * 100
       : null;
-  const seoulYouthRatio19_34 =
-    seoulYouth19_34 != null && seoulYouthBase != null && seoulYouthBase > 0
-      ? (seoulYouth19_34 / seoulYouthBase) * 100
+  const guAvgYouthRatio19_34 =
+    guAvgYouth19_34 != null && guAvgYouthBase != null && guAvgYouthBase > 0
+      ? (guAvgYouth19_34 / guAvgYouthBase) * 100
       : null;
-  const seoulYouthRatio19_39 =
-    seoulYouth19_39 != null && seoulYouthBase != null && seoulYouthBase > 0
-      ? (seoulYouth19_39 / seoulYouthBase) * 100
+  const guAvgYouthRatio19_39 =
+    guAvgYouth19_39 != null && guAvgYouthBase != null && guAvgYouthBase > 0
+      ? (guAvgYouth19_39 / guAvgYouthBase) * 100
       : null;
   const youthDate = formatMetricDate(guMetrics?.metrics['POP_YOUTH_19_34']?.date);
 
-  // 4. (B1) Avg age — POP_MEAN_AGE / *_MALE / *_FEMALE
+  // 4. (B1) Avg age — POP_MEAN_AGE / *_MALE / *_FEMALE (25구 평균 비교)
   const meanAge = guMetrics?.metrics['POP_MEAN_AGE']?.value ?? null;
   const meanAgeMale = guMetrics?.metrics['POP_MEAN_AGE_MALE']?.value ?? null;
   const meanAgeFemale = guMetrics?.metrics['POP_MEAN_AGE_FEMALE']?.value ?? null;
-  const seoulMeanAge = guMetrics?.seoul_avg['POP_MEAN_AGE']?.value ?? null;
+  const guAvgMeanAge = guMetrics?.metrics['POP_MEAN_AGE']?.gu_avg ?? null;
+  const meanAgeRank = guMetrics?.metrics['POP_MEAN_AGE']?.rank_in_seoul ?? null;
   const meanAgeDate = formatMetricDate(guMetrics?.metrics['POP_MEAN_AGE']?.date);
-  const meanAgeDiff = meanAge != null && seoulMeanAge != null ? meanAge - seoulMeanAge : null;
+  const meanAgeDiff = meanAge != null && guAvgMeanAge != null ? meanAge - guAvgMeanAge : null;
 
-  // 5. (B2) Elderly ratio — POP_ELDERLY_RATIO (%)
+  // 5. (B2) Elderly ratio — POP_ELDERLY_RATIO (%) (25구 평균 비교)
   const elderlyRatio = guMetrics?.metrics['POP_ELDERLY_RATIO']?.value ?? null;
-  const seoulElderlyRatio = guMetrics?.seoul_avg['POP_ELDERLY_RATIO']?.value ?? null;
+  const guAvgElderlyRatio = guMetrics?.metrics['POP_ELDERLY_RATIO']?.gu_avg ?? null;
+  const elderlyRank = guMetrics?.metrics['POP_ELDERLY_RATIO']?.rank_in_seoul ?? null;
   const elderlyDate = formatMetricDate(guMetrics?.metrics['POP_ELDERLY_RATIO']?.date);
   const elderlyDonutData =
     elderlyRatio != null
@@ -290,14 +296,17 @@ export default function PopulationSection({
               <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
                 {youthRatio19_34 != null ? `${youthRatio19_34.toFixed(1)}%` : '-'}
               </p>
-              {seoulYouthRatio19_34 != null && youthRatio19_34 != null && (
+              {guAvgYouthRatio19_34 != null && youthRatio19_34 != null && (
                 <p className="m-0 mt-1 text-caption text-text-muted">
-                  서울 {seoulYouthRatio19_34.toFixed(1)}%
-                  <span className={`ml-1 font-medium ${youthRatio19_34 > seoulYouthRatio19_34 ? 'text-success' : 'text-danger'}`}>
-                    {youthRatio19_34 > seoulYouthRatio19_34 ? '▲' : '▼'}
-                    {Math.abs(youthRatio19_34 - seoulYouthRatio19_34).toFixed(1)}%p
+                  25구 평균 {guAvgYouthRatio19_34.toFixed(1)}%
+                  <span className={`ml-1 font-medium ${youthRatio19_34 > guAvgYouthRatio19_34 ? 'text-success' : 'text-danger'}`}>
+                    {youthRatio19_34 > guAvgYouthRatio19_34 ? '▲' : '▼'}
+                    {Math.abs(youthRatio19_34 - guAvgYouthRatio19_34).toFixed(1)}%p
                   </span>
                 </p>
+              )}
+              {youthRank19_34 != null && (
+                <p className="m-0 mt-1 text-caption text-text-subtle">25구 중 {youthRank19_34}위</p>
               )}
             </div>
             {/* 19~39세 */}
@@ -306,14 +315,17 @@ export default function PopulationSection({
               <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
                 {youthRatio19_39 != null ? `${youthRatio19_39.toFixed(1)}%` : '-'}
               </p>
-              {seoulYouthRatio19_39 != null && youthRatio19_39 != null && (
+              {guAvgYouthRatio19_39 != null && youthRatio19_39 != null && (
                 <p className="m-0 mt-1 text-caption text-text-muted">
-                  서울 {seoulYouthRatio19_39.toFixed(1)}%
-                  <span className={`ml-1 font-medium ${youthRatio19_39 > seoulYouthRatio19_39 ? 'text-success' : 'text-danger'}`}>
-                    {youthRatio19_39 > seoulYouthRatio19_39 ? '▲' : '▼'}
-                    {Math.abs(youthRatio19_39 - seoulYouthRatio19_39).toFixed(1)}%p
+                  25구 평균 {guAvgYouthRatio19_39.toFixed(1)}%
+                  <span className={`ml-1 font-medium ${youthRatio19_39 > guAvgYouthRatio19_39 ? 'text-success' : 'text-danger'}`}>
+                    {youthRatio19_39 > guAvgYouthRatio19_39 ? '▲' : '▼'}
+                    {Math.abs(youthRatio19_39 - guAvgYouthRatio19_39).toFixed(1)}%p
                   </span>
                 </p>
+              )}
+              {youthRank19_39 != null && (
+                <p className="m-0 mt-1 text-caption text-text-subtle">25구 중 {youthRank19_39}위</p>
               )}
             </div>
           </div>
@@ -369,15 +381,18 @@ export default function PopulationSection({
                   </span>
                 )}
               </div>
-              {seoulMeanAge != null && meanAgeDiff != null && (
+              {guAvgMeanAge != null && meanAgeDiff != null && (
                 // 대학생 타겟에서 평균 연령이 낮을수록 또래·자취생이 많다고 가정하여 success.
                 <p className="m-0 mt-2 text-caption text-text-muted">
-                  서울 {seoulMeanAge.toFixed(1)}세
+                  25구 평균 {guAvgMeanAge.toFixed(1)}세
                   <span className={`ml-1 font-medium ${meanAgeDiff <= 0 ? 'text-success' : 'text-danger'}`}>
                     {meanAgeDiff >= 0 ? '▲' : '▼'}
                     {Math.abs(meanAgeDiff).toFixed(1)}세
                   </span>
                 </p>
+              )}
+              {meanAgeRank != null && (
+                <p className="m-0 mt-1 text-caption text-text-subtle">25구 중 {meanAgeRank}위</p>
               )}
               {meanAgeDate && (
                 <p className="m-0 mt-1 text-caption text-text-subtle">{meanAgeDate}</p>
@@ -435,14 +450,17 @@ export default function PopulationSection({
               <p className="m-0 tabular text-body-base font-semibold text-text">
                 {elderlyRatio.toFixed(1)}%
               </p>
-              {seoulElderlyRatio != null && (
+              {guAvgElderlyRatio != null && (
                 <p className="m-0 mt-1 text-caption text-text-muted">
-                  서울 {seoulElderlyRatio.toFixed(1)}%
-                  <span className={`ml-1 font-medium ${elderlyRatio <= seoulElderlyRatio ? 'text-success' : 'text-danger'}`}>
-                    {elderlyRatio >= seoulElderlyRatio ? '▲' : '▼'}
-                    {Math.abs(elderlyRatio - seoulElderlyRatio).toFixed(1)}%p
+                  25구 평균 {guAvgElderlyRatio.toFixed(1)}%
+                  <span className={`ml-1 font-medium ${elderlyRatio <= guAvgElderlyRatio ? 'text-success' : 'text-danger'}`}>
+                    {elderlyRatio >= guAvgElderlyRatio ? '▲' : '▼'}
+                    {Math.abs(elderlyRatio - guAvgElderlyRatio).toFixed(1)}%p
                   </span>
                 </p>
+              )}
+              {elderlyRank != null && (
+                <p className="m-0 mt-1 text-caption text-text-subtle">25구 중 {elderlyRank}위</p>
               )}
               {elderlyDate && (
                 <p className="m-0 mt-1 text-caption text-text-subtle">{elderlyDate}</p>

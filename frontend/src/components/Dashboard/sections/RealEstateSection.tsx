@@ -103,14 +103,16 @@ export default function RealEstateSection({ realEstate, slug, guMetrics }: RealE
     monthly: b.avg_monthly_rent,
   }));
 
-  // B5. 지가 변동률
+  // B5. 지가 변동률 (25구 평균 비교)
   const landPriceChange = guMetrics?.metrics['LAND_PRICE_CHANGE_RATE']?.value ?? null;
-  const seoulLandPriceChange = guMetrics?.seoul_avg['LAND_PRICE_CHANGE_RATE']?.value ?? null;
+  const guAvgLandPriceChange = guMetrics?.metrics['LAND_PRICE_CHANGE_RATE']?.gu_avg ?? null;
+  const landPriceRank = guMetrics?.metrics['LAND_PRICE_CHANGE_RATE']?.rank_in_seoul ?? null;
   const landPriceDate = formatMetricDate(guMetrics?.metrics['LAND_PRICE_CHANGE_RATE']?.date);
 
-  // B6. 주택 수
+  // B6. 주택 수 (25구 평균 비교)
   const housingCount = guMetrics?.metrics['HOUSING_COUNT']?.value ?? null;
-  const seoulHousingCount = guMetrics?.seoul_avg['HOUSING_COUNT']?.value ?? null;
+  const guAvgHousingCount = guMetrics?.metrics['HOUSING_COUNT']?.gu_avg ?? null;
+  const housingRank = guMetrics?.metrics['HOUSING_COUNT']?.rank_in_seoul ?? null;
   const housingDate = formatMetricDate(guMetrics?.metrics['HOUSING_COUNT']?.date);
 
   return (
@@ -136,11 +138,14 @@ export default function RealEstateSection({ realEstate, slug, guMetrics }: RealE
                   {landPriceChange >= 0 ? '▲' : '▼'}
                   {Math.abs(landPriceChange).toFixed(2)}%
                 </p>
-                {seoulLandPriceChange != null && (
+                {guAvgLandPriceChange != null && (
                   <p className="m-0 mt-1 text-caption text-text-muted">
-                    서울 {seoulLandPriceChange >= 0 ? '+' : ''}
-                    {seoulLandPriceChange.toFixed(2)}%
+                    25구 평균 {guAvgLandPriceChange >= 0 ? '+' : ''}
+                    {guAvgLandPriceChange.toFixed(2)}%
                   </p>
+                )}
+                {landPriceRank != null && (
+                  <p className="m-0 mt-1 text-caption text-text-subtle">25구 중 {landPriceRank}위</p>
                 )}
                 {landPriceDate && (
                   <p className="m-0 mt-1 text-caption text-text-subtle">{landPriceDate}</p>
@@ -165,10 +170,13 @@ export default function RealEstateSection({ realEstate, slug, guMetrics }: RealE
                   {Math.round(housingCount).toLocaleString()}
                   <span className="ml-1 text-body-base font-medium text-text-muted">호</span>
                 </p>
-                {seoulHousingCount != null && (
+                {guAvgHousingCount != null && (
                   <p className="m-0 mt-1 text-caption text-text-muted">
-                    서울 {Math.round(seoulHousingCount).toLocaleString()}호
+                    25구 평균 {Math.round(guAvgHousingCount).toLocaleString()}호
                   </p>
+                )}
+                {housingRank != null && (
+                  <p className="m-0 mt-1 text-caption text-text-subtle">25구 중 {housingRank}위</p>
                 )}
                 {housingDate && (
                   <p className="m-0 mt-1 text-caption text-text-subtle">{housingDate}</p>

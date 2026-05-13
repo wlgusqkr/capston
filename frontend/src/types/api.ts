@@ -229,6 +229,12 @@ export interface GuMetricValue {
   name: string;
   unit: string;
   category: string;
+  /** 25개 자치구 중 값이 큰 순으로 1위. value=null이면 null. 동률은 같은 rank. */
+  rank_in_seoul?: number | null;
+  /** 그 date에 데이터를 가진 구 수 (일반적으로 25). */
+  gu_count?: number;
+  /** 25개 자치구 산술 평균 (null 제외). SeoulMetric raw와 의미 다름. */
+  gu_avg?: number | null;
 }
 
 /** Seoul average row in gu-metrics response. */
@@ -263,6 +269,13 @@ export interface GuMetricSeries {
   unit: string;
   category: string;
   points: GuMetricSeriesPoint[];
+  /** series의 가장 최신 non-null point 기준 25구 중 순위. 데이터 없으면 null. */
+  current_rank?: {
+    rank: number;
+    total: number;
+    value: number | null;
+    date: string;
+  } | null;
 }
 
 /** Response of GET /api/dongs/:slug/gu-metrics/series?codes=...&years=N.
@@ -275,6 +288,8 @@ export interface GuMetricSeriesResponse {
   gu_name: string;
   series: Record<string, GuMetricSeries>;
   seoul_series: Record<string, { points: GuMetricSeriesPoint[] }>;
+  /** date별 25구 산술 평균 시계열. seoul_series와 alignment 동일. 비교용으로 권장. */
+  gu_avg_series?: Record<string, { points: GuMetricSeriesPoint[] }>;
 }
 
 // -------- Explore (Phase 4.8 — 자취 시세 BI 대시보드) --------------------
