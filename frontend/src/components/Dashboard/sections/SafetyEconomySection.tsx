@@ -77,7 +77,7 @@ function MetricCard({
 
   return (
     <div className="p-4 rounded-card border border-divider bg-surface">
-      <p className="mono-label m-0 mb-1 text-text-subtle">{label}</p>
+      <p className="text-caption m-0 mb-1 text-text-subtle">{label}</p>
       <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
         {value != null ? `${formatNumber(value)}${unit}` : '-'}
       </p>
@@ -226,13 +226,13 @@ export default function SafetyEconomySection({
           </h3>
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div className="p-3 rounded-card border border-divider bg-surface">
-              <p className="mono-label m-0 mb-1 text-text-subtle">총 발생건수</p>
+              <p className="text-caption m-0 mb-1 text-text-subtle">총 발생건수</p>
               <p className="tabular m-0 text-feature-heading font-semibold text-text">
                 {accTotal != null ? `${accTotal.toLocaleString()}건` : '-'}
               </p>
             </div>
             <div className="p-3 rounded-card border border-divider bg-surface">
-              <p className="mono-label m-0 mb-1 text-text-subtle">사망자수</p>
+              <p className="text-caption m-0 mb-1 text-text-subtle">사망자수</p>
               <p className="tabular m-0 text-feature-heading font-semibold text-danger">
                 {accDeath != null ? `${accDeath}명` : '-'}
               </p>

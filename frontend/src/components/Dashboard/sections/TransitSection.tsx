@@ -55,7 +55,7 @@ export default function TransitSection({ transit }: TransitSectionProps) {
                     className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-body-base font-semibold ${
                       isTop
                         ? 'bg-primary text-surface'
-                        : 'bg-surface-alt text-text-muted'
+                        : 'bg-primary-soft text-text-muted'
                     }`}
                   >
                     {st.rank}
@@ -68,7 +68,7 @@ export default function TransitSection({ transit }: TransitSectionProps) {
                         {st.name}
                       </span>
                       <span
-                        className="inline-flex items-center px-1.5 py-0.5 rounded-full text-mono-label text-surface font-medium"
+                        className="inline-flex items-center px-1.5 py-0.5 rounded-full text-caption text-surface font-medium"
                         style={{ backgroundColor: lineColor(st.line) }}
                       >
                         {st.line}
@@ -97,14 +97,14 @@ export default function TransitSection({ transit }: TransitSectionProps) {
         {/* 2. Bus stats */}
         <div className="flex flex-col gap-5">
           <Card padding="lg">
-            <p className="mono-label m-0 mb-2 text-text-subtle">버스 정류장</p>
+            <p className="text-caption m-0 mb-2 text-text-subtle">버스 정류장</p>
             <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
               {bus.stop_count}
             </p>
             <p className="m-0 mt-1 text-caption text-text-muted">개소</p>
           </Card>
           <Card padding="lg">
-            <p className="mono-label m-0 mb-2 text-text-subtle">버스 노선</p>
+            <p className="text-caption m-0 mb-2 text-text-subtle">버스 노선</p>
             <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
               {bus.route_count}
             </p>

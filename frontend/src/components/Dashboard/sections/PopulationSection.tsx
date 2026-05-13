@@ -240,7 +240,7 @@ export default function PopulationSection({
           <div className="grid grid-cols-2 gap-4">
             {/* 19~34세 */}
             <div className="p-4 rounded-card border border-divider bg-surface">
-              <p className="mono-label m-0 mb-1 text-text-subtle">19~34세</p>
+              <p className="text-caption m-0 mb-1 text-text-subtle">19~34세</p>
               <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
                 {youthRatio19_34 != null ? `${youthRatio19_34.toFixed(1)}%` : '-'}
               </p>
@@ -256,7 +256,7 @@ export default function PopulationSection({
             </div>
             {/* 19~39세 */}
             <div className="p-4 rounded-card border border-divider bg-surface">
-              <p className="mono-label m-0 mb-1 text-text-subtle">19~39세</p>
+              <p className="text-caption m-0 mb-1 text-text-subtle">19~39세</p>
               <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
                 {youthRatio19_39 != null ? `${youthRatio19_39.toFixed(1)}%` : '-'}
               </p>
@@ -301,7 +301,7 @@ export default function PopulationSection({
                       animationBegin={400}
                     >
                       <Cell fill={CATEGORY_COLORS.population} />
-                      <Cell fill="var(--color-surface-alt)" />
+                      <Cell fill="var(--color-primary-soft)" />
                     </Pie>
                     <Tooltip
                       contentStyle={TOOLTIP_STYLE}

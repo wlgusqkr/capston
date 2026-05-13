@@ -135,6 +135,14 @@
   --font-family-display: var(--font-family-base);
   --font-family-mono:    var(--font-family-base);
 
+  /* Override Tailwind built-in font utilities to Pretendard only */
+  --font-sans:
+    'Pretendard', 'Pretendard Variable', -apple-system, BlinkMacSystemFont,
+    'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  --font-mono:
+    'Pretendard', 'Pretendard Variable', -apple-system, BlinkMacSystemFont,
+    'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+
   /* ----- FONT SIZE (Tailwind text-* utilities) ----- */
   --text-hero-display:    80px;
   --text-page-display:    60px;

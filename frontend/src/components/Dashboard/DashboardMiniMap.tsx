@@ -250,7 +250,7 @@ export default function DashboardMiniMap({
             />
           ))}
         </div>
-        <div className="flex justify-between text-mono-label text-text-subtle">
+        <div className="flex justify-between text-caption text-text-subtle">
           <span>{legendLow}</span>
           <span>{legendHigh}</span>
         </div>

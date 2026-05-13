@@ -1,6 +1,10 @@
 # 변경 이력
 
 ## 2026-05-13
+- 대시보드 전체 폰트 Pretendard 통일 (mono-label → text-caption, --font-mono 오버라이드)
+- 대시보드 배경색 grey → green-wash 전환 (bg-surface-alt → bg-primary-soft)
+- 보증금 대역 막대그래프 색상 primary-green으로 변경
+- 편의시설 테이블 헤더 글꼴·배경 수정 (font-mono 제거, 그린워시 적용)
 - **Phase 2**: 인구·사회 섹션 (남녀 비율 도넛/인구 추이 라인/청년 비율 카드/1인 가구 추정)
 - **Phase 2**: 안전·환경·경제 섹션 (6분야 안전등급 레이더/교통사고 통계/녹지·GRDP·화재 지표, 구 단위 뱃지)
 - 대시보드용 인구 시계열 API (`/api/dongs/<slug>/population`)와 구별 지표 API (`/api/dongs/<slug>/gu-metrics`) 추가

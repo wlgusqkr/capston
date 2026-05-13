@@ -88,9 +88,9 @@ export default function KpiCard({
       <div
         className={`p-5 border border-divider rounded-card bg-surface flex flex-col gap-2 ${className}`}
       >
-        <div className="h-3 w-16 bg-surface-alt rounded animate-[match-panel-pulse_1.5s_ease-in-out_infinite]" />
-        <div className="h-8 w-24 bg-surface-alt rounded animate-[match-panel-pulse_1.5s_ease-in-out_infinite]" />
-        <div className="h-3 w-20 bg-surface-alt rounded animate-[match-panel-pulse_1.5s_ease-in-out_infinite]" />
+        <div className="h-3 w-16 bg-primary-soft rounded animate-[match-panel-pulse_1.5s_ease-in-out_infinite]" />
+        <div className="h-8 w-24 bg-primary-soft rounded animate-[match-panel-pulse_1.5s_ease-in-out_infinite]" />
+        <div className="h-3 w-20 bg-primary-soft rounded animate-[match-panel-pulse_1.5s_ease-in-out_infinite]" />
       </div>
     );
   }
@@ -108,7 +108,7 @@ export default function KpiCard({
     <div
       className={`p-5 border border-divider rounded-card bg-surface flex flex-col gap-2 ${className}`}
     >
-      <p className="mono-label m-0 text-text-subtle">{label}</p>
+      <p className="text-caption m-0 text-text-subtle">{label}</p>
       <div className="flex items-end gap-3">
         <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
           {displayValue}

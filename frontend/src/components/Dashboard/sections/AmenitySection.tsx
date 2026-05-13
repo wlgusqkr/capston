@@ -44,19 +44,19 @@ export default function AmenitySection({
           <table className="w-full border-collapse text-body-base">
             <thead>
               <tr>
-                <th className="bg-surface-alt text-text-subtle font-mono text-mono-label font-normal tracking-[0.26px] text-left uppercase py-2.5 px-4 border-b border-divider">
+                <th className="bg-primary-soft text-text-subtle text-caption font-medium text-left py-2.5 px-4 border-b border-divider">
                   카테고리
                 </th>
-                <th className="bg-surface-alt text-text-subtle font-mono text-mono-label font-normal tracking-[0.26px] text-right uppercase py-2.5 px-4 border-b border-divider">
+                <th className="bg-primary-soft text-text-subtle text-caption font-medium text-right py-2.5 px-4 border-b border-divider">
                   개수
                 </th>
-                <th className="bg-surface-alt text-text-subtle font-mono text-mono-label font-normal tracking-[0.26px] text-right uppercase py-2.5 px-4 border-b border-divider">
+                <th className="bg-primary-soft text-text-subtle text-caption font-medium text-right py-2.5 px-4 border-b border-divider">
                   밀도(/km2)
                 </th>
-                <th className="bg-surface-alt text-text-subtle font-mono text-mono-label font-normal tracking-[0.26px] text-center uppercase py-2.5 px-4 border-b border-divider">
+                <th className="bg-primary-soft text-text-subtle text-caption font-medium text-center py-2.5 px-4 border-b border-divider">
                   순위
                 </th>
-                <th className="bg-surface-alt text-text-subtle font-mono text-mono-label font-normal tracking-[0.26px] text-center uppercase py-2.5 px-4 border-b border-divider">
+                <th className="bg-primary-soft text-text-subtle text-caption font-medium text-center py-2.5 px-4 border-b border-divider">
                   충분도
                 </th>
               </tr>

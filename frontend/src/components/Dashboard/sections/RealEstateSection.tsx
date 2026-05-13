@@ -103,7 +103,7 @@ export default function RealEstateSection({ realEstate, slug }: RealEstateSectio
           <h3 className="m-0 mb-1 text-feature-heading leading-[1.3] font-semibold text-text">
             월별 평균 환산월세 추이
           </h3>
-          <p className="mono-label m-0 mb-3 text-text-subtle">
+          <p className="text-caption m-0 mb-3 text-text-subtle">
             국토부 RTMS · 자취 4종 (만원)
           </p>
           <div className="w-full h-[220px]">
@@ -200,7 +200,7 @@ export default function RealEstateSection({ realEstate, slug }: RealEstateSectio
           <h3 className="m-0 mb-1 text-feature-heading leading-[1.3] font-semibold text-text">
             주택 유형 분포
           </h3>
-          <p className="mono-label m-0 mb-3 text-text-subtle">
+          <p className="text-caption m-0 mb-3 text-text-subtle">
             최근 6개월 자취 거래 기준
           </p>
           <div className="w-full h-[220px]">
@@ -250,7 +250,7 @@ export default function RealEstateSection({ realEstate, slug }: RealEstateSectio
           <h3 className="m-0 mb-1 text-feature-heading leading-[1.3] font-semibold text-text">
             면적 x 환산월세 분포
           </h3>
-          <p className="mono-label m-0 mb-3 text-text-subtle">
+          <p className="text-caption m-0 mb-3 text-text-subtle">
             최근 6개월 · 점 하나 = 거래 1건
           </p>
           <div className="w-full h-[220px]">
@@ -318,7 +318,7 @@ export default function RealEstateSection({ realEstate, slug }: RealEstateSectio
           <h3 className="m-0 mb-1 text-feature-heading leading-[1.3] font-semibold text-text">
             보증금 대역별 평균 월세
           </h3>
-          <p className="mono-label m-0 mb-3 text-text-subtle">
+          <p className="text-caption m-0 mb-3 text-text-subtle">
             보증금 구간별 평균 월세 (만원)
           </p>
           <div className="w-full h-[220px]">

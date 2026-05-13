@@ -86,7 +86,7 @@ export default function Dashboard() {
     : undefined;
 
   return (
-    <main id="main" className="min-h-[calc(100vh-var(--space-14))] bg-surface-alt">
+    <main id="main" className="min-h-[calc(100vh-var(--space-14))] bg-primary-soft">
       <div className="max-w-[1280px] mx-auto px-6 py-6 flex flex-col gap-6">
         {/* Header: dong selector + selected dong info */}
         <DashboardHeader
@@ -225,10 +225,10 @@ export default function Dashboard() {
             {['부동산 시세', '편의시설', '교통'].map((title) => (
               <Card key={title} padding="lg">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-1 h-6 rounded-full bg-surface-alt" />
-                  <div className="h-5 w-24 bg-surface-alt rounded animate-[match-panel-pulse_1.5s_ease-in-out_infinite]" />
+                  <div className="w-1 h-6 rounded-full bg-primary-soft" />
+                  <div className="h-5 w-24 bg-primary-soft rounded animate-[match-panel-pulse_1.5s_ease-in-out_infinite]" />
                 </div>
-                <div className="h-[200px] bg-surface-alt rounded animate-[match-panel-pulse_1.5s_ease-in-out_infinite]" />
+                <div className="h-[200px] bg-primary-soft rounded animate-[match-panel-pulse_1.5s_ease-in-out_infinite]" />
               </Card>
             ))}
           </>

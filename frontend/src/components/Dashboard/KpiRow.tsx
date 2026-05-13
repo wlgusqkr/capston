@@ -169,16 +169,16 @@ export default function KpiRow({ detail, summary, isLoading }: KpiRowProps) {
       <div className="p-5 border border-divider rounded-card bg-surface flex flex-col items-center gap-2">
         {isLoading ? (
           <>
-            <div className="h-3 w-16 bg-surface-alt rounded animate-[match-panel-pulse_1.5s_ease-in-out_infinite]" />
-            <div className="h-20 w-20 bg-surface-alt rounded-full animate-[match-panel-pulse_1.5s_ease-in-out_infinite]" />
+            <div className="h-3 w-16 bg-primary-soft rounded animate-[match-panel-pulse_1.5s_ease-in-out_infinite]" />
+            <div className="h-20 w-20 bg-primary-soft rounded-full animate-[match-panel-pulse_1.5s_ease-in-out_infinite]" />
           </>
         ) : (
           <>
-            <p className="mono-label m-0 text-text-subtle">안전 지수</p>
+            <p className="text-caption m-0 text-text-subtle">안전 지수</p>
             <Gauge value={safetyScore} size="sm" />
             {summary && (
               <span className="inline-flex items-center gap-1 text-caption text-text-muted">
-                <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-surface-alt text-mono-label text-text-subtle">
+                <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-primary-soft text-caption text-text-subtle">
                   {summary.gu} 단위
                 </span>
               </span>

@@ -25,7 +25,7 @@
 - **히트맵 종합**: 5분위 (불변), **지하철**: 1~9호선 (불변)
 - **Category (NEW)**: realestate (#F59E0B), transport (#3B82F6), amenity (#10B981), safety (#EF4444), population (#8B5CF6), environment (#14B8A6) -- 대시보드 섹션 헤더/아이콘용
 - **히트맵 레이어 (NEW)**: rent/activity/youth/studio/safety 각 5단계 팔레트 (--color-hm-{layer}-{1..5})
-- **타이포**: Pretendard only. 12단계 + Data Display
+- **타이포**: Pretendard only (--font-sans, --font-mono 모두 Pretendard로 오버라이드). 12단계 + Data Display
 - **스페이싱**: 8px base (Tailwind 기본 스케일과 동일)
 - **라디우스**: xs(4)/sm,md(8)/card(16)/hero(22)/xl(30)/pill(32)/full(9999)
 
@@ -43,6 +43,7 @@
 - **Category colors**: 6종 -- 대시보드 카테고리 섹션 헤더/아이콘
 - **Heatmap layer palettes**: 5종 x 5단계 -- 레이어별 히트맵 팔레트
 - **shimmer-border keyframe** -- AI 검색창 등 shimmer 효과용
+- **--font-sans, --font-mono**: Tailwind 내장 유틸리티를 Pretendard로 오버라이드
 
 ### JS 미러 (colors.ts)
 - HEATMAP_COLORS, HEATMAP_COLORS_ORDERED, scoreToHeatmapBucket, scoreToHeatmapColor
@@ -142,7 +143,7 @@ Django + DRF + GeoDjango. 9개 앱, 28개 모델, 20개 API 엔드포인트.
 
 ## QA Notes
 
-마지막 리뷰: 2026-05-13 (Phase 2 대시보드 확장 위젯)
+마지막 리뷰: 2026-05-13 (대시보드 폰트 통일 + 그린워시 배경 + 바차트 색상)
 
 ### 해결 완료
 - explore__chip/radio/range-inputs CSS 누락 → Chip 프리미티브 + 인라인 Tailwind 전환
@@ -162,6 +163,10 @@ Django + DRF + GeoDjango. 9개 앱, 28개 모델, 20개 API 엔드포인트.
 - Phase 2 hardcoded hex → CATEGORY_COLORS 상수 전환 (Phase 2 QA)
 - Phase 2 tooltipStyle → TOOLTIP_STYLE (Phase 1 패턴 통일) (Phase 2 QA)
 - Phase 2 h3 text-body-base → text-feature-heading 통일 (Phase 2 QA)
+- Dashboard mono-label / text-mono-label → text-caption 전환, font-mono → Pretendard 통일
+- Dashboard bg-surface-alt → bg-primary-soft 그린워시 전환 (메인 배경, 스켈레톤, 게이지 뱃지, 테이블 헤더)
+- CHART_COLORS.bar #4C4C4C → #059669 (primary green) 전환
+- --font-sans, --font-mono → Pretendard 오버라이드 (프로젝트 전체 적용)
 
 ### 잔여 관찰
 - CriteriaPanel 닫기 버튼 text-[20px]: 정확 매핑 토큰 없음 (feature-heading 22px 근사). 시각 차이 미미하여 유지.
@@ -172,3 +177,6 @@ Django + DRF + GeoDjango. 9개 앱, 28개 모델, 20개 API 엔드포인트.
 - DashboardMiniMap z-[1000] x3: Leaflet 스태킹 컨텍스트 내 overlay용. modal backdrop z-index와 동일하나 기능 충돌 없음.
 - Dashboard 차트 컨테이너 h-[220px] vs Detail h-[240px]: 대시보드 밀도 높은 레이아웃 의도.
 - Detail/RealEstateSection 로컬 KpiCard과 Dashboard/KpiCard 중복: 향후 통합 권장.
+- PopulationSection GENDER_COLORS 내 #EC4899 하드코딩: colors.ts 상수 추출 권장.
+- CHART_COLORS.bar 변경이 DongExplore 탐색 페이지에도 전파됨 (의도적이면 OK).
+- KPI 위젯 세로 높이가 컨텐츠 대비 넉넉함: 추후 KPI 추가 시 리사이징 예정.
