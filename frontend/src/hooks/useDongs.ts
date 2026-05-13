@@ -2,10 +2,12 @@
 import { useQuery } from '@tanstack/react-query';
 import type { UseQueryResult } from '@tanstack/react-query';
 
-import { getCompare, getDongDetail, getDongScores, getDongSummary } from '@/lib/api';
+import { getCompare, getDongDetail, getDongGuMetrics, getDongPopulation, getDongScores, getDongSummary } from '@/lib/api';
 import type {
   CompareResponse,
   DongDetail,
+  DongGuMetricsResponse,
+  DongPopulationResponse,
   DongScore,
   DongSummary,
   Weights,
@@ -94,5 +96,33 @@ export function useDongDetail(
     queryFn: () => getDongDetail(slug as string, weights),
     enabled: !!slug,
     staleTime: 60_000,
+  });
+}
+
+/** Subscribe to /api/dongs/:slug/population — population time series.
+ *  Disabled until slug is truthy. Backend caches 10min.
+ */
+export function useDongPopulation(
+  slug: string | null | undefined,
+): UseQueryResult<DongPopulationResponse> {
+  return useQuery({
+    queryKey: ['dongs', 'population', slug] as const,
+    queryFn: () => getDongPopulation(slug as string),
+    enabled: !!slug,
+    staleTime: 600_000, // 10 min — matches backend cache TTL
+  });
+}
+
+/** Subscribe to /api/dongs/:slug/gu-metrics — gu-level metrics + Seoul avg.
+ *  Disabled until slug is truthy. Backend caches 5min.
+ */
+export function useDongGuMetrics(
+  slug: string | null | undefined,
+): UseQueryResult<DongGuMetricsResponse> {
+  return useQuery({
+    queryKey: ['dongs', 'gu-metrics', slug] as const,
+    queryFn: () => getDongGuMetrics(slug as string),
+    enabled: !!slug,
+    staleTime: 300_000, // 5 min — matches backend cache TTL
   });
 }

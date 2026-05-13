@@ -203,6 +203,42 @@ export interface DongDetail {
   }>;
 }
 
+// -------- Dashboard Phase 2 — Population + Gu Metrics --------------------
+
+/** Single time-series row from GET /api/dongs/:slug/population. */
+export interface PopulationTrendRow {
+  date: string;
+  total_population: number;
+  household_count: number;
+  male_population: number;
+  female_population: number;
+}
+
+/** Response of GET /api/dongs/:slug/population. */
+export interface DongPopulationResponse {
+  dong: { slug: string; name: string; gu: string };
+  latest: PopulationTrendRow | null;
+  trend: PopulationTrendRow[];
+}
+
+/** Single metric value within the gu-metrics response. */
+export interface GuMetricValue {
+  value: number | null;
+  name: string;
+  unit: string;
+  category: string;
+}
+
+/** Response of GET /api/dongs/:slug/gu-metrics. */
+export interface DongGuMetricsResponse {
+  dong: { slug: string; name: string; gu: string };
+  gu_code: string;
+  gu_name: string;
+  date: string | null;
+  metrics: Record<string, GuMetricValue>;
+  seoul_avg: Record<string, { value: number | null }>;
+}
+
 // -------- Explore (Phase 4.8 — 자취 시세 BI 대시보드) --------------------
 // GET /api/dongs/:slug/explore?<filters>
 

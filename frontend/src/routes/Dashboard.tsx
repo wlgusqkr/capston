@@ -1,4 +1,4 @@
-// Dashboard — Phase 1: KPI + MiniMap + Sections A/B/C.
+// Dashboard — Phase 2: KPI + MiniMap + Sections A~E.
 //
 // URL-driven dong selection via ?dong= search param. Default: "pildong".
 
@@ -9,10 +9,12 @@ import DashboardHeader from '@/components/Dashboard/DashboardHeader';
 import DashboardMiniMap from '@/components/Dashboard/DashboardMiniMap';
 import KpiRow from '@/components/Dashboard/KpiRow';
 import AmenitySection from '@/components/Dashboard/sections/AmenitySection';
+import PopulationSection from '@/components/Dashboard/sections/PopulationSection';
 import RealEstateSection from '@/components/Dashboard/sections/RealEstateSection';
+import SafetyEconomySection from '@/components/Dashboard/sections/SafetyEconomySection';
 import TransitSection from '@/components/Dashboard/sections/TransitSection';
 import Card from '@/components/ui/Card';
-import { useDongDetail, useDongScores, useDongSummary } from '@/hooks/useDongs';
+import { useDongDetail, useDongGuMetrics, useDongPopulation, useDongScores, useDongSummary } from '@/hooks/useDongs';
 import type { CategoryKey } from '@/lib/colors';
 import { DEFAULT_WEIGHTS } from '@/types/api';
 
@@ -23,10 +25,8 @@ interface SectionDef {
   category: CategoryKey;
 }
 
-/** Placeholder sections for Phase 2+ (population, safety, etc). */
+/** Placeholder sections for Phase 3+ (charts, reviews). */
 const LATER_SECTIONS: SectionDef[] = [
-  { title: '인구·사회', category: 'population' },
-  { title: '안전·환경·경제', category: 'safety' },
   { title: '인기 차트', category: 'environment' },
   { title: '자취생 리뷰', category: 'environment' },
 ];
@@ -58,6 +58,8 @@ export default function Dashboard() {
   const { data: dongs } = useDongScores(DEFAULT_WEIGHTS);
   const { data: detail, isLoading: detailLoading, isError: detailError } = useDongDetail(dongSlug, DEFAULT_WEIGHTS);
   const { data: summary } = useDongSummary(dongSlug, DEFAULT_WEIGHTS);
+  const { data: population } = useDongPopulation(dongSlug);
+  const { data: guMetrics } = useDongGuMetrics(dongSlug);
 
   const selectedDong = useMemo(
     () => dongs?.find((d) => d.slug === dongSlug) ?? null,
@@ -178,6 +180,45 @@ export default function Dashboard() {
           </section>
         )}
 
+        {/* Section D: Population */}
+        {population && (
+          <section aria-labelledby="section-population">
+            <Card padding="lg">
+              <div className="flex items-center gap-3 mb-4">
+                <div
+                  className="w-1 h-6 rounded-full"
+                  style={{ backgroundColor: 'var(--color-cat-population)' }}
+                />
+                <h2 id="section-population" className="text-feature-heading font-semibold text-text">
+                  인구·사회
+                </h2>
+              </div>
+              <PopulationSection
+                population={population}
+                guMetrics={guMetrics}
+              />
+            </Card>
+          </section>
+        )}
+
+        {/* Section E: Safety & Economy */}
+        {guMetrics && guMetrics.date && (
+          <section aria-labelledby="section-safety">
+            <Card padding="lg">
+              <div className="flex items-center gap-3 mb-4">
+                <div
+                  className="w-1 h-6 rounded-full"
+                  style={{ backgroundColor: 'var(--color-cat-safety)' }}
+                />
+                <h2 id="section-safety" className="text-feature-heading font-semibold text-text">
+                  안전·환경·경제
+                </h2>
+              </div>
+              <SafetyEconomySection guMetrics={guMetrics} />
+            </Card>
+          </section>
+        )}
+
         {/* Loading skeleton for sections when detail is loading */}
         {detailLoading && !detail && (
           <>
@@ -193,7 +234,7 @@ export default function Dashboard() {
           </>
         )}
 
-        {/* Placeholder sections for Phase 2+ */}
+        {/* Placeholder sections for Phase 3+ */}
         {LATER_SECTIONS.map((section) => (
           <PlaceholderSection
             key={section.title}

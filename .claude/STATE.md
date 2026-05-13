@@ -4,7 +4,7 @@
 
 ## Project Status
 
-- **단계**: Phase 1 완료 — 대시보드 핵심 위젯 (KPI/미니맵/부동산/편의시설/교통)
+- **단계**: Phase 2 완료 — 대시보드 확장 위젯 (인구·사회/안전·환경·경제)
 - **활성 모드**: 프론트엔드 + 디자인 집중. 백엔드/데이터는 휴면.
 - **데이터**: 426개 행정동 실데이터 적재 완료 (RDS ETL).
 - **CSS 방식**: Tailwind CSS v4 (globals.css 단일 파일). 컴포넌트별 CSS 파일 없음.
@@ -62,7 +62,7 @@ Button, Card, Badge, Chip, Score, MetricBar, Input, Select, Slider, Modal, Toolt
 | 경로 | 컴포넌트 | 상태 |
 |---|---|---|
 | `/` | MainMap | 완성 |
-| `/dashboard` | Dashboard (lazy) | Phase 1 위젯 |
+| `/dashboard` | Dashboard (lazy) | Phase 2 위젯 (A~E 섹션) |
 | `/dong/:slug` | DongDetail | 완성 |
 | `/dong/:slug/explore` | DongExplore | 완성 |
 | `/compare` | Compare | 완성 |
@@ -87,6 +87,13 @@ Button, Card, Badge, Chip, Score, MetricBar, Input, Select, Slider, Modal, Toolt
 - **AmenitySection** (`components/Dashboard/sections/AmenitySection.tsx`) — 카테고리별 테이블 + 자취생 필수시설 칩 그리드
 - **TransitSection** (`components/Dashboard/sections/TransitSection.tsx`) — 지하철 TOP3 + 버스 통계 + placeholder 위젯
 
+### 신규 컴포넌트 (Phase 2)
+- **PopulationSection** (`components/Dashboard/sections/PopulationSection.tsx`) — 남녀 비율 도넛 + 인구 추이 AreaChart + 청년 비율 카드 (구 단위) + 1인 가구 추정 도넛
+- **SafetyEconomySection** (`components/Dashboard/sections/SafetyEconomySection.tsx`) — 안전 등급 6분야 레이더 + 교통사고 통계/바 + 녹지/GRDP/화재 MetricCard (구 단위)
+- **useDongPopulation** (`hooks/useDongs.ts`) — /api/dongs/:slug/population 훅 (staleTime 10min)
+- **useDongGuMetrics** (`hooks/useDongs.ts`) — /api/dongs/:slug/gu-metrics 훅 (staleTime 5min)
+- **DongPopulationResponse, DongGuMetricsResponse** (`types/api.ts`) — Phase 2 API 타입
+
 ### TopNav 변경
 - 네비 탭 (맵/대시보드) NavLink 추가 (pill 스타일, active 상태 bg-primary-soft)
 - 컨텍스트 타이틀 (동네 비교, 동 이름 등) 탭 우측 middot 구분
@@ -100,7 +107,7 @@ Button, Card, Badge, Chip, Score, MetricBar, Input, Select, Slider, Modal, Toolt
 
 ### 빌드
 - CSS: 72KB (18KB gz)
-- JS main: 982KB (292KB gz), Dashboard chunk: 47KB (15KB gz)
+- JS main: 984KB (293KB gz), Dashboard chunk: 99KB (26KB gz)
 - tsc + vite build 통과
 
 ### 알려진 이슈
@@ -135,7 +142,7 @@ Django + DRF + GeoDjango. 9개 앱, 28개 모델, 20개 API 엔드포인트.
 
 ## QA Notes
 
-마지막 리뷰: 2026-05-13 (Phase 1 대시보드 핵심 위젯)
+마지막 리뷰: 2026-05-13 (Phase 2 대시보드 확장 위젯)
 
 ### 해결 완료
 - explore__chip/radio/range-inputs CSS 누락 → Chip 프리미티브 + 인라인 Tailwind 전환
@@ -152,6 +159,9 @@ Django + DRF + GeoDjango. 9개 앱, 28개 모델, 20개 API 엔드포인트.
 - KpiCard text-[28px] → text-card-heading 토큰 전환 (Phase 1 QA)
 - TransitSection text-[32px] → text-card-heading 토큰 전환 (Phase 1 QA)
 - Dashboard 섹션 aria-labelledby 추가 (Phase 1 QA)
+- Phase 2 hardcoded hex → CATEGORY_COLORS 상수 전환 (Phase 2 QA)
+- Phase 2 tooltipStyle → TOOLTIP_STYLE (Phase 1 패턴 통일) (Phase 2 QA)
+- Phase 2 h3 text-body-base → text-feature-heading 통일 (Phase 2 QA)
 
 ### 잔여 관찰
 - CriteriaPanel 닫기 버튼 text-[20px]: 정확 매핑 토큰 없음 (feature-heading 22px 근사). 시각 차이 미미하여 유지.

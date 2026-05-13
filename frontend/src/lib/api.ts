@@ -7,6 +7,8 @@ import type {
   Bbox,
   CompareResponse,
   DongDetail,
+  DongGuMetricsResponse,
+  DongPopulationResponse,
   DongScore,
   DongSummary,
   ExploreFilters,
@@ -208,6 +210,28 @@ export async function submitPreferenceComparisons(
   const { data } = await api.post<PreferenceWeightsResponse>(
     '/preference/submit',
     { comparisons }
+  );
+  return data;
+}
+
+// -------- Dashboard Phase 2 — Population + Gu Metrics ----------------------
+
+/** GET /api/dongs/:slug/population — time-series population data. */
+export async function getDongPopulation(
+  slug: string,
+): Promise<DongPopulationResponse> {
+  const { data } = await api.get<DongPopulationResponse>(
+    `/dongs/${slug}/population`,
+  );
+  return data;
+}
+
+/** GET /api/dongs/:slug/gu-metrics — gu-level metrics + Seoul averages. */
+export async function getDongGuMetrics(
+  slug: string,
+): Promise<DongGuMetricsResponse> {
+  const { data } = await api.get<DongGuMetricsResponse>(
+    `/dongs/${slug}/gu-metrics`,
   );
   return data;
 }
