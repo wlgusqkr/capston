@@ -31,7 +31,7 @@ export default function DashboardHeader({
               {selectedDong.gu} {selectedDong.name}
             </h1>
             {summaryText ? (
-              <span className="text-caption text-text-muted truncate max-w-[400px]">
+              <span className="text-caption text-text font-medium truncate max-w-[400px]">
                 {summaryText}
               </span>
             ) : (

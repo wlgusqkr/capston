@@ -18,6 +18,10 @@ export interface KpiCardProps {
   hint?: string;
   /** Slot for a tiny inline chart (Recharts tiny LineChart, etc). */
   miniChart?: React.ReactNode;
+  /** Percentile badge text e.g. "상위 12%". */
+  badge?: string;
+  /** Insight text (검정색 해석). */
+  insight?: string;
   className?: string;
   /** Whether to show loading skeleton. */
   isLoading?: boolean;
@@ -77,6 +81,8 @@ export default function KpiCard({
   subValue,
   hint,
   miniChart,
+  badge,
+  insight,
   className = '',
   isLoading = false,
 }: KpiCardProps) {
@@ -86,10 +92,10 @@ export default function KpiCard({
   if (isLoading) {
     return (
       <div
-        className={`p-5 border border-divider rounded-card bg-surface flex flex-col gap-2 ${className}`}
+        className={`p-3 border border-divider rounded-card bg-surface flex flex-col gap-1.5 ${className}`}
       >
         <div className="h-3 w-16 bg-primary-soft rounded animate-[match-panel-pulse_1.5s_ease-in-out_infinite]" />
-        <div className="h-8 w-24 bg-primary-soft rounded animate-[match-panel-pulse_1.5s_ease-in-out_infinite]" />
+        <div className="h-6 w-24 bg-primary-soft rounded animate-[match-panel-pulse_1.5s_ease-in-out_infinite]" />
         <div className="h-3 w-20 bg-primary-soft rounded animate-[match-panel-pulse_1.5s_ease-in-out_infinite]" />
       </div>
     );
@@ -106,11 +112,11 @@ export default function KpiCard({
 
   return (
     <div
-      className={`p-5 border border-divider rounded-card bg-surface flex flex-col gap-2 ${className}`}
+      className={`p-3 border border-divider rounded-card bg-surface flex flex-col gap-1.5 ${className}`}
     >
-      <p className="text-caption m-0 text-text-subtle">{label}</p>
-      <div className="flex items-end gap-3">
-        <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
+      <p className="text-[12px] m-0 text-text-subtle">{label}</p>
+      <div className="flex items-end gap-2">
+        <p className="tabular m-0 text-[20px] font-semibold text-text leading-[1.1]">
           {displayValue}
         </p>
         {subValue && (
@@ -119,8 +125,14 @@ export default function KpiCard({
           </span>
         )}
       </div>
-      {miniChart && <div className="mt-1">{miniChart}</div>}
-      {hint && <p className="m-0 text-caption text-text-muted">{hint}</p>}
+      {badge && (
+        <span className="inline-flex self-start items-center justify-center px-1.5 py-0.5 rounded-full bg-primary-soft text-[11px] text-primary font-medium">
+          {badge}
+        </span>
+      )}
+      {miniChart && <div className="mt-0.5">{miniChart}</div>}
+      {insight && <p className="m-0 text-[13px] text-text leading-snug">{insight}</p>}
+      {hint && <p className="m-0 text-[11px] text-text-muted">{hint}</p>}
     </div>
   );
 }

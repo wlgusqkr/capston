@@ -140,6 +140,7 @@ function MetricCard({
   rank,
   higherIsBetter = true,
   formatter,
+  insight,
 }: {
   label: string;
   value: number | null;
@@ -149,6 +150,7 @@ function MetricCard({
   rank?: number | null;
   higherIsBetter?: boolean;
   formatter?: (n: number) => string;
+  insight?: string | null;
 }) {
   const fmt = formatter ?? formatNumber;
   const diff = value != null && guAvg != null ? value - guAvg : null;
@@ -156,13 +158,13 @@ function MetricCard({
   const dateText = formatMetricDate(date);
 
   return (
-    <div className="p-4 rounded-card border border-divider bg-surface">
-      <p className="text-caption m-0 mb-1 text-text-subtle">{label}</p>
-      <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
+    <div className="p-2 rounded-card border border-divider bg-surface">
+      <p className="text-[12px] m-0 mb-1 text-text-subtle">{label}</p>
+      <p className="tabular m-0 text-[18px] font-semibold text-text leading-[1.1]">
         {value != null ? `${fmt(value)}${unit}` : '-'}
       </p>
       {guAvg != null && diff != null && (
-        <p className="m-0 mt-1 text-caption text-text-muted">
+        <p className="m-0 mt-1 text-[12px] text-text-muted">
           25구 평균 {fmt(guAvg)}{unit}
           <span className={`ml-1 font-medium ${isGood ? 'text-success' : 'text-danger'}`}>
             {diff >= 0 ? '▲' : '▼'}
@@ -171,10 +173,13 @@ function MetricCard({
         </p>
       )}
       {rank != null && (
-        <p className="m-0 mt-1 text-caption text-text-subtle">25구 중 {rank}위</p>
+        <p className="m-0 mt-1 text-[12px] text-text-subtle">25구 중 {rank}위</p>
+      )}
+      {insight && (
+        <span className="inline-flex items-center mt-1 px-2.5 py-1 rounded-full bg-primary-soft text-[13px] font-semibold text-primary">{insight}</span>
       )}
       {dateText && (
-        <p className="m-0 mt-1 text-caption text-text-subtle">{dateText}</p>
+        <p className="m-0 mt-1 text-[11px] text-text-subtle">{dateText}</p>
       )}
     </div>
   );
@@ -241,11 +246,44 @@ export default function SafetyEconomySection({
       : null;
   const safetyDate = formatMetricDate(mDate(metrics, 'SAFETY_GRADE_TRAFFIC'));
 
+  // Safety insight text
+  const safetyInsight =
+    safetyMean != null && guAvgSafetyMean != null
+      ? safetyMean > guAvgSafetyMean
+        ? '서울 평균보다 안전한 구예요'
+        : '안전 지표가 서울 평균보다 낮아요'
+      : null;
+
+  // Shared population values (used by accident per-capita AND green/GRDP sections)
+  const popResident = mv(metrics, 'POP_RESIDENT');
+  const guAvgPopResident = ga(metrics, 'POP_RESIDENT');
+
   // 2. Accident metrics — 실제 코드 기반
   const accTotal = mv(metrics, 'ACC_TOTAL_COUNT');
   const accInjury = mv(metrics, 'ACC_INJURY_COUNT');
   const accDrunk = mv(metrics, 'ACC_DRUNK_COUNT');
   const accHitrun = mv(metrics, 'ACC_HITRUN_COUNT');
+  const guAvgAccTotal = ga(metrics, 'ACC_TOTAL_COUNT');
+  const guAvgAccInjury = ga(metrics, 'ACC_INJURY_COUNT');
+  const accTotalRank = rank(metrics, 'ACC_TOTAL_COUNT');
+
+  // 인구 10만명당 사고율 (구 비교용)
+  const accPer100k =
+    accTotal != null && popResident != null && popResident > 0
+      ? (accTotal / popResident) * 100_000
+      : null;
+  const guAvgAccPer100k =
+    guAvgAccTotal != null && guAvgPopResident != null && guAvgPopResident > 0
+      ? (guAvgAccTotal / guAvgPopResident) * 100_000
+      : null;
+
+  // Accident insight text
+  const accidentInsight =
+    accPer100k != null && guAvgAccPer100k != null
+      ? accPer100k < guAvgAccPer100k
+        ? '사고율이 낮아 안심할 수 있어요'
+        : '사고율이 서울 평균보다 높은 편이에요'
+      : null;
 
   // 음주/뺑소니는 절대값 → 총건수 대비 비율로 변환
   const accDrunkRatio =
@@ -260,29 +298,27 @@ export default function SafetyEconomySection({
   ];
   const accBarColors = [CHART_COLORS.warningDeep, CATEGORY_COLORS.safety];
 
-  // 3. Green area metrics — AREA_GREEN, AREA_URBAN, POP_RESIDENT (25구 평균 비교)
+  // 3. Green area metrics — AREA_GREEN, AREA_URBAN (25구 평균 비교)
   const areaGreen = mv(metrics, 'AREA_GREEN');
   const areaUrban = mv(metrics, 'AREA_URBAN');
-  const popResident = mv(metrics, 'POP_RESIDENT');
   const guAvgAreaGreen = ga(metrics, 'AREA_GREEN');
   const guAvgAreaUrban = ga(metrics, 'AREA_URBAN');
-  const guAvgPopResident = ga(metrics, 'POP_RESIDENT');
 
   const greenRatio =
     areaGreen != null && areaUrban != null && areaGreen + areaUrban > 0
       ? (areaGreen / (areaGreen + areaUrban)) * 100
       : null;
-  const greenPerCapita =
-    areaGreen != null && popResident != null && popResident > 0
-      ? areaGreen / popResident
-      : null;
   const guAvgGreenRatio =
     guAvgAreaGreen != null && guAvgAreaUrban != null && guAvgAreaGreen + guAvgAreaUrban > 0
       ? (guAvgAreaGreen / (guAvgAreaGreen + guAvgAreaUrban)) * 100
       : null;
-  const guAvgGreenPerCapita =
-    guAvgAreaGreen != null && guAvgPopResident != null && guAvgPopResident > 0
-      ? guAvgAreaGreen / guAvgPopResident
+
+  // Green insight text
+  const greenInsight =
+    greenRatio != null && guAvgGreenRatio != null
+      ? greenRatio > guAvgGreenRatio
+        ? '녹지가 풍부한 구예요'
+        : '녹지 비율이 서울 평균보다 낮아요'
       : null;
 
   // 4. GRDP — GRDP_CURRENT (백만원 단위) ÷ POP_RESIDENT (25구 평균 비교)
@@ -302,6 +338,14 @@ export default function SafetyEconomySection({
   // GRDP 총액 — 백만원 → 조원 (÷ 1,000,000)
   const grdpTotalJo = grdpCurrent != null ? grdpCurrent / 1_000_000 : null;
 
+  // GRDP insight text
+  const grdpInsight =
+    grdpPerCapita != null && guAvgGrdpPerCapita != null
+      ? grdpPerCapita > guAvgGrdpPerCapita
+        ? '경제 활동이 활발한 구예요'
+        : '1인당 경제규모가 서울 평균보다 작은 편이에요'
+      : null;
+
   // 5. Fire count (25구 평균 비교)
   const fireCount = mv(metrics, 'FIRE_COUNT');
   const guAvgFireCount = ga(metrics, 'FIRE_COUNT');
@@ -319,29 +363,29 @@ export default function SafetyEconomySection({
   const trafficCultureDate = formatMetricDate(mDate(metrics, 'TRAFFIC_CULTURE_INDEX'));
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-2">
       {/* Badge: all data is gu-level */}
       <div className="flex items-center gap-2">
         <Badge variant="neutral" size="sm">
           {gu_name} 단위
         </Badge>
-        <span className="text-caption text-text-muted">
+        <span className="text-[12px] text-text-muted">
           모든 지표는 자치구 단위 데이터입니다
         </span>
       </div>
 
       {/* Row 1: Safety radar (with composite text) + Accident stats */}
-      <div className="grid grid-cols-2 gap-5">
+      <div className="grid grid-cols-2 gap-2">
         {/* 1. Safety radar */}
-        <Card padding="lg">
-          <div className="flex items-baseline justify-between mb-3">
-            <h3 className="m-0 text-feature-heading leading-[1.3] font-semibold text-text">
+        <Card padding="md">
+          <div className="flex items-baseline justify-between mb-1">
+            <h3 className="m-0 text-[16px] leading-snug font-semibold text-text">
               안전 등급 (6분야)
             </h3>
             {safetyMean != null && (
-              <p className="m-0 tabular text-caption text-text-muted">
+              <p className="m-0 tabular text-[12px] text-text-muted">
                 종합{' '}
-                <span className="text-body-base font-semibold text-text">
+                <span className="text-[13px] font-semibold text-text">
                   {safetyMean.toFixed(1)}
                 </span>
                 {guAvgSafetyMean != null && (
@@ -351,7 +395,7 @@ export default function SafetyEconomySection({
             )}
           </div>
           {hasRadarData ? (
-            <div className="h-[220px] w-full">
+            <div className="h-[280px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart data={radarData}>
                   <PolarGrid stroke={CHART_COLORS.grid} />
@@ -390,36 +434,78 @@ export default function SafetyEconomySection({
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-[220px] text-text-muted text-caption">
+            <div className="flex items-center justify-center h-[280px] text-text-muted text-[12px]">
               안전 등급 데이터가 없습니다
             </div>
           )}
-          <p className="m-0 mt-2 text-caption text-text-subtle">
-            1~5점, 높을수록 안전. {safetyDate || '서울시 안전등급 기준'}
+          {safetyInsight && (
+            <span className="inline-flex items-center mt-1 px-2.5 py-1 rounded-full bg-primary-soft text-[13px] font-semibold text-primary">{safetyInsight}</span>
+          )}
+          <p className="m-0 mt-1 text-[11px] text-text-subtle">
+            행정안전부 지역안전등급 · 1~5점(높을수록 안전) · {safetyDate || '연간'}
           </p>
         </Card>
 
         {/* 2. Accident stats */}
-        <Card padding="lg">
-          <h3 className="m-0 mb-3 text-feature-heading leading-[1.3] font-semibold text-text">
-            교통사고
-          </h3>
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className="p-3 rounded-card border border-divider bg-surface">
-              <p className="text-caption m-0 mb-1 text-text-subtle">총 발생건수</p>
-              <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
+        <Card padding="md">
+          <div className="flex items-baseline justify-between mb-1">
+            <h3 className="m-0 text-[16px] leading-snug font-semibold text-text">
+              교통사고
+            </h3>
+            {accTotalRank != null && (
+              <Badge variant="neutral" size="sm">
+                {accTotalRank}위 / 25구
+              </Badge>
+            )}
+          </div>
+          {/* 인구 10만명당 사고율 — 구 간 비교 가능한 지표 */}
+          {accPer100k != null && (
+            <div className="p-2 rounded-card border border-divider bg-surface mb-1">
+              <p className="text-[12px] m-0 mb-1 text-text-subtle">인구 10만명당 사고</p>
+              <p className="tabular m-0 text-[18px] font-semibold text-text leading-[1.1]">
+                {accPer100k.toFixed(0)}
+                <span className="ml-1 text-[13px] font-medium text-text-muted">건</span>
+              </p>
+              {guAvgAccPer100k != null && (
+                <p className="m-0 mt-1 text-[12px] text-text-muted">
+                  25구 평균 {guAvgAccPer100k.toFixed(0)}건
+                  <span className={`ml-1 font-medium ${accPer100k <= guAvgAccPer100k ? 'text-success' : 'text-danger'}`}>
+                    {accPer100k >= guAvgAccPer100k ? '▲' : '▼'}
+                    {Math.abs(accPer100k - guAvgAccPer100k).toFixed(0)}건
+                  </span>
+                </p>
+              )}
+            </div>
+          )}
+          {accidentInsight && (
+            <span className="inline-flex items-center mb-1 px-2.5 py-1 rounded-full bg-primary-soft text-[13px] font-semibold text-primary">{accidentInsight}</span>
+          )}
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="p-2 rounded-card border border-divider bg-surface">
+              <p className="text-[12px] m-0 mb-1 text-text-subtle">총 발생건수</p>
+              <p className="tabular m-0 text-[15px] leading-snug font-semibold text-text">
                 {accTotal != null ? `${accTotal.toLocaleString()}건` : '-'}
               </p>
+              {guAvgAccTotal != null && accTotal != null && (
+                <p className="m-0 mt-1 text-[12px] text-text-muted">
+                  25구 평균 {Math.round(guAvgAccTotal).toLocaleString()}건
+                </p>
+              )}
             </div>
-            <div className="p-3 rounded-card border border-divider bg-surface">
-              <p className="text-caption m-0 mb-1 text-text-subtle">부상자수</p>
-              <p className="tabular m-0 text-card-heading font-semibold text-danger leading-[1.1]">
+            <div className="p-2 rounded-card border border-divider bg-surface">
+              <p className="text-[12px] m-0 mb-1 text-text-subtle">부상자수</p>
+              <p className="tabular m-0 text-[15px] leading-snug font-semibold text-danger">
                 {accInjury != null ? `${accInjury.toLocaleString()}명` : '-'}
               </p>
+              {guAvgAccInjury != null && accInjury != null && (
+                <p className="m-0 mt-1 text-[12px] text-text-muted">
+                  25구 평균 {Math.round(guAvgAccInjury).toLocaleString()}명
+                </p>
+              )}
             </div>
           </div>
           {accBarData.length > 0 ? (
-            <div className="h-[120px] w-full">
+            <div className="h-[80px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={accBarData} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} horizontal={false} />
@@ -432,7 +518,7 @@ export default function SafetyEconomySection({
                     type="category"
                     dataKey="name"
                     tick={{ fontSize: 11, fill: CHART_COLORS.axis }}
-                    width={88}
+                    width={100}
                   />
                   <Tooltip
                     contentStyle={TOOLTIP_STYLE}
@@ -455,22 +541,22 @@ export default function SafetyEconomySection({
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-[80px] text-text-muted text-caption">
+            <div className="flex items-center justify-center h-[80px] text-text-muted text-[12px]">
               음주/뺑소니 비율 데이터가 없습니다
             </div>
           )}
           {accDate && (
-            <p className="m-0 mt-2 text-caption text-text-subtle">{accDate}</p>
+            <p className="m-0 mt-1 text-[11px] text-text-subtle">{accDate}</p>
           )}
         </Card>
       </div>
 
       {/* Row 1.5 (Phase 4): 교통사고 추이 + 화재 추이 라인 차트 */}
-      <div className="grid grid-cols-2 gap-5">
+      <div className="grid grid-cols-2 gap-2">
         {/* 교통사고 추이 라인 */}
-        <Card padding="lg">
-          <div className="flex items-baseline justify-between mb-3">
-            <h3 className="m-0 text-feature-heading leading-[1.3] font-semibold text-text">
+        <Card padding="md">
+          <div className="flex items-baseline justify-between mb-1">
+            <h3 className="m-0 text-[16px] leading-snug font-semibold text-text">
               교통사고 추이
             </h3>
             {accRank && (
@@ -480,7 +566,7 @@ export default function SafetyEconomySection({
             )}
           </div>
           {hasAccTrend ? (
-            <div className="h-[220px] w-full">
+            <div className="h-[140px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={accTrendData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
@@ -532,19 +618,19 @@ export default function SafetyEconomySection({
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-[220px] text-text-muted text-caption">
+            <div className="flex items-center justify-center h-[140px] text-text-muted text-[12px]">
               교통사고 추이 데이터가 없습니다
             </div>
           )}
-          <p className="m-0 mt-2 text-caption text-text-subtle">
-            {accSeries?.name ?? '교통사고 총 발생건수'} · 연간 {accSeries?.unit ?? '건'}
+          <p className="m-0 mt-1 text-[11px] text-text-subtle">
+            도로교통공단 TAAS · 연간 · {accSeries?.unit ?? '건'}
           </p>
         </Card>
 
         {/* 화재 추이 라인 */}
-        <Card padding="lg">
-          <div className="flex items-baseline justify-between mb-3">
-            <h3 className="m-0 text-feature-heading leading-[1.3] font-semibold text-text">
+        <Card padding="md">
+          <div className="flex items-baseline justify-between mb-1">
+            <h3 className="m-0 text-[16px] leading-snug font-semibold text-text">
               화재 발생 추이
             </h3>
             {fireRank && (
@@ -554,7 +640,7 @@ export default function SafetyEconomySection({
             )}
           </div>
           {hasFireTrend ? (
-            <div className="h-[220px] w-full">
+            <div className="h-[140px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={fireTrendData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
@@ -606,45 +692,43 @@ export default function SafetyEconomySection({
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-[220px] text-text-muted text-caption">
+            <div className="flex items-center justify-center h-[140px] text-text-muted text-[12px]">
               화재 추이 데이터가 없습니다
             </div>
           )}
-          <p className="m-0 mt-2 text-caption text-text-subtle">
-            {fireSeries?.name ?? '화재 발생건수'} · 연간 {fireSeries?.unit ?? '건'}
+          <p className="m-0 mt-1 text-[11px] text-text-subtle">
+            소방청 화재통계 · 연간 · {fireSeries?.unit ?? '건'}
           </p>
         </Card>
       </div>
 
-      {/* Row 2: Traffic culture radar (B3) + GRDP total card */}
-      <div className="grid grid-cols-2 gap-5">
+      {/* Row 2: Traffic culture radar (B3) + GRDP총액 + GRDP 1인당 */}
+      <div className="grid grid-cols-3 gap-2">
         {/* B3. Traffic culture radar */}
-        <Card padding="lg">
-          <div className="flex items-baseline justify-between mb-3">
-            <h3 className="m-0 text-feature-heading leading-[1.3] font-semibold text-text">
+        <Card padding="md">
+          <div className="flex items-baseline justify-between mb-1">
+            <h3 className="m-0 text-[16px] leading-snug font-semibold text-text">
               교통문화지수
             </h3>
-            {trafficCultureIndex != null && (
-              <div className="flex items-center gap-2">
-                <p className="m-0 tabular text-caption text-text-muted">
-                  종합{' '}
-                  <span className="text-body-base font-semibold text-text">
-                    {trafficCultureIndex.toFixed(1)}
-                  </span>
-                  {guAvgTrafficCultureIndex != null && (
-                    <span className="ml-1">/ 25구 평균 {guAvgTrafficCultureIndex.toFixed(1)}</span>
-                  )}
-                </p>
-                {trafficCultureRank != null && (
-                  <Badge variant="neutral" size="sm">
-                    {trafficCultureRank}위 / 25구
-                  </Badge>
-                )}
-              </div>
+            {trafficCultureRank != null && (
+              <Badge variant="neutral" size="sm">
+                {trafficCultureRank}위 / 25구
+              </Badge>
             )}
           </div>
+          {trafficCultureIndex != null && (
+            <p className="m-0 mb-1 tabular text-[12px] text-text-muted">
+              종합{' '}
+              <span className="text-[13px] font-semibold text-text">
+                {trafficCultureIndex.toFixed(1)}
+              </span>
+              {guAvgTrafficCultureIndex != null && (
+                <span className="ml-1">/ 25구 평균 {guAvgTrafficCultureIndex.toFixed(1)}</span>
+              )}
+            </p>
+          )}
           {hasTrafficRadar ? (
-            <div className="h-[220px] w-full">
+            <div className="h-[140px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart data={trafficRadarData}>
                   <PolarGrid stroke={CHART_COLORS.grid} />
@@ -683,62 +767,65 @@ export default function SafetyEconomySection({
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-[220px] text-text-muted text-caption">
+            <div className="flex items-center justify-center h-[140px] text-text-muted text-[12px]">
               교통문화지수 데이터가 없습니다
             </div>
           )}
-          <p className="m-0 mt-2 text-caption text-text-subtle">
-            0~100점, 높을수록 양호. {trafficCultureDate || '국토부 교통문화지수'}
+          <p className="m-0 mt-1 text-[11px] text-text-subtle">
+            국토교통부 교통문화지수 · 0~100점(높을수록 양호) · {trafficCultureDate || '연간'}
           </p>
         </Card>
 
-        {/* GRDP — 총액 + 1인당 */}
-        <Card padding="lg">
-          <h3 className="m-0 mb-3 text-feature-heading leading-[1.3] font-semibold text-text">
-            GRDP (지역내총생산)
+        {/* GRDP 총액 */}
+        <Card padding="md">
+          <h3 className="m-0 mb-1 text-[16px] leading-snug font-semibold text-text">
+            GRDP 총액
           </h3>
-          <div className="flex flex-col gap-3">
-            <div className="p-4 rounded-card border border-divider bg-surface">
-              <div className="flex items-center gap-2 mb-1">
-                <p className="text-caption m-0 text-text-subtle">{gu_name} GRDP 총액</p>
-                {grdpRank != null && (
-                  <Badge variant="neutral" size="sm">
-                    {grdpRank}위 / 25구
-                  </Badge>
-                )}
-              </div>
-              <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
-                {grdpTotalJo != null ? `${grdpTotalJo.toFixed(1)}조원` : '-'}
-              </p>
-              {grdpDate && (
-                <p className="m-0 mt-1 text-caption text-text-subtle">{grdpDate}</p>
-              )}
-            </div>
-            <div className="p-4 rounded-card border border-divider bg-surface">
-              <p className="text-caption m-0 mb-1 text-text-subtle">1인당 GRDP</p>
-              <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
-                {grdpPerCapita != null ? `${grdpPerCapita.toFixed(1)}백만원` : '-'}
-              </p>
-              {guAvgGrdpPerCapita != null && grdpPerCapita != null && (
-                <p className="m-0 mt-1 text-caption text-text-muted">
-                  25구 평균 {guAvgGrdpPerCapita.toFixed(1)}백만원
-                  <span
-                    className={`ml-1 font-medium ${
-                      grdpPerCapita >= guAvgGrdpPerCapita ? 'text-success' : 'text-danger'
-                    }`}
-                  >
-                    {grdpPerCapita >= guAvgGrdpPerCapita ? '▲' : '▼'}
-                    {Math.abs(grdpPerCapita - guAvgGrdpPerCapita).toFixed(1)}백만원
-                  </span>
-                </p>
-              )}
-            </div>
+          <div className="flex items-center gap-2 mb-1">
+            <p className="text-[12px] m-0 text-text-subtle">{gu_name}</p>
+            {grdpRank != null && (
+              <Badge variant="neutral" size="sm">
+                {grdpRank}위 / 25구
+              </Badge>
+            )}
           </div>
+          <p className="tabular m-0 text-[18px] font-semibold text-text leading-[1.1]">
+            {grdpTotalJo != null ? `${grdpTotalJo.toFixed(1)}조원` : '-'}
+          </p>
+          {grdpDate && (
+            <p className="m-0 mt-1 text-[11px] text-text-subtle">{grdpDate}</p>
+          )}
+        </Card>
+
+        {/* GRDP 1인당 */}
+        <Card padding="md">
+          <h3 className="m-0 mb-1 text-[16px] leading-snug font-semibold text-text">
+            1인당 GRDP
+          </h3>
+          <p className="tabular m-0 text-[18px] font-semibold text-text leading-[1.1]">
+            {grdpPerCapita != null ? `${grdpPerCapita.toFixed(1)}백만원` : '-'}
+          </p>
+          {guAvgGrdpPerCapita != null && grdpPerCapita != null && (
+            <p className="m-0 mt-1 text-[12px] text-text-muted">
+              25구 평균 {guAvgGrdpPerCapita.toFixed(1)}백만원
+              <span
+                className={`ml-1 font-medium ${
+                  grdpPerCapita >= guAvgGrdpPerCapita ? 'text-success' : 'text-danger'
+                }`}
+              >
+                {grdpPerCapita >= guAvgGrdpPerCapita ? '▲' : '▼'}
+                {Math.abs(grdpPerCapita - guAvgGrdpPerCapita).toFixed(1)}백만원
+              </span>
+            </p>
+          )}
+          {grdpInsight && (
+            <span className="inline-flex items-center mt-1 px-2.5 py-1 rounded-full bg-primary-soft text-[13px] font-semibold text-primary">{grdpInsight}</span>
+          )}
         </Card>
       </div>
 
       {/* Row 3: Green + Fire metrics */}
-      <div className="grid grid-cols-3 gap-5">
+      <div className="grid grid-cols-4 gap-2">
         <MetricCard
           label="녹지 비율"
           value={greenRatio}
@@ -748,15 +835,7 @@ export default function SafetyEconomySection({
           rank={rank(metrics, 'AREA_GREEN')}
           higherIsBetter={true}
           formatter={(n) => n.toFixed(1)}
-        />
-        <MetricCard
-          label="1인당 녹지"
-          value={greenPerCapita}
-          guAvg={guAvgGreenPerCapita}
-          unit="㎡"
-          date={mDate(metrics, 'AREA_GREEN')}
-          higherIsBetter={true}
-          formatter={(n) => n.toFixed(1)}
+          insight={greenInsight}
         />
         <MetricCard
           label="화재 발생"

@@ -1,13 +1,9 @@
 // Dashboard RealEstateSection -- SPEC 4.4 Section A.
 //
-// 4 Recharts widgets in a 2x2 grid:
-//   1. Monthly avg converted rent trend (LineChart, 4 series)
-//   2. Housing type distribution (PieChart donut)
-//   3. Area x converted rent scatter (ScatterChart)
-//   4. Deposit band distribution (BarChart)
+// KPI row (4-col): 지가변동률 + 주택수 (narrower)
+// 4-col chart grid: 월세추이(col-span-2) + 유형분포 + 산점도 + 보증금대역
 //
-// Data: DongDetail.real_estate
-// Does NOT modify Detail/RealEstateSection.tsx.
+// Data: DongDetail.real_estate + DongGuMetricsResponse
 
 import { Link } from 'react-router-dom';
 import {
@@ -115,23 +111,40 @@ export default function RealEstateSection({ realEstate, slug, guMetrics }: RealE
   const housingRank = guMetrics?.metrics['HOUSING_COUNT']?.rank_in_seoul ?? null;
   const housingDate = formatMetricDate(guMetrics?.metrics['HOUSING_COUNT']?.date);
 
+  // Real estate insight
+  const avgRent = trend.length > 0 ? trend[trend.length - 1] : null;
+  const latestVilla = avgRent?.villa;
+  const latestOfficetel = avgRent?.officetel;
+  const realEstateInsight = latestVilla != null || latestOfficetel != null
+    ? latestVilla != null && latestVilla <= 50
+      ? '월세 부담이 적은 동네예요'
+      : latestVilla != null && latestVilla >= 80
+        ? '월세가 다소 높은 편이에요'
+        : '월세 수준이 평균적이에요'
+    : undefined;
+
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-2">
+      {/* Real estate insight */}
+      {realEstateInsight && (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary-soft text-[13px] font-semibold text-primary">{realEstateInsight}</span>
+      )}
+
       {/* B5+B6 KPI row — gu-level real estate signals */}
       {guMetrics && (landPriceChange != null || housingCount != null) && (
-        <div className="grid grid-cols-2 gap-5">
+        <div className="grid grid-cols-2 gap-2">
           {/* B5. 지가 변동률 */}
-          <Card padding="lg">
+          <Card padding="md">
             <div className="flex items-center gap-2 mb-1">
-              <p className="text-caption m-0 text-text-subtle">지가 변동률</p>
+              <p className="text-[12px] m-0 text-text-subtle">지가 변동률</p>
               <Badge variant="neutral" size="sm">
-                {guMetrics.gu_name} 단위
+                {guMetrics.gu_name}
               </Badge>
             </div>
             {landPriceChange != null ? (
               <>
                 <p
-                  className={`tabular m-0 text-card-heading font-semibold leading-[1.1] ${
+                  className={`tabular m-0 text-[18px] font-semibold leading-[1.1] ${
                     landPriceChange >= 0 ? 'text-success' : 'text-danger'
                   }`}
                 >
@@ -139,80 +152,80 @@ export default function RealEstateSection({ realEstate, slug, guMetrics }: RealE
                   {Math.abs(landPriceChange).toFixed(2)}%
                 </p>
                 {guAvgLandPriceChange != null && (
-                  <p className="m-0 mt-1 text-caption text-text-muted">
+                  <p className="m-0 mt-1 text-[11px] text-text-muted">
                     25구 평균 {guAvgLandPriceChange >= 0 ? '+' : ''}
                     {guAvgLandPriceChange.toFixed(2)}%
                   </p>
                 )}
                 {landPriceRank != null && (
-                  <p className="m-0 mt-1 text-caption text-text-subtle">25구 중 {landPriceRank}위</p>
+                  <p className="m-0 mt-0.5 text-[11px] text-text-subtle">25구 중 {landPriceRank}위</p>
                 )}
                 {landPriceDate && (
-                  <p className="m-0 mt-1 text-caption text-text-subtle">{landPriceDate}</p>
+                  <p className="m-0 mt-0.5 text-[11px] text-text-subtle">{landPriceDate}</p>
                 )}
               </>
             ) : (
-              <p className="m-0 text-caption text-text-muted">데이터가 없습니다</p>
+              <p className="m-0 text-[12px] text-text-muted">데이터가 없습니다</p>
             )}
           </Card>
 
           {/* B6. 주택 수 */}
-          <Card padding="lg">
+          <Card padding="md">
             <div className="flex items-center gap-2 mb-1">
-              <p className="text-caption m-0 text-text-subtle">주택 수</p>
+              <p className="text-[12px] m-0 text-text-subtle">주택 수</p>
               <Badge variant="neutral" size="sm">
-                {guMetrics.gu_name} 단위
+                {guMetrics.gu_name}
               </Badge>
             </div>
             {housingCount != null ? (
               <>
-                <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
+                <p className="tabular m-0 text-[18px] font-semibold text-text leading-[1.1]">
                   {Math.round(housingCount).toLocaleString()}
-                  <span className="ml-1 text-body-base font-medium text-text-muted">호</span>
+                  <span className="ml-1 text-[13px] font-medium text-text-muted">호</span>
                 </p>
                 {guAvgHousingCount != null && (
-                  <p className="m-0 mt-1 text-caption text-text-muted">
+                  <p className="m-0 mt-1 text-[11px] text-text-muted">
                     25구 평균 {Math.round(guAvgHousingCount).toLocaleString()}호
                   </p>
                 )}
                 {housingRank != null && (
-                  <p className="m-0 mt-1 text-caption text-text-subtle">25구 중 {housingRank}위</p>
+                  <p className="m-0 mt-0.5 text-[11px] text-text-subtle">25구 중 {housingRank}위</p>
                 )}
                 {housingDate && (
-                  <p className="m-0 mt-1 text-caption text-text-subtle">{housingDate}</p>
+                  <p className="m-0 mt-0.5 text-[11px] text-text-subtle">{housingDate}</p>
                 )}
               </>
             ) : (
-              <p className="m-0 text-caption text-text-muted">데이터가 없습니다</p>
+              <p className="m-0 text-[12px] text-text-muted">데이터가 없습니다</p>
             )}
           </Card>
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-5">
+      <div className="grid grid-cols-2 gap-2">
         {/* 1. Monthly trend line chart */}
-        <Card padding="lg">
-          <h3 className="m-0 mb-1 text-feature-heading leading-[1.3] font-semibold text-text">
+        <Card padding="md">
+          <h3 className="m-0 mb-1 text-[16px] leading-snug font-semibold text-text">
             월별 평균 환산월세 추이
           </h3>
-          <p className="text-caption m-0 mb-3 text-text-subtle">
-            국토부 RTMS · 자취 4종 (만원)
+          <p className="text-[11px] m-0 mb-1 text-text-subtle">
+            국토부 실거래가 · 비아파트 4종 · 만원
           </p>
-          <div className="w-full h-[220px]">
+          <div className="w-full h-[140px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trend} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
                 <CartesianGrid stroke={CHART_COLORS.grid} strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="month"
                   stroke={CHART_COLORS.axis}
-                  tick={{ fill: CHART_COLORS.axis, fontSize: 11 }}
-                  tickMargin={6}
+                  tick={{ fill: CHART_COLORS.axis, fontSize: 10 }}
+                  tickMargin={4}
                 />
                 <YAxis
                   stroke={CHART_COLORS.axis}
-                  tick={{ fill: CHART_COLORS.axis, fontSize: 11 }}
-                  tickMargin={6}
-                  width={40}
+                  tick={{ fill: CHART_COLORS.axis, fontSize: 10 }}
+                  tickMargin={4}
+                  width={36}
                 />
                 <Tooltip
                   contentStyle={TOOLTIP_STYLE}
@@ -226,10 +239,10 @@ export default function RealEstateSection({ realEstate, slug, guMetrics }: RealE
                 />
                 <Legend
                   verticalAlign="top"
-                  height={28}
+                  height={24}
                   iconType="circle"
-                  iconSize={8}
-                  wrapperStyle={{ fontSize: 'var(--font-caption-size)' }}
+                  iconSize={6}
+                  wrapperStyle={{ fontSize: 11 }}
                 />
                 <Line
                   type="monotone"
@@ -239,7 +252,7 @@ export default function RealEstateSection({ realEstate, slug, guMetrics }: RealE
                   strokeWidth={2}
                   connectNulls={false}
                   dot={{ r: 2 }}
-                  activeDot={{ r: 4 }}
+                  activeDot={{ r: 3 }}
                   isAnimationActive={true}
                   animationDuration={1200}
                 />
@@ -251,7 +264,7 @@ export default function RealEstateSection({ realEstate, slug, guMetrics }: RealE
                   strokeWidth={2}
                   connectNulls={false}
                   dot={{ r: 2 }}
-                  activeDot={{ r: 4 }}
+                  activeDot={{ r: 3 }}
                   isAnimationActive={true}
                   animationDuration={1200}
                   animationBegin={100}
@@ -264,7 +277,7 @@ export default function RealEstateSection({ realEstate, slug, guMetrics }: RealE
                   strokeWidth={2}
                   connectNulls={false}
                   dot={{ r: 2 }}
-                  activeDot={{ r: 4 }}
+                  activeDot={{ r: 3 }}
                   isAnimationActive={true}
                   animationDuration={1200}
                   animationBegin={200}
@@ -277,7 +290,7 @@ export default function RealEstateSection({ realEstate, slug, guMetrics }: RealE
                   strokeWidth={2}
                   connectNulls={false}
                   dot={{ r: 2 }}
-                  activeDot={{ r: 4 }}
+                  activeDot={{ r: 3 }}
                   isAnimationActive={true}
                   animationDuration={1200}
                   animationBegin={300}
@@ -288,14 +301,14 @@ export default function RealEstateSection({ realEstate, slug, guMetrics }: RealE
         </Card>
 
         {/* 2. Housing type distribution donut */}
-        <Card padding="lg">
-          <h3 className="m-0 mb-1 text-feature-heading leading-[1.3] font-semibold text-text">
+        <Card padding="md">
+          <h3 className="m-0 mb-1 text-[16px] leading-snug font-semibold text-text">
             주택 유형 분포
           </h3>
-          <p className="text-caption m-0 mb-3 text-text-subtle">
-            최근 6개월 자취 거래 기준
+          <p className="text-[11px] m-0 mb-1 text-text-subtle">
+            국토부 실거래가 · 최근 6개월
           </p>
-          <div className="w-full h-[220px]">
+          <div className="w-full h-[180px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -327,10 +340,10 @@ export default function RealEstateSection({ realEstate, slug, guMetrics }: RealE
                 />
                 <Legend
                   verticalAlign="bottom"
-                  height={28}
+                  height={24}
                   iconType="circle"
-                  iconSize={8}
-                  wrapperStyle={{ fontSize: 'var(--font-caption-size)' }}
+                  iconSize={6}
+                  wrapperStyle={{ fontSize: 10 }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -338,16 +351,16 @@ export default function RealEstateSection({ realEstate, slug, guMetrics }: RealE
         </Card>
 
         {/* 3. Area x converted rent scatter */}
-        <Card padding="lg">
-          <h3 className="m-0 mb-1 text-feature-heading leading-[1.3] font-semibold text-text">
-            면적 x 환산월세 분포
+        <Card padding="md">
+          <h3 className="m-0 mb-1 text-[16px] leading-snug font-semibold text-text">
+            면적 x 환산월세
           </h3>
-          <p className="text-caption m-0 mb-3 text-text-subtle">
-            최근 6개월 · 점 하나 = 거래 1건
+          <p className="text-[11px] m-0 mb-1 text-text-subtle">
+            국토부 실거래가 · 점 1개 = 거래 1건
           </p>
-          <div className="w-full h-[220px]">
+          <div className="w-full h-[120px]">
             <ResponsiveContainer width="100%" height="100%">
-              <ScatterChart margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
+              <ScatterChart margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
                 <CartesianGrid stroke={CHART_COLORS.grid} strokeDasharray="3 3" />
                 <XAxis
                   type="number"
@@ -355,8 +368,8 @@ export default function RealEstateSection({ realEstate, slug, guMetrics }: RealE
                   name="면적"
                   unit="㎡"
                   stroke={CHART_COLORS.axis}
-                  tick={{ fill: CHART_COLORS.axis, fontSize: 11 }}
-                  tickMargin={6}
+                  tick={{ fill: CHART_COLORS.axis, fontSize: 9 }}
+                  tickMargin={4}
                 />
                 <YAxis
                   type="number"
@@ -364,11 +377,11 @@ export default function RealEstateSection({ realEstate, slug, guMetrics }: RealE
                   name="환산월세"
                   unit="만원"
                   stroke={CHART_COLORS.axis}
-                  tick={{ fill: CHART_COLORS.axis, fontSize: 11 }}
-                  tickMargin={6}
-                  width={48}
+                  tick={{ fill: CHART_COLORS.axis, fontSize: 9 }}
+                  tickMargin={4}
+                  width={36}
                 />
-                <ZAxis range={[24, 24]} />
+                <ZAxis range={[16, 16]} />
                 <Tooltip
                   cursor={{ strokeDasharray: '3 3' }}
                   contentStyle={TOOLTIP_STYLE}
@@ -376,17 +389,10 @@ export default function RealEstateSection({ realEstate, slug, guMetrics }: RealE
                   formatter={(value, name) => {
                     const v = typeof value === 'number' ? value : Number(value);
                     const n = String(name);
-                    if (n === '면적') return [`${v}㎡`, n] as [string, string];
-                    if (n === '환산월세') return [`${v}만원`, n] as [string, string];
+                    if (n === '면적') return [`${v}`, n] as [string, string];
+                    if (n === '환산월세') return [`${v}`, n] as [string, string];
                     return [`${v}`, n] as [string, string];
                   }}
-                />
-                <Legend
-                  verticalAlign="top"
-                  height={28}
-                  iconType="circle"
-                  iconSize={8}
-                  wrapperStyle={{ fontSize: 'var(--font-caption-size)' }}
                 />
                 {(Object.keys(scatterByType) as DealTypeKey[]).map((type) => (
                   <Scatter
@@ -406,34 +412,34 @@ export default function RealEstateSection({ realEstate, slug, guMetrics }: RealE
         </Card>
 
         {/* 4. Deposit band distribution */}
-        <Card padding="lg">
-          <h3 className="m-0 mb-1 text-feature-heading leading-[1.3] font-semibold text-text">
+        <Card padding="md">
+          <h3 className="m-0 mb-1 text-[16px] leading-snug font-semibold text-text">
             보증금 대역별 평균 월세
           </h3>
-          <p className="text-caption m-0 mb-3 text-text-subtle">
-            보증금 구간별 평균 월세 (만원)
+          <p className="text-[11px] m-0 mb-1 text-text-subtle">
+            국토부 실거래가 · 보증금 구간별 평균 월세 (만원)
           </p>
-          <div className="w-full h-[220px]">
+          <div className="w-full h-[120px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={bands}
                 layout="vertical"
-                margin={{ top: 8, right: 24, bottom: 0, left: 8 }}
+                margin={{ top: 4, right: 24, bottom: 0, left: 8 }}
               >
                 <CartesianGrid stroke={CHART_COLORS.grid} strokeDasharray="3 3" horizontal={false} />
                 <XAxis
                   type="number"
                   stroke={CHART_COLORS.axis}
-                  tick={{ fill: CHART_COLORS.axis, fontSize: 11 }}
-                  tickMargin={6}
+                  tick={{ fill: CHART_COLORS.axis, fontSize: 10 }}
+                  tickMargin={4}
                 />
                 <YAxis
                   type="category"
                   dataKey="band"
                   stroke={CHART_COLORS.axis}
-                  tick={{ fill: CHART_COLORS.axis, fontSize: 11 }}
-                  width={72}
-                  tickMargin={6}
+                  tick={{ fill: CHART_COLORS.axis, fontSize: 10 }}
+                  width={64}
+                  tickMargin={4}
                 />
                 <Tooltip
                   contentStyle={TOOLTIP_STYLE}
@@ -447,7 +453,7 @@ export default function RealEstateSection({ realEstate, slug, guMetrics }: RealE
                   dataKey="monthly"
                   fill={CHART_COLORS.bar}
                   radius={[0, 4, 4, 0]}
-                  barSize={18}
+                  barSize={14}
                   isAnimationActive={true}
                   animationDuration={1000}
                   animationBegin={200}
@@ -460,7 +466,7 @@ export default function RealEstateSection({ realEstate, slug, guMetrics }: RealE
 
       <Link
         to={`/dong/${slug}/explore`}
-        className="self-end text-caption text-link hover:underline"
+        className="self-end text-[12px] text-link hover:underline"
       >
         자세한 시세 탐색 →
       </Link>

@@ -3,12 +3,11 @@
 // Widgets:
 //   1. Nearest subway stations TOP 3 (card list with line colors)
 //   2. Bus stats (stop_count, route_count) as big number cards
-//   3. Per-capita vehicle registration KPI (gu_metric — B4)
-//   4. Subway time-of-day congestion line (weekday / saturday / sunday)
-//   5. Bus time-of-day congestion line (weekday / weekend)
-//   6. Dong personality estimate (label + reason + pattern bars)
+//   3. Subway time-of-day congestion line (weekday / saturday / sunday)
+//   4. Bus time-of-day congestion line (weekday / weekend)
+//   5. Dong personality estimate (label + reason + pattern bars)
 //
-// Data: DongDetail.transit + DongGuMetricsResponse + TransitCongestionResponse
+// Data: DongDetail.transit + TransitCongestionResponse
 
 import {
   CartesianGrid,
@@ -27,32 +26,20 @@ import { CATEGORY_COLORS, CHART_COLORS } from '@/lib/colors';
 import type {
   CongestionPoint,
   DongDetail,
-  DongGuMetricsResponse,
   TransitCongestionResponse,
 } from '@/types/api';
 
 interface TransitSectionProps {
   transit: DongDetail['transit'];
-  guMetrics?: DongGuMetricsResponse;
-  /** Optional congestion + personality payload. May be undefined while loading;
-   *  charts render empty state when arrays are empty / bus stop_count = 0. */
   congestion?: TransitCongestionResponse;
-}
-
-/** Format ISO date "YYYY-MM-DD" → "YYYY년 기준". */
-function formatMetricDate(date: string | null | undefined): string {
-  if (!date) return '';
-  return `${date.slice(0, 4)}년 기준`;
 }
 
 /** Map subway line string to CSS variable name for line color. */
 function lineColor(line: string): string {
-  // Extract line number from strings like "1호선", "2호선", "9호선", "신분당선"
   const match = line.match(/^(\d)/);
   if (match) {
     return `var(--color-subway-${match[1]})`;
   }
-  // Non-numbered lines: use a neutral color
   return 'var(--color-text-muted)';
 }
 
@@ -63,7 +50,6 @@ const TOOLTIP_STYLE = {
   fontSize: 'var(--font-caption-size)',
 };
 
-/** Row shape used by the subway congestion line chart. */
 interface SubwayRow {
   hour: number;
   평일: number | null;
@@ -71,21 +57,18 @@ interface SubwayRow {
   일요일: number | null;
 }
 
-/** Row shape used by the bus congestion line chart. */
 interface BusRow {
   hour: number;
   평일: number | null;
   주말: number | null;
 }
 
-/** Build a hour-indexed lookup so the 3-series merge ignores ordering. */
 function toHourMap(points: CongestionPoint[]): Map<number, number | null> {
   const m = new Map<number, number | null>();
   points.forEach((p) => m.set(p.hour, p.congestion));
   return m;
 }
 
-/** Merge weekday / saturday / sunday into one dataset keyed by hour. */
 function mergeSubwayRows(by: TransitCongestionResponse['subway']['by_day']): SubwayRow[] {
   const wk = toHourMap(by.평일);
   const sa = toHourMap(by.토요일);
@@ -108,28 +91,22 @@ function mergeBusRows(by: TransitCongestionResponse['bus']['by_pattern']): BusRo
   }));
 }
 
-/** Convert background category color into a soft inline-bar fill. */
 function personalityTone(label: TransitCongestionResponse['personality']['label']): {
   bg: string;
   accent: string;
 } {
   switch (label) {
     case '주거 중심':
-      // 그린워시 (primary-soft) + primary accent
       return { bg: 'var(--color-primary-soft)', accent: CATEGORY_COLORS.amenity };
     case '상업·업무 중심':
-      // amber 톤 (realestate)
       return { bg: 'var(--color-warning-soft)', accent: CATEGORY_COLORS.realestate };
     case '유동인구 많음':
-      // 보라 톤 (population) — soft 토큰 없어 info-soft 폴백 (보라 인접)
       return { bg: 'var(--color-info-soft)', accent: CATEGORY_COLORS.population };
     default:
-      // null/모름 — 그린워시 (메인 배경과 동일 톤)
       return { bg: 'var(--color-primary-soft)', accent: 'var(--color-text-muted)' };
   }
 }
 
-/** Pattern score bar — bg is a flat track, fill is proportional. */
 function PatternBar({
   label,
   value,
@@ -143,14 +120,14 @@ function PatternBar({
 }) {
   const pct = value != null && max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-0.5">
       <div className="flex items-baseline justify-between">
-        <span className="text-caption text-text-muted">{label}</span>
-        <span className="tabular text-caption font-medium text-text">
+        <span className="text-[11px] text-text-muted">{label}</span>
+        <span className="tabular text-[11px] font-medium text-text">
           {value != null ? value.toFixed(1) : '-'}
         </span>
       </div>
-      <div className="h-2 w-full rounded-full bg-divider overflow-hidden">
+      <div className="h-1.5 w-full rounded-full bg-divider overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-700"
           style={{ width: `${pct}%`, backgroundColor: accent }}
@@ -160,35 +137,48 @@ function PatternBar({
   );
 }
 
-export default function TransitSection({ transit, guMetrics, congestion }: TransitSectionProps) {
-  const stations = transit.nearest_stations;
+function mergeStationsByName(
+  stations: TransitSectionProps['transit']['nearest_stations'],
+): Array<{ name: string; lines: string[]; walking_min: number; rank: number }> {
+  const map = new Map<string, { lines: string[]; walking_min: number; rank: number }>();
+  for (const st of stations) {
+    if (st.name === '정보 없음') continue;
+    const existing = map.get(st.name);
+    if (existing) {
+      if (!existing.lines.includes(st.line)) existing.lines.push(st.line);
+      if (st.walking_min < existing.walking_min) existing.walking_min = st.walking_min;
+    } else {
+      map.set(st.name, { lines: [st.line], walking_min: st.walking_min, rank: st.rank });
+    }
+  }
+  return Array.from(map.entries()).map(([name, data]) => ({
+    name,
+    lines: data.lines,
+    walking_min: data.walking_min,
+    rank: data.rank,
+  }));
+}
+
+/** Transit insight: combine station proximity + bus count. */
+function getTransitInsight(
+  mergedStations: Array<{ walking_min: number }>,
+  busStopCount: number,
+  busRouteCount: number,
+): string | undefined {
+  const hasNearStation = mergedStations.length > 0 && mergedStations[0].walking_min <= 10;
+  const hasManyBuses = busRouteCount >= 5;
+  if (hasNearStation && hasManyBuses) return '대중교통 접근성이 좋은 편이에요';
+  if (hasNearStation) return '지하철 접근성이 좋은 동네예요';
+  if (hasManyBuses) return '버스 노선이 다양한 동네예요';
+  if (mergedStations.length === 0) return '지하철역이 다소 먼 동네예요';
+  return undefined;
+}
+
+export default function TransitSection({ transit, congestion }: TransitSectionProps) {
+  const mergedStations = mergeStationsByName(transit.nearest_stations);
   const bus = transit.bus;
 
-  // B4. 1인당 차량 등록 (보행 친화도 시그널) — 25구 평균값과 비교.
-  //   순위는 1인당 비율 기준이 더 의미 있으나 백엔드 rank는 raw 값 기준이라
-  //   여기서는 raw VEHICLE_REGISTERED 순위를 그대로 표시 (구 전체 차량 절대량).
-  const vehicleRegistered = guMetrics?.metrics['VEHICLE_REGISTERED']?.value ?? null;
-  const popResident = guMetrics?.metrics['POP_RESIDENT']?.value ?? null;
-  const guAvgVehicleRegistered = guMetrics?.metrics['VEHICLE_REGISTERED']?.gu_avg ?? null;
-  const guAvgPopResident = guMetrics?.metrics['POP_RESIDENT']?.gu_avg ?? null;
-  const vehicleRank = guMetrics?.metrics['VEHICLE_REGISTERED']?.rank_in_seoul ?? null;
-
-  const vehiclePerCapita =
-    vehicleRegistered != null && popResident != null && popResident > 0
-      ? vehicleRegistered / popResident
-      : null;
-  // 25구 평균의 1인당 차량 = (Σ vehicle ÷ 25) / (Σ pop ÷ 25) = 25구 합산비와 동일.
-  const guAvgVehiclePerCapita =
-    guAvgVehicleRegistered != null && guAvgPopResident != null && guAvgPopResident > 0
-      ? guAvgVehicleRegistered / guAvgPopResident
-      : null;
-  const vehicleDiff =
-    vehiclePerCapita != null && guAvgVehiclePerCapita != null
-      ? vehiclePerCapita - guAvgVehiclePerCapita
-      : null;
-  const vehicleDate = formatMetricDate(guMetrics?.metrics['VEHICLE_REGISTERED']?.date);
-
-  // -- Congestion rows --------------------------------------------------------
+  // Congestion rows
   const subwayRows = congestion ? mergeSubwayRows(congestion.subway.by_day) : [];
   const busRows = congestion ? mergeBusRows(congestion.bus.by_pattern) : [];
   const hasSubwayCongestion =
@@ -203,7 +193,7 @@ export default function TransitSection({ transit, guMetrics, congestion }: Trans
       ? congestion.subway.stations.map((s) => s.name).join(', ')
       : '';
 
-  // Personality + pattern scores -------------------------------------------
+  // Personality + pattern scores
   const personality = congestion?.personality;
   const tone = personalityTone(personality?.label ?? null);
   const patternMax = (() => {
@@ -217,64 +207,69 @@ export default function TransitSection({ transit, guMetrics, congestion }: Trans
     return vals.length > 0 ? Math.max(...vals) : 0;
   })();
 
+  const transitInsight = getTransitInsight(mergedStations, bus.stop_count, bus.route_count);
+
   return (
-    <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-3 gap-5">
+    <div className="flex flex-col gap-2">
+      {/* Transit insight */}
+      {transitInsight && (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary-soft text-[13px] font-semibold text-primary">{transitInsight}</span>
+      )}
+
+      <div className="grid grid-cols-3 gap-2">
         {/* 1. Nearest subway stations */}
-        <Card padding="lg" className="col-span-2">
-          <h3 className="m-0 mb-3 text-feature-heading leading-[1.3] font-semibold text-text">
+        <Card padding="md">
+          <h3 className="m-0 mb-1 text-[16px] leading-snug font-semibold text-text">
             가까운 지하철역 TOP 3
           </h3>
-          <div className="flex flex-col gap-3">
-            {stations.slice(0, 3).map((st) => {
-              const isTop = st.rank === 1;
+          <div className="flex flex-col gap-2">
+            {mergedStations.map((st, idx) => {
+              const isTop = idx === 0;
               return (
                 <div
-                  key={`${st.name}-${st.line}`}
-                  className={`flex items-center gap-4 p-3 rounded-card border ${
+                  key={st.name}
+                  className={`flex items-center gap-3 p-2 rounded-card border ${
                     isTop
                       ? 'border-primary/30 bg-primary-soft/30'
                       : 'border-divider bg-surface'
                   }`}
                 >
-                  {/* Rank badge */}
                   <div
-                    className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-body-base font-semibold ${
+                    className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[13px] font-semibold ${
                       isTop
                         ? 'bg-primary text-surface'
                         : 'bg-primary-soft text-text-muted'
                     }`}
                   >
-                    {st.rank}
+                    {idx + 1}
                   </div>
-
-                  {/* Station info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-body-base font-medium text-text">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[13px] font-medium text-text">
                         {st.name}
                       </span>
-                      <span
-                        className="inline-flex items-center px-1.5 py-0.5 rounded-full text-caption text-surface font-medium"
-                        style={{ backgroundColor: lineColor(st.line) }}
-                      >
-                        {st.line}
-                      </span>
+                      {st.lines.map((line) => (
+                        <span
+                          key={line}
+                          className="inline-flex items-center px-1 py-0.5 rounded-full text-[10px] text-surface font-medium"
+                          style={{ backgroundColor: lineColor(line) }}
+                        >
+                          {line}
+                        </span>
+                      ))}
                     </div>
                   </div>
-
-                  {/* Walking time */}
                   <div className="flex-shrink-0 text-right">
-                    <span className="tabular text-body-base font-semibold text-text">
+                    <span className="tabular text-[13px] font-semibold text-text">
                       {st.walking_min}분
                     </span>
-                    <span className="text-caption text-text-muted ml-1">도보</span>
+                    <span className="text-[11px] text-text-muted ml-1">도보</span>
                   </div>
                 </div>
               );
             })}
-            {stations.length === 0 && (
-              <div className="text-center text-text-muted text-caption py-6">
+            {mergedStations.length === 0 && (
+              <div className="text-center text-text-muted text-[12px] py-4">
                 인근 지하철역 데이터가 없습니다.
               </div>
             )}
@@ -282,79 +277,31 @@ export default function TransitSection({ transit, guMetrics, congestion }: Trans
         </Card>
 
         {/* 2. Bus stats */}
-        <div className="flex flex-col gap-5">
-          <Card padding="lg">
-            <p className="text-caption m-0 mb-2 text-text-subtle">버스 정류장</p>
-            <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
-              {bus.stop_count}
-            </p>
-            <p className="m-0 mt-1 text-caption text-text-muted">개소</p>
-          </Card>
-          <Card padding="lg">
-            <p className="text-caption m-0 mb-2 text-text-subtle">버스 노선</p>
-            <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
-              {bus.route_count}
-            </p>
-            <p className="m-0 mt-1 text-caption text-text-muted">개 노선</p>
-          </Card>
-        </div>
+        <Card padding="md">
+          <p className="text-[12px] m-0 mb-1 text-text-subtle">버스 정류장</p>
+          <p className="tabular m-0 text-[18px] font-semibold text-text leading-[1.1]">
+            {bus.stop_count}
+          </p>
+          <p className="m-0 mt-0.5 text-[11px] text-text-muted">개소</p>
+        </Card>
+        <Card padding="md">
+          <p className="text-[12px] m-0 mb-1 text-text-subtle">버스 노선</p>
+          <p className="tabular m-0 text-[18px] font-semibold text-text leading-[1.1]">
+            {bus.route_count}
+          </p>
+          <p className="m-0 mt-0.5 text-[11px] text-text-muted">개 노선</p>
+        </Card>
       </div>
 
-      {/* B4. 1인당 차량 등록 (보행 친화도 시그널) */}
-      {vehiclePerCapita != null && guMetrics && (
-        <Card padding="lg">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <p className="text-caption m-0 text-text-subtle">
-                  1인당 차량 등록
-                </p>
-                <Badge variant="neutral" size="sm">
-                  {guMetrics.gu_name} 단위
-                </Badge>
-              </div>
-              <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
-                {vehiclePerCapita.toFixed(2)}
-                <span className="ml-1 text-body-base font-medium text-text-muted">대 / 명</span>
-              </p>
-              {guAvgVehiclePerCapita != null && vehicleDiff != null && (
-                <p className="m-0 text-caption text-text-muted">
-                  25구 평균 {guAvgVehiclePerCapita.toFixed(2)}대
-                  <span
-                    className={`ml-1 font-medium ${
-                      vehicleDiff <= 0 ? 'text-success' : 'text-danger'
-                    }`}
-                  >
-                    {vehicleDiff >= 0 ? '▲' : '▼'}
-                    {Math.abs(vehicleDiff).toFixed(2)}대
-                  </span>
-                </p>
-              )}
-              {vehicleRank != null && (
-                <p className="m-0 text-caption text-text-subtle">
-                  25구 중 {vehicleRank}위 (차량 등록 총량 기준)
-                </p>
-              )}
-              {vehicleDate && (
-                <p className="m-0 text-caption text-text-subtle">{vehicleDate}</p>
-              )}
-            </div>
-            <p className="m-0 text-caption text-text-subtle max-w-[200px] text-right">
-              값이 낮을수록 보행 친화적인 동네입니다
-            </p>
-          </div>
-        </Card>
-      )}
-
       {/* Row: 시간대 혼잡도 — 지하철 + 버스 라인 차트 */}
-      <div className="grid grid-cols-2 gap-5">
+      <div className="grid grid-cols-2 gap-2">
         {/* 지하철 시간대 혼잡도 */}
-        <Card padding="lg">
-          <h3 className="m-0 mb-3 text-feature-heading leading-[1.3] font-semibold text-text">
+        <Card padding="md">
+          <h3 className="m-0 mb-1 text-[16px] leading-snug font-semibold text-text">
             지하철 시간대 혼잡도
           </h3>
           {hasSubwayCongestion ? (
-            <div className="h-[220px] w-full">
+            <div className="h-[140px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={subwayRows} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
@@ -363,11 +310,11 @@ export default function TransitSection({ transit, guMetrics, congestion }: Trans
                     type="number"
                     domain={[0, 23]}
                     ticks={[0, 6, 12, 18, 23]}
-                    tick={{ fontSize: 10, fill: CHART_COLORS.axis }}
+                    tick={{ fontSize: 9, fill: CHART_COLORS.axis }}
                     tickFormatter={(v: number) => `${v}시`}
                   />
                   <YAxis
-                    tick={{ fontSize: 10, fill: CHART_COLORS.axis }}
+                    tick={{ fontSize: 9, fill: CHART_COLORS.axis }}
                     tickFormatter={(v: number) => v.toFixed(0)}
                   />
                   <Tooltip
@@ -379,15 +326,15 @@ export default function TransitSection({ transit, guMetrics, congestion }: Trans
                       return [v.toFixed(2), name];
                     }}
                   />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
                   <Line
                     name="평일"
                     type="monotone"
                     dataKey="평일"
                     stroke={CATEGORY_COLORS.transport}
                     strokeWidth={2}
-                    dot={{ r: 2, fill: CATEGORY_COLORS.transport }}
-                    activeDot={{ r: 5 }}
+                    dot={{ r: 1.5, fill: CATEGORY_COLORS.transport }}
+                    activeDot={{ r: 4 }}
                     connectNulls
                     isAnimationActive
                     animationDuration={1200}
@@ -420,24 +367,24 @@ export default function TransitSection({ transit, guMetrics, congestion }: Trans
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-[220px] text-text-muted text-caption">
+            <div className="flex items-center justify-center h-[140px] text-text-muted text-[12px]">
               인근 지하철역 혼잡도 데이터가 부족합니다
             </div>
           )}
-          <p className="m-0 mt-2 text-caption text-text-subtle">
+          <p className="m-0 mt-1 text-[11px] text-text-subtle">
             {stationLabel
-              ? `인근 ${congestion?.subway.stations.length ?? 0}개역 평균 — ${stationLabel}`
-              : '인근 지하철역 평균'}
+              ? `서울교통공사 · 인근 ${congestion?.subway.stations.length ?? 0}개역 평균 — ${stationLabel}`
+              : '서울교통공사 혼잡도'}
           </p>
         </Card>
 
         {/* 버스 시간대 혼잡도 */}
-        <Card padding="lg">
-          <h3 className="m-0 mb-3 text-feature-heading leading-[1.3] font-semibold text-text">
+        <Card padding="md">
+          <h3 className="m-0 mb-1 text-[16px] leading-snug font-semibold text-text">
             버스 시간대 혼잡도
           </h3>
           {hasBusCongestion ? (
-            <div className="h-[220px] w-full">
+            <div className="h-[140px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={busRows} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
@@ -446,11 +393,11 @@ export default function TransitSection({ transit, guMetrics, congestion }: Trans
                     type="number"
                     domain={[0, 23]}
                     ticks={[0, 6, 12, 18, 23]}
-                    tick={{ fontSize: 10, fill: CHART_COLORS.axis }}
+                    tick={{ fontSize: 9, fill: CHART_COLORS.axis }}
                     tickFormatter={(v: number) => `${v}시`}
                   />
                   <YAxis
-                    tick={{ fontSize: 10, fill: CHART_COLORS.axis }}
+                    tick={{ fontSize: 9, fill: CHART_COLORS.axis }}
                     tickFormatter={(v: number) => v.toFixed(2)}
                   />
                   <Tooltip
@@ -462,15 +409,15 @@ export default function TransitSection({ transit, guMetrics, congestion }: Trans
                       return [v.toFixed(3), name];
                     }}
                   />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
                   <Line
                     name="평일"
                     type="monotone"
                     dataKey="평일"
                     stroke={CATEGORY_COLORS.transport}
                     strokeWidth={2}
-                    dot={{ r: 2, fill: CATEGORY_COLORS.transport }}
-                    activeDot={{ r: 5 }}
+                    dot={{ r: 1.5, fill: CATEGORY_COLORS.transport }}
+                    activeDot={{ r: 4 }}
                     connectNulls
                     isAnimationActive
                     animationDuration={1200}
@@ -491,42 +438,42 @@ export default function TransitSection({ transit, guMetrics, congestion }: Trans
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-[220px] text-text-muted text-caption">
+            <div className="flex items-center justify-center h-[140px] text-text-muted text-[12px]">
               {busStopCount === 0
                 ? '동에 매핑된 버스 정류장 데이터가 부족합니다'
                 : '버스 시간대 혼잡도 데이터가 없습니다'}
             </div>
           )}
-          <p className="m-0 mt-2 text-caption text-text-subtle">
+          <p className="m-0 mt-1 text-[11px] text-text-subtle">
             {busStopCount > 0
-              ? `동 내 ${busStopCount}개 정류장 평균 · 최근 30~60일`
-              : '동 내 버스 정류장 평균 · 최근 30~60일'}
+              ? `서울교통빅데이터 · 동 내 ${busStopCount}개 정류장 평균 · 최근 60일`
+              : '서울교통빅데이터'}
           </p>
         </Card>
       </div>
 
       {/* 동 성격 추정 카드 (full width) */}
-      <Card padding="lg" className={personality?.label == null ? 'opacity-70' : ''}>
+      <Card padding="md" className={personality?.label == null ? 'opacity-70' : ''}>
         <div
-          className="rounded-card p-5 flex flex-col gap-4"
+          className="rounded-card p-3 flex flex-col gap-2"
           style={{ backgroundColor: tone.bg }}
         >
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex flex-col gap-1">
-              <p className="text-caption m-0 text-text-subtle">동 성격 추정</p>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col gap-0.5">
+              <p className="text-[12px] m-0 text-text-subtle">동 성격 추정</p>
               <p
-                className="m-0 text-card-heading font-semibold leading-[1.2]"
+                className="m-0 text-[18px] font-semibold leading-[1.2]"
                 style={{ color: personality?.label != null ? tone.accent : 'var(--color-text-muted)' }}
               >
                 {personality?.label ?? '특징 추정 보류'}
               </p>
               {personality?.reason && (
-                <p className="m-0 mt-1 text-caption text-text-muted max-w-[640px]">
+                <p className="m-0 mt-0.5 text-[12px] text-text-muted max-w-[640px]">
                   {personality.reason}
                 </p>
               )}
               {personality?.label == null && !personality?.reason && (
-                <p className="m-0 mt-1 text-caption text-text-muted">
+                <p className="m-0 mt-0.5 text-[12px] text-text-muted">
                   혼잡도 패턴이 뚜렷한 특징을 보이지 않습니다
                 </p>
               )}
@@ -538,7 +485,7 @@ export default function TransitSection({ transit, guMetrics, congestion }: Trans
 
           {/* Pattern score bars */}
           {personality && (
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-4 gap-2">
               <PatternBar
                 label="출근 (7~9시)"
                 value={personality.scores.morning_peak}

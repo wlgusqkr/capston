@@ -75,7 +75,7 @@ export default function Dashboard() {
 
   return (
     <main id="main" className="min-h-[calc(100vh-var(--space-14))] bg-primary-soft">
-      <div className="max-w-[1280px] mx-auto px-6 py-6 flex flex-col gap-6">
+      <div className="max-w-[1280px] mx-auto px-5 py-5 flex flex-col gap-3">
         {/* Header: dong selector + selected dong info */}
         <DashboardHeader
           selectedDong={
@@ -88,11 +88,12 @@ export default function Dashboard() {
         />
 
         {/* KPI row + MiniMap */}
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-2 gap-3">
           <KpiRow
             detail={detail}
             summary={summary}
             derived={derived}
+            allDongs={dongs}
             isLoading={detailLoading}
           />
           <DashboardMiniMap
@@ -104,8 +105,8 @@ export default function Dashboard() {
 
         {/* Error state */}
         {detailError && (
-          <Card padding="lg">
-            <div className="flex items-center justify-center h-[120px] text-text-muted text-caption">
+          <Card padding="md">
+            <div className="flex items-center justify-center h-[100px] text-text-muted text-caption">
               데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.
             </div>
           </Card>
@@ -114,13 +115,13 @@ export default function Dashboard() {
         {/* Section A: Real Estate */}
         {detail && (
           <section aria-labelledby="section-realestate">
-            <Card padding="lg">
-              <div className="flex items-center gap-3 mb-4">
+            <Card padding="md">
+              <div className="flex items-center gap-2 mb-2">
                 <div
-                  className="w-1 h-6 rounded-full"
+                  className="w-1 h-5 rounded-full"
                   style={{ backgroundColor: 'var(--color-cat-realestate)' }}
                 />
-                <h2 id="section-realestate" className="text-feature-heading font-semibold text-text">
+                <h2 id="section-realestate" className="text-[16px] font-semibold text-text">
                   부동산 시세
                 </h2>
               </div>
@@ -132,13 +133,13 @@ export default function Dashboard() {
         {/* Section B: Amenities */}
         {detail && (
           <section aria-labelledby="section-amenity">
-            <Card padding="lg">
-              <div className="flex items-center gap-3 mb-4">
+            <Card padding="md">
+              <div className="flex items-center gap-2 mb-2">
                 <div
-                  className="w-1 h-6 rounded-full"
+                  className="w-1 h-5 rounded-full"
                   style={{ backgroundColor: 'var(--color-cat-amenity)' }}
                 />
-                <h2 id="section-amenity" className="text-feature-heading font-semibold text-text">
+                <h2 id="section-amenity" className="text-[16px] font-semibold text-text">
                   편의시설
                 </h2>
               </div>
@@ -155,17 +156,17 @@ export default function Dashboard() {
         {/* Section C: Transit */}
         {detail && (
           <section aria-labelledby="section-transit">
-            <Card padding="lg">
-              <div className="flex items-center gap-3 mb-4">
+            <Card padding="md">
+              <div className="flex items-center gap-2 mb-2">
                 <div
-                  className="w-1 h-6 rounded-full"
+                  className="w-1 h-5 rounded-full"
                   style={{ backgroundColor: 'var(--color-cat-transport)' }}
                 />
-                <h2 id="section-transit" className="text-feature-heading font-semibold text-text">
+                <h2 id="section-transit" className="text-[16px] font-semibold text-text">
                   교통
                 </h2>
               </div>
-              <TransitSection transit={detail.transit} guMetrics={guMetrics} congestion={congestion} />
+              <TransitSection transit={detail.transit} congestion={congestion} />
             </Card>
           </section>
         )}
@@ -173,13 +174,13 @@ export default function Dashboard() {
         {/* Section D: Population */}
         {population && (
           <section aria-labelledby="section-population">
-            <Card padding="lg">
-              <div className="flex items-center gap-3 mb-4">
+            <Card padding="md">
+              <div className="flex items-center gap-2 mb-2">
                 <div
-                  className="w-1 h-6 rounded-full"
+                  className="w-1 h-5 rounded-full"
                   style={{ backgroundColor: 'var(--color-cat-population)' }}
                 />
-                <h2 id="section-population" className="text-feature-heading font-semibold text-text">
+                <h2 id="section-population" className="text-[16px] font-semibold text-text">
                   인구·사회
                 </h2>
               </div>
@@ -194,13 +195,13 @@ export default function Dashboard() {
         {/* Section E: Safety & Economy */}
         {guMetrics && (
           <section aria-labelledby="section-safety">
-            <Card padding="lg">
-              <div className="flex items-center gap-3 mb-4">
+            <Card padding="md">
+              <div className="flex items-center gap-2 mb-2">
                 <div
-                  className="w-1 h-6 rounded-full"
+                  className="w-1 h-5 rounded-full"
                   style={{ backgroundColor: 'var(--color-cat-safety)' }}
                 />
-                <h2 id="section-safety" className="text-feature-heading font-semibold text-text">
+                <h2 id="section-safety" className="text-[16px] font-semibold text-text">
                   안전·환경·경제
                 </h2>
               </div>
@@ -211,13 +212,13 @@ export default function Dashboard() {
 
         {/* Section F: Popularity (인기 차트) */}
         <section aria-labelledby="section-popularity">
-          <Card padding="lg">
-            <div className="flex items-center gap-3 mb-4">
+          <Card padding="md">
+            <div className="flex items-center gap-2 mb-2">
               <div
-                className="w-1 h-6 rounded-full"
+                className="w-1 h-5 rounded-full"
                 style={{ backgroundColor: 'var(--color-cat-environment)' }}
               />
-              <h2 id="section-popularity" className="text-feature-heading font-semibold text-text">
+              <h2 id="section-popularity" className="text-[16px] font-semibold text-text">
                 인기 차트
               </h2>
             </div>
@@ -232,13 +233,13 @@ export default function Dashboard() {
 
         {/* Section G: Reviews (자취생 리뷰) */}
         <section aria-labelledby="section-reviews">
-          <Card padding="lg">
-            <div className="flex items-center gap-3 mb-4">
+          <Card padding="md">
+            <div className="flex items-center gap-2 mb-2">
               <div
-                className="w-1 h-6 rounded-full"
+                className="w-1 h-5 rounded-full"
                 style={{ backgroundColor: 'var(--color-cat-environment)' }}
               />
-              <h2 id="section-reviews" className="text-feature-heading font-semibold text-text">
+              <h2 id="section-reviews" className="text-[16px] font-semibold text-text">
                 자취생 리뷰
               </h2>
             </div>
@@ -254,12 +255,12 @@ export default function Dashboard() {
         {detailLoading && !detail && (
           <>
             {['부동산 시세', '편의시설', '교통'].map((title) => (
-              <Card key={title} padding="lg">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-1 h-6 rounded-full bg-primary-soft" />
-                  <div className="h-5 w-24 bg-primary-soft rounded animate-[match-panel-pulse_1.5s_ease-in-out_infinite]" />
+              <Card key={title} padding="md">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1 h-5 rounded-full bg-primary-soft" />
+                  <div className="h-4 w-24 bg-primary-soft rounded animate-[match-panel-pulse_1.5s_ease-in-out_infinite]" />
                 </div>
-                <div className="h-[200px] bg-primary-soft rounded animate-[match-panel-pulse_1.5s_ease-in-out_infinite]" />
+                <div className="h-[160px] bg-primary-soft rounded animate-[match-panel-pulse_1.5s_ease-in-out_infinite]" />
               </Card>
             ))}
           </>

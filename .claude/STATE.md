@@ -1,10 +1,10 @@
 # 자취맵 -- 프로젝트 상태
 
-마지막 업데이트: 2026-05-13
+마지막 업데이트: 2026-05-14
 
 ## Project Status
 
-- **단계**: Phase 3 완료 — 대시보드 사용자 데이터 위젯 (인기 차트 / 자취생 리뷰)
+- **단계**: Phase 3 완료 + QA 라운드 1 (위젯 컴팩트화, 데이터 출처 정리, 오분류 문서화)
 - **활성 모드**: 프론트엔드 + 디자인 집중. 백엔드/데이터는 휴면.
 - **데이터**: 426개 행정동 실데이터 적재 완료 (RDS ETL).
 - **CSS 방식**: Tailwind CSS v4 (globals.css 단일 파일). 컴포넌트별 CSS 파일 없음.
@@ -88,14 +88,14 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 - **KpiRow** (`components/Dashboard/KpiRow.tsx`) — KPI 2행 그리드. Row 1: 4칸(환산월세/보증금/거래건수/안전게이지). Row 2: 자취촌 지수 게이지(col-span-2) + 계약 활발도(col-span-2). 2행은 `useDongDerivedIndices`(SPEC §4.5) 의존.
 - **DashboardMiniMap** (`components/Dashboard/DashboardMiniMap.tsx`) — Leaflet 미니맵 + 히트맵 레이어 토글 6종 + 컬러칩 범례 + 확장 버튼
 - **RealEstateSection** (`components/Dashboard/sections/RealEstateSection.tsx`) — 4개 Recharts 차트 (라인/도넛/산점도/바)
-- **AmenitySection** (`components/Dashboard/sections/AmenitySection.tsx`) — 카테고리별 테이블 + 자취생 필수시설 칩 그리드 + **대형 공원 카드 리스트(TOP 6, id dedupe, area_m2 desc, ha/㎡ 포맷, 도보 분 환산)** + **도서관 placeholder (opacity-60)**. props에 `parks?: DongParksResponse` 추가.
-- **TransitSection** (`components/Dashboard/sections/TransitSection.tsx`) — 지하철 TOP3 + 버스 통계 + placeholder 위젯
+- **AmenitySection** (`components/Dashboard/sections/AmenitySection.tsx`) — 카테고리별 테이블 + **대형 공원 카드 리스트(TOP 6, id dedupe, area_m2 desc, ha/㎡ 포맷, 도보 분 환산)** + **도서관 placeholder (opacity-60)**. 자취생 필수시설 칩 그리드 삭제 (2026-05-15). h3 text-[16px]. props에 `parks?: DongParksResponse` 추가.
+- **TransitSection** (`components/Dashboard/sections/TransitSection.tsx`) — 지하철 TOP3 + 버스 통계 + 시간대 혼잡도 + 동 성격 추정. guMetrics prop 제거 (1인당 차량 등록 카드 삭제). h3 text-[16px]. QA: 3열 균등 배치
 
 ### 신규 컴포넌트 (Phase 2)
-- **PopulationSection** (`components/Dashboard/sections/PopulationSection.tsx`) — 남녀 비율 도넛 + 인구 추이 AreaChart + 청년 비율 카드 (구 단위, POP_YOUTH_19_34÷POP_TOTAL_YOUTH_BASE 계산) + **평균 연령 카드 (B1: 전체/남/여 칩)** + **고령 인구 비율 도넛 (B2: POP_ELDERLY_RATIO)** + 1인 가구 추정 도넛
-- **SafetyEconomySection** (`components/Dashboard/sections/SafetyEconomySection.tsx`) — 안전 등급 6분야 레이더 (TRAFFIC/CRIME/FIRE/DISEASE/LIFE/SUICIDE, 종합 평균 텍스트) + 교통사고 통계 (ACC_TOTAL_COUNT/INJURY/DRUNK/HITRUN, 비율 계산) + **교통사고 추이 LineChart (Phase 4, ACC_TOTAL_COUNT 시계열, 구 + 서울 평균, safety 색)** + **화재 발생 추이 LineChart (Phase 4, FIRE_COUNT 시계열, warningDeep 색)** + **교통문화지수 레이더 (B3)** + GRDP 총액+1인당 + 녹지비율/1인당녹지/화재 MetricCard. 모든 카드에 metric date 푸터. props에 `series?: GuMetricSeriesResponse` 추가.
-- **TransitSection** (`components/Dashboard/sections/TransitSection.tsx`) — 지하철 TOP3 + 버스 통계 + **1인당 차량 등록 KPI (B4: VEHICLE_REGISTERED÷POP_RESIDENT, 보행 친화도 시그널)** + **지하철 시간대 혼잡도 LineChart (평일/토/일 3시리즈, transport·warningDeep·warning 색, ticks 0/6/12/18/23, connectNulls)** + **버스 시간대 혼잡도 LineChart (평일/주말, stop_count=0이면 빈 상태)** + **동 성격 추정 카드 (label/reason + 4개 패턴 막대: 출근/낮/퇴근/주말). 라벨별 톤: 주거 중심→primary-soft, 상업·업무 중심→warning-soft, 유동인구 많음→info-soft, null→primary-soft dimmed)**
-- **RealEstateSection** (`components/Dashboard/sections/RealEstateSection.tsx`) — **지가 변동률 (B5: LAND_PRICE_CHANGE_RATE)** + **주택 수 (B6: HOUSING_COUNT)** KPI 행 추가, 그 아래 기존 4개 Recharts 차트
+- **PopulationSection** (`components/Dashboard/sections/PopulationSection.tsx`) — 남녀 비율 도넛 + 인구 YoY 증감률 바차트 + 청년 비율 카드 (구 단위, POP_YOUTH_19_34÷POP_TOTAL_YOUTH_BASE 계산) + **평균 연령 카드 (B1: 전체/남/여 칩)** + 1인 가구 추정 도넛. QA2: 그리드 3행→2행 병합 (Row1 cols-4: 도넛+바, Row2 cols-3: 청년+연령+1인가구), 폰트 컴팩트화 (h3→15px, 값→18px, 라벨→13px, 보조→12/11px), 차트 높이 축소, 인사이트 텍스트 3종 추가 (인구 추세/청년 비율/1인 가구)
+- **SafetyEconomySection** (`components/Dashboard/sections/SafetyEconomySection.tsx`) — 안전 등급 6분야 레이더 (TRAFFIC/CRIME/FIRE/DISEASE/LIFE/SUICIDE, 종합 평균 텍스트) + 교통사고 통계 (ACC_TOTAL_COUNT/INJURY/DRUNK/HITRUN, 비율 계산) + **교통사고 추이 LineChart (Phase 4, ACC_TOTAL_COUNT 시계열, 구 + 서울 평균, safety 색)** + **화재 발생 추이 LineChart (Phase 4, FIRE_COUNT 시계열, warningDeep 색)** + **교통문화지수 레이더 (B3)** + GRDP 총액+1인당 + 녹지비율/화재 MetricCard. 모든 카드에 metric date 푸터. props에 `series?: GuMetricSeriesResponse` 추가. h3 text-[16px]. grid items-start 제거 (같은 행 높이 통일). 안전 레이더 차트 높이 h-[280px] (2배 확대, 2026-05-15). 교통사고 바 차트 YAxis width=100 (라벨 잘림 수정, 2026-05-15).
+- **TransitSection** (`components/Dashboard/sections/TransitSection.tsx`) — 지하철 TOP3 + 버스 통계 (guMetrics prop 제거, 1인당 차량 등록 카드 삭제) + **지하철 시간대 혼잡도 LineChart (평일/토/일 3시리즈, transport·warningDeep·warning 색, ticks 0/6/12/18/23, connectNulls)** + **버스 시간대 혼잡도 LineChart (평일/주말, stop_count=0이면 빈 상태)** + **동 성격 추정 카드 (label/reason + 4개 패턴 막대: 출근/낮/퇴근/주말). 라벨별 톤: 주거 중심→primary-soft, 상업·업무 중심→warning-soft, 유동인구 많음→info-soft, null→primary-soft dimmed)** h3 text-[16px].
+- **RealEstateSection** (`components/Dashboard/sections/RealEstateSection.tsx`) — **지가 변동률 (B5: LAND_PRICE_CHANGE_RATE)** + **주택 수 (B6: HOUSING_COUNT)** KPI 행 추가, 그 아래 기존 4개 Recharts 차트. h3 text-[16px], 주택 유형 도넛 h-[180px] (2026-05-15).
 - **useDongPopulation** (`hooks/useDongs.ts`) — /api/dongs/:slug/population 훅 (staleTime 10min)
 - **useDongGuMetrics** (`hooks/useDongs.ts`) — /api/dongs/:slug/gu-metrics 훅 (staleTime 5min)
 - **useDongParks** (`hooks/useDongs.ts`) — /api/dongs/:slug/parks 훅 (staleTime 10min). Dashboard.tsx에서 호출 → AmenitySection `parks` prop.
@@ -135,9 +135,69 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 - Dashboard lazy import + Suspense 래핑
 - AiSidePanel 글로벌 배치 (AppContent 바깥, AiPanelProvider 안)
 
+### QA 라운드 2 (2026-05-14) — PopulationSection 컴팩트화 + 인사이트
+- PopulationSection 그리드 3행→2행 병합. Row1 grid-cols-4 (도넛 1 + 바 3), Row2 grid-cols-3 (청년 + 연령 + 1인가구)
+- 폰트: h3 text-feature-heading→text-[15px], 값 text-card-heading→text-body-large(18px), 라벨 text-body-base→text-[13px], 보조 text-caption→text-micro(12px)/text-[11px]
+- 차트 높이: 도넛 140→120, 바 160→130, 1인가구 도넛 120→100
+- gap-3→gap-2, mb-2→mb-1
+- 출처 텍스트 간결화
+- 인사이트 텍스트 3종: 인구 추세(유출/유입/안정), 청년 비율(또래 많음/낮음), 1인 가구(자취 인프라/가족 세대)
+- 주의: text-[15px], text-[13px], text-[11px]은 기존 디자인 토큰에 정확히 매칭되지 않는 arbitrary value. design-system-keeper에게 토큰 추가 요청 필요.
+
+### QA 라운드 2 (2026-05-14) — SafetyEconomySection 컴팩트화 + 인사이트
+- 폰트 사이즈: h3 text-feature-heading→text-[15px], text-card-heading→text-[18px], text-body-base→text-[13px], text-caption→text-[12px]/text-[11px] (메타데이터)
+- 차트 높이: h-[180px]→h-[140px], h-[100px]→h-[80px]
+- 그리드 변경: Row 2 grid-cols-2→grid-cols-3 (교통문화 레이더 + GRDP 총액 + 1인당 GRDP 각 col-span-1), Row 3 grid-cols-2→grid-cols-4
+- 간격 축소: gap-3→gap-2, mb-2→mb-1, mb-3→mb-2
+- 출처 라벨: gu_metric/metric 코드 제거 (기관명 + 척도만 유지, 4곳)
+- 인사이트 텍스트: 안전 레이더/교통사고/녹지/GRDP 4곳에 서울 평균 대비 한줄 해석 추가
+- MetricCard: p-3→p-2, text-card-heading→text-[18px], text-caption→text-[12px], insight prop 추가
+- GRDP 카드 분리: 기존 nested sub-card 구조 → 독립 Card 2장 (총액 + 1인당)
+- NOTE: arbitrary value 다수 사용 (text-[15px], text-[18px], text-[13px], text-[12px], text-[11px]) — 사용자 지시에 따른 의도적 바이패스
+
+### QA 라운드 2 전체 (2026-05-14) — 컴팩트 + 해석 + 비교군 + 인기차트 개편
+- **Dashboard.tsx**: gap-4→gap-3, 섹션 헤더 h2 text-feature-heading→text-[16px], allDongs prop KpiRow에 전달
+- **KpiCard.tsx**: p-5→p-3, text-card-heading→text-[20px], badge/insight prop 추가
+- **KpiRow.tsx**: gap-4→gap-3, truncate 제거(breakdown 자연 줄바꿈), allDongs prop 수신, 환산월세/보증금/거래건수/안전 KPI에 percentile 뱃지 + 해석 텍스트 추가, 자취촌 지수 폰트 12/11px
+- **RealEstateSection.tsx**: KPI행 grid-cols-2 (2칸만 사용, 빈 div 제거), 차트 grid-cols-2 (2x2 균등: 월세추이/유형분포/산점도/보증금, col-span 모두 제거), h3→text-[15px], 출처 DB 컬럼명 제거
+- **PopulationSection.tsx**: 3행→2행 (Row1 cols-4, Row2 cols-3 — 1인가구 합류), 도넛 h-120, 바 h-130, 1인가구 h-100, 인사이트 3종, 출처 간결화
+- **SafetyEconomySection.tsx**: 차트 h-180→140, h-100→80, 교통문화+GRDP cols-3 분리, 녹지+화재 cols-4, MetricCard p-2, 인사이트 4종, 출처 4곳 DB코드 제거
+- **TransitSection.tsx**: 차트 h-180→140, 패턴바 h-2→1.5, 대중교통 접근성 인사이트, 출처 2곳 서비스명 교체
+- **AmenitySection.tsx**: 테이블 py-2.5→2 px-4→3, th 11px, 칩 간격 축소, 공원 h-80, 도서관 placeholder h-[80px]→py-6 (고정 높이 제거), 편의시설 충분/부족 인사이트
+
+### 빈 공간 최적화 (2026-05-15) — PopularitySection + SafetyEconomySection
+- **PopularitySection.tsx**: 자취촌 지수 TOP 10 placeholder h-[140px]→py-8, 학교별 empty state h-[120px]→py-6, 비슷한 동 카드 p-2.5→p-2, 비슷한 동 empty state h-[140px]→py-8 — 고정 높이 제거로 불필요한 빈 공간 해소
+- **SafetyEconomySection.tsx**: Row 1(안전 레이더 + 교통사고) grid에 items-start 추가, Row 2(교통문화 + GRDP 총액 + 1인당 GRDP) grid에 items-start 추가 — 내용이 적은 카드가 같은 행의 큰 카드에 맞춰 stretch되던 문제 해소
+- **PopularitySection.tsx**: grid-cols-3→2×2, 종합점수 TOP 10 + 자취촌 지수 TOP 10(placeholder — API 미구현) + 학교별 empty state("사용자 데이터 부족") + 비슷한 동
+- **ReviewDashboardSection.tsx**: Stars size lg→28px, md→18px, sm→14px, gap 축소, empty state 개선 (CTA 유도)
+- **새 API 필요**: 자취촌 지수 TOP 10 랭킹 (`GET /api/dongs/studio-index-ranking?limit=10`) — 프론트 placeholder 배포 후 별도 세션에서 backend-engineer 호출 예정
+
+### 위젯 레이아웃 미세조정 (2026-05-15) — PopularitySection + PopulationSection + ReviewDashboardSection
+- **PopularitySection.tsx**: grid-cols-2→grid-cols-4 (4개 위젯 한 행 배치), items-start 제거. TOP 10 리스트 아이템 px-2 py-1.5→px-1.5 py-1, 자취촌 지수 placeholder py-8→py-6, 학교별 empty py-6→py-4, Select mb-2→mb-1, 비슷한 동 카드 gap-2→gap-1.5. h3 text-[15px]→text-[16px].
+- **PopulationSection.tsx**: h3 text-[15px]→text-[16px] (전체 5개 위젯 타이틀).
+- **ReviewDashboardSection.tsx**: h3 text-[15px]→text-[16px] (전체 3개 위젯 타이틀).
+
+### 해석 텍스트 chip 스타일 + 스타일 업그레이드 + 부동산 해석 추가 (2026-05-15)
+- 모든 해석 텍스트를 chip 스타일로 변경: `<p>` → `<span>` pill 형태, `bg-primary-soft text-primary rounded-full px-2.5 py-1 font-semibold text-[13px]` (10곳, 5개 파일)
+- 면적×환산월세 산점도 툴팁 "만원만원" 중복 수정 — Recharts YAxis unit prop이 자동 추가하는 단위와 커스텀 formatter의 단위가 겹치던 문제 해소
+- 모든 섹션 insight 텍스트 `text-[13px] text-text` → `text-[14px] font-medium text-text` 로 가독성 상향 (5개 파일, 10곳)
+  - AmenitySection (1곳), TransitSection (1곳), SafetyEconomySection (4곳: MetricCard insight + safetyInsight + accidentInsight + grdpInsight), PopulationSection (3곳: yoyInsight + youthInsight + singleInsight)
+- RealEstateSection에 해석 텍스트 신규 추가: 최신 월세 추이(villa) 기반 월세 부담 한줄 해석 (50만 이하 / 80만 이상 / 평균)
+- ReviewDashboardSection은 변경 없음 (리뷰 본문 텍스트와 구분)
+- KpiCard, KpiRow 변경 없음
+
+### QA 라운드 1 (2026-05-14)
+- 전체 위젯 컴팩트화: gap 6→4, 5→3, padding lg→md, 차트 높이 220→180px 등 (10개 파일)
+- 지하철역 중복 해소: `mergeStationsByName()` 추가, 동일역 호선 전부 배지 표시
+- 인구 추이: AreaChart(인구+세대) → BarChart(전년 대비 증감률 %) 교체
+- 교통사고: 인구 10만명당 사고율 + 25구 평균 비교 + 순위 배지 추가
+- 고령인구비율 도넛 + 1인당 녹지 MetricCard 삭제
+- 위젯 출처 텍스트: 기관명·DB 테이블·metric 코드 수준으로 상세화
+- 데이터 소스 문서: `.claude/DATA_SOURCES.md` 신규 (395줄, 동 성격 추정 분류 규칙 포함)
+
 ### 빌드
 - CSS: 73KB (18KB gz)
-- JS main: 985KB (293KB gz), Dashboard chunk: 138KB (33.1KB gz) — KPI 2행(자취촌 지수 게이지 + 계약 활발도) 추가 +4KB
+- JS main: 985KB (293KB gz), Dashboard chunk: 130KB (31KB gz)
 - tsc + vite build 통과
 
 ### Phase 5 정정 (2026-05-13) — SeoulMetric raw → 25구 평균 / 순위

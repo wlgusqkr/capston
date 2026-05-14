@@ -5,19 +5,18 @@
 //   2. Population trend line (adong_population trend, 2022.09~)
 //   3. Youth ratio highlight cards (POP_YOUTH_19_34 / POP_TOTAL_YOUTH_BASE)
 //   4. Avg age card (POP_MEAN_AGE + male/female chips) — Phase 4 B1
-//   5. Elderly ratio donut (POP_ELDERLY_RATIO) — Phase 4 B2
-//   6. 1-person household estimate donut (household vs population ratio)
+//   5. 1-person household estimate donut (household vs population ratio)
 //
 // Data: DongPopulationResponse + DongGuMetricsResponse
 
 import {
-  Area,
-  AreaChart,
+  Bar,
+  BarChart,
   CartesianGrid,
   Cell,
-  Legend,
   Pie,
   PieChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -50,6 +49,17 @@ function formatMetricDate(date: string | null | undefined): string {
   return `${year}년 기준`;
 }
 
+/** Derive YoY insight text from the last 2+ years of change data. */
+function getYoyInsight(yoyData: Array<{ year: string; change: number }>): string {
+  if (yoyData.length < 2) return '인구 변동이 크지 않아요';
+  const lastTwo = yoyData.slice(-2);
+  const allNeg = lastTwo.every((d) => d.change < 0);
+  const allPos = lastTwo.every((d) => d.change > 0);
+  if (allNeg) return '최근 인구가 줄고 있어 유출 추세예요';
+  if (allPos) return '최근 인구가 늘고 있어 유입 추세예요';
+  return '인구 변동이 크지 않아요';
+}
+
 export default function PopulationSection({
   population,
   guMetrics,
@@ -73,14 +83,28 @@ export default function PopulationSection({
       ? ((latest.female_population / latest.total_population) * 100).toFixed(1)
       : null;
 
-  // 2. Population trend line data — sample every 3rd point if too many rows
-  const trendData = (() => {
-    const sampled = trend.length > 24 ? trend.filter((_, i) => i % 3 === 0 || i === trend.length - 1) : trend;
-    return sampled.map((row) => ({
-      date: row.date,
-      인구: row.total_population,
-      세대: row.household_count,
-    }));
+  // 2. Population YoY change data — group by year, compute year-over-year change rate
+  const yoyData = (() => {
+    if (trend.length < 2) return [];
+    // Group by year, take the last entry per year
+    const byYear = new Map<string, { pop: number; date: string }>();
+    for (const row of trend) {
+      const year = row.date.slice(0, 4);
+      byYear.set(year, { pop: row.total_population, date: row.date });
+    }
+    const years = Array.from(byYear.keys()).sort();
+    const result: Array<{ year: string; change: number }> = [];
+    for (let i = 1; i < years.length; i++) {
+      const prev = byYear.get(years[i - 1])!;
+      const curr = byYear.get(years[i])!;
+      if (prev.pop > 0) {
+        result.push({
+          year: years[i],
+          change: +((((curr.pop - prev.pop) / prev.pop) * 100).toFixed(2)),
+        });
+      }
+    }
+    return result;
   })();
 
   // 3. Youth ratio — compute from POP_YOUTH_19_34/39 ÷ POP_TOTAL_YOUTH_BASE × 100.
@@ -122,19 +146,6 @@ export default function PopulationSection({
   const meanAgeDate = formatMetricDate(guMetrics?.metrics['POP_MEAN_AGE']?.date);
   const meanAgeDiff = meanAge != null && guAvgMeanAge != null ? meanAge - guAvgMeanAge : null;
 
-  // 5. (B2) Elderly ratio — POP_ELDERLY_RATIO (%) (25구 평균 비교)
-  const elderlyRatio = guMetrics?.metrics['POP_ELDERLY_RATIO']?.value ?? null;
-  const guAvgElderlyRatio = guMetrics?.metrics['POP_ELDERLY_RATIO']?.gu_avg ?? null;
-  const elderlyRank = guMetrics?.metrics['POP_ELDERLY_RATIO']?.rank_in_seoul ?? null;
-  const elderlyDate = formatMetricDate(guMetrics?.metrics['POP_ELDERLY_RATIO']?.date);
-  const elderlyDonutData =
-    elderlyRatio != null
-      ? [
-          { name: '65세 이상', value: elderlyRatio },
-          { name: '그 외', value: Math.max(0, 100 - elderlyRatio) },
-        ]
-      : [];
-
   // 6. 1-person household estimate (가구당 평균인원 기반 단순 추정)
   const avgPersonsPerHousehold =
     latest && latest.household_count > 0
@@ -152,13 +163,30 @@ export default function PopulationSection({
         ]
       : [];
 
+  // Insight texts
+  const yoyInsight = getYoyInsight(yoyData);
+
+  const youthInsight =
+    youthRatio19_34 != null && guAvgYouthRatio19_34 != null
+      ? youthRatio19_34 > guAvgYouthRatio19_34
+        ? '같은 또래 자취생이 많은 구예요'
+        : '청년 비율이 서울 평균보다 낮아요'
+      : null;
+
+  const singleInsight =
+    singleHouseholdPct != null
+      ? singleHouseholdPct >= 50
+        ? '1인 가구 비율이 높아 자취 인프라가 잘 갖춰져 있을 거예요'
+        : '가족 세대가 많은 동네예요'
+      : null;
+
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-2">
       {/* Row 1: Gender donut + Population trend */}
-      <div className="grid grid-cols-3 gap-5">
+      <div className="grid grid-cols-4 gap-2">
         {/* 1. Gender ratio donut */}
-        <Card padding="lg">
-          <h3 className="m-0 mb-3 text-feature-heading leading-[1.3] font-semibold text-text">
+        <Card padding="md">
+          <h3 className="m-0 mb-1 text-[16px] leading-snug font-semibold text-text">
             남녀 비율
           </h3>
           {genderData.length > 0 ? (
@@ -192,7 +220,7 @@ export default function PopulationSection({
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="flex items-center gap-4 text-caption text-text-muted">
+              <div className="flex items-center gap-4 text-micro text-text-muted">
                 <span>
                   <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: GENDER_COLORS[0] }} />
                   남성 {maleRatio}%
@@ -204,83 +232,78 @@ export default function PopulationSection({
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-[160px] text-text-muted text-caption">
+            <div className="flex items-center justify-center h-[120px] text-text-muted text-micro">
               인구 데이터가 없습니다
             </div>
           )}
         </Card>
 
-        {/* 2. Population trend line */}
-        <Card padding="lg" className="col-span-2">
-          <h3 className="m-0 mb-3 text-feature-heading leading-[1.3] font-semibold text-text">
-            인구 추이
+        {/* 2. Population YoY change bar */}
+        <Card padding="md" className="col-span-3">
+          <h3 className="m-0 mb-1 text-[16px] leading-snug font-semibold text-text">
+            인구 증감률 (전년 대비)
           </h3>
-          {trendData.length > 0 ? (
-            <div className="h-[200px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trendData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 10, fill: CHART_COLORS.axis }}
-                    tickFormatter={(d: string) => d.slice(2, 7)} // "22-09"
-                    interval="preserveStartEnd"
-                  />
-                  <YAxis
-                    tick={{ fontSize: 10, fill: CHART_COLORS.axis }}
-                    tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`}
-                    width={40}
-                  />
-                  <Tooltip
-                    contentStyle={TOOLTIP_STYLE}
-                    formatter={(value) => {
-                      const v = value as number;
-                      return [`${v.toLocaleString()}`, ''];
-                    }}
-                  />
-                  <Legend
-                    wrapperStyle={{ fontSize: 11 }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="인구"
-                    stroke={CATEGORY_COLORS.population}
-                    fill={CATEGORY_COLORS.population}
-                    fillOpacity={0.15}
-                    strokeWidth={2}
-                    dot={false}
-                    isAnimationActive={true}
-                    animationDuration={1200}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="세대"
-                    stroke={CATEGORY_COLORS.environment}
-                    fill={CATEGORY_COLORS.environment}
-                    fillOpacity={0.1}
-                    strokeWidth={2}
-                    dot={false}
-                    isAnimationActive={true}
-                    animationDuration={1200}
-                    animationBegin={300}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+          {yoyData.length > 0 ? (
+            <>
+              <div className="h-[130px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={yoyData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
+                    <XAxis
+                      dataKey="year"
+                      tick={{ fontSize: 10, fill: CHART_COLORS.axis }}
+                      tickFormatter={(y: string) => `${y}년`}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 10, fill: CHART_COLORS.axis }}
+                      tickFormatter={(v: number) => `${v > 0 ? '+' : ''}${v}%`}
+                      width={48}
+                    />
+                    <ReferenceLine y={0} stroke={CHART_COLORS.axis} strokeWidth={1} />
+                    <Tooltip
+                      contentStyle={TOOLTIP_STYLE}
+                      formatter={(value) => {
+                        const v = value as number;
+                        return [`${v > 0 ? '+' : ''}${v.toFixed(2)}%`, '증감률'];
+                      }}
+                      labelFormatter={(label) => `${label}년`}
+                    />
+                    <Bar
+                      dataKey="change"
+                      radius={[4, 4, 0, 0]}
+                      isAnimationActive={true}
+                      animationDuration={800}
+                    >
+                      {yoyData.map((entry, idx) => (
+                        <Cell
+                          key={idx}
+                          fill={entry.change >= 0 ? CATEGORY_COLORS.population : CATEGORY_COLORS.safety}
+                          fillOpacity={0.8}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <span className="inline-flex items-center mt-1 px-2.5 py-1 rounded-full bg-primary-soft text-[13px] font-semibold text-primary">{yoyInsight}</span>
+            </>
           ) : (
-            <div className="flex items-center justify-center h-[200px] text-text-muted text-caption">
+            <div className="flex items-center justify-center h-[130px] text-text-muted text-micro">
               추이 데이터가 없습니다
             </div>
           )}
+          <p className="m-0 mt-2 text-[11px] text-text-subtle">
+            출처: 주민등록인구 · 전년 대비 증감률
+          </p>
         </Card>
       </div>
 
-      {/* Row 2: Youth ratio + Avg age + Elderly ratio */}
-      <div className="grid grid-cols-3 gap-5">
+      {/* Row 2: Youth ratio + Avg age + 1-person household */}
+      <div className="grid grid-cols-3 gap-2">
         {/* 3. Youth ratio cards */}
-        <Card padding="lg">
-          <div className="flex items-center gap-2 mb-3">
-            <h3 className="m-0 text-feature-heading leading-[1.3] font-semibold text-text">
+        <Card padding="md">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="m-0 text-[16px] leading-snug font-semibold text-text">
               청년 비율
             </h3>
             {guMetrics && (
@@ -289,15 +312,15 @@ export default function PopulationSection({
               </Badge>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             {/* 19~34세 */}
             <div className="p-3 rounded-card border border-divider bg-surface">
-              <p className="text-caption m-0 mb-1 text-text-subtle">19~34세</p>
-              <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
+              <p className="text-micro m-0 mb-1 text-text-subtle">19~34세</p>
+              <p className="tabular m-0 text-body-large font-semibold text-text leading-[1.1]">
                 {youthRatio19_34 != null ? `${youthRatio19_34.toFixed(1)}%` : '-'}
               </p>
               {guAvgYouthRatio19_34 != null && youthRatio19_34 != null && (
-                <p className="m-0 mt-1 text-caption text-text-muted">
+                <p className="m-0 mt-1 text-micro text-text-muted">
                   25구 평균 {guAvgYouthRatio19_34.toFixed(1)}%
                   <span className={`ml-1 font-medium ${youthRatio19_34 > guAvgYouthRatio19_34 ? 'text-success' : 'text-danger'}`}>
                     {youthRatio19_34 > guAvgYouthRatio19_34 ? '▲' : '▼'}
@@ -306,17 +329,17 @@ export default function PopulationSection({
                 </p>
               )}
               {youthRank19_34 != null && (
-                <p className="m-0 mt-1 text-caption text-text-subtle">25구 중 {youthRank19_34}위</p>
+                <p className="m-0 mt-1 text-[11px] text-text-subtle">25구 중 {youthRank19_34}위</p>
               )}
             </div>
             {/* 19~39세 */}
             <div className="p-3 rounded-card border border-divider bg-surface">
-              <p className="text-caption m-0 mb-1 text-text-subtle">19~39세</p>
-              <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
+              <p className="text-micro m-0 mb-1 text-text-subtle">19~39세</p>
+              <p className="tabular m-0 text-body-large font-semibold text-text leading-[1.1]">
                 {youthRatio19_39 != null ? `${youthRatio19_39.toFixed(1)}%` : '-'}
               </p>
               {guAvgYouthRatio19_39 != null && youthRatio19_39 != null && (
-                <p className="m-0 mt-1 text-caption text-text-muted">
+                <p className="m-0 mt-1 text-micro text-text-muted">
                   25구 평균 {guAvgYouthRatio19_39.toFixed(1)}%
                   <span className={`ml-1 font-medium ${youthRatio19_39 > guAvgYouthRatio19_39 ? 'text-success' : 'text-danger'}`}>
                     {youthRatio19_39 > guAvgYouthRatio19_39 ? '▲' : '▼'}
@@ -325,24 +348,27 @@ export default function PopulationSection({
                 </p>
               )}
               {youthRank19_39 != null && (
-                <p className="m-0 mt-1 text-caption text-text-subtle">25구 중 {youthRank19_39}위</p>
+                <p className="m-0 mt-1 text-[11px] text-text-subtle">25구 중 {youthRank19_39}위</p>
               )}
             </div>
           </div>
+          {youthInsight && (
+            <span className="inline-flex items-center mt-1 px-2.5 py-1 rounded-full bg-primary-soft text-[13px] font-semibold text-primary">{youthInsight}</span>
+          )}
           {youthDate && (
-            <p className="m-0 mt-2 text-caption text-text-subtle">{youthDate}</p>
+            <p className="m-0 mt-1 text-[11px] text-text-subtle">{youthDate}</p>
           )}
           {!guMetrics && (
-            <div className="flex items-center justify-center h-[60px] text-text-muted text-caption">
+            <div className="flex items-center justify-center h-[60px] text-text-muted text-micro">
               구 지표 데이터를 불러오는 중...
             </div>
           )}
         </Card>
 
         {/* 4. (B1) Avg age */}
-        <Card padding="lg">
-          <div className="flex items-center gap-2 mb-3">
-            <h3 className="m-0 text-feature-heading leading-[1.3] font-semibold text-text">
+        <Card padding="md">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="m-0 text-[16px] leading-snug font-semibold text-text">
               평균 연령
             </h3>
             {guMetrics && (
@@ -353,14 +379,14 @@ export default function PopulationSection({
           </div>
           {meanAge != null ? (
             <>
-              <p className="tabular m-0 text-card-heading font-semibold text-text leading-[1.1]">
+              <p className="tabular m-0 text-body-large font-semibold text-text leading-[1.1]">
                 {meanAge.toFixed(1)}
-                <span className="ml-1 text-body-base font-medium text-text-muted">세</span>
+                <span className="ml-1 text-[13px] font-medium text-text-muted">세</span>
               </p>
               <div className="flex items-center gap-2 mt-2">
                 {meanAgeMale != null && (
                   <span
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-caption font-medium"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-micro font-medium"
                     style={{
                       backgroundColor: 'var(--color-info-soft)',
                       color: GENDER_COLORS[0],
@@ -371,7 +397,7 @@ export default function PopulationSection({
                 )}
                 {meanAgeFemale != null && (
                   <span
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-caption font-medium"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-micro font-medium"
                     style={{
                       backgroundColor: 'var(--color-danger-soft)',
                       color: GENDER_COLORS[1],
@@ -382,8 +408,7 @@ export default function PopulationSection({
                 )}
               </div>
               {guAvgMeanAge != null && meanAgeDiff != null && (
-                // 대학생 타겟에서 평균 연령이 낮을수록 또래·자취생이 많다고 가정하여 success.
-                <p className="m-0 mt-2 text-caption text-text-muted">
+                <p className="m-0 mt-2 text-micro text-text-muted">
                   25구 평균 {guAvgMeanAge.toFixed(1)}세
                   <span className={`ml-1 font-medium ${meanAgeDiff <= 0 ? 'text-success' : 'text-danger'}`}>
                     {meanAgeDiff >= 0 ? '▲' : '▼'}
@@ -392,92 +417,22 @@ export default function PopulationSection({
                 </p>
               )}
               {meanAgeRank != null && (
-                <p className="m-0 mt-1 text-caption text-text-subtle">25구 중 {meanAgeRank}위</p>
+                <p className="m-0 mt-1 text-[11px] text-text-subtle">25구 중 {meanAgeRank}위</p>
               )}
               {meanAgeDate && (
-                <p className="m-0 mt-1 text-caption text-text-subtle">{meanAgeDate}</p>
+                <p className="m-0 mt-1 text-[11px] text-text-subtle">{meanAgeDate}</p>
               )}
             </>
           ) : (
-            <div className="flex items-center justify-center h-[80px] text-text-muted text-caption">
+            <div className="flex items-center justify-center h-[80px] text-text-muted text-micro">
               평균 연령 데이터가 없습니다
             </div>
           )}
         </Card>
 
-        {/* 5. (B2) Elderly ratio donut */}
-        <Card padding="lg">
-          <div className="flex items-center gap-2 mb-3">
-            <h3 className="m-0 text-feature-heading leading-[1.3] font-semibold text-text">
-              고령 인구 비율
-            </h3>
-            {guMetrics && (
-              <Badge variant="neutral" size="sm">
-                {guMetrics.gu_name} 단위
-              </Badge>
-            )}
-          </div>
-          {elderlyDonutData.length > 0 && elderlyRatio != null ? (
-            <div className="flex flex-col items-center">
-              <div className="h-[120px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={elderlyDonutData}
-                      dataKey="value"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius="60%"
-                      outerRadius="85%"
-                      paddingAngle={2}
-                      isAnimationActive={true}
-                      animationDuration={1000}
-                      animationBegin={300}
-                    >
-                      <Cell fill={CATEGORY_COLORS.safety} />
-                      <Cell fill="var(--color-primary-soft)" />
-                    </Pie>
-                    <Tooltip
-                      contentStyle={TOOLTIP_STYLE}
-                      formatter={(value) => {
-                        const v = value as number;
-                        return [`${v.toFixed(1)}%`, ''];
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <p className="m-0 tabular text-body-base font-semibold text-text">
-                {elderlyRatio.toFixed(1)}%
-              </p>
-              {guAvgElderlyRatio != null && (
-                <p className="m-0 mt-1 text-caption text-text-muted">
-                  25구 평균 {guAvgElderlyRatio.toFixed(1)}%
-                  <span className={`ml-1 font-medium ${elderlyRatio <= guAvgElderlyRatio ? 'text-success' : 'text-danger'}`}>
-                    {elderlyRatio >= guAvgElderlyRatio ? '▲' : '▼'}
-                    {Math.abs(elderlyRatio - guAvgElderlyRatio).toFixed(1)}%p
-                  </span>
-                </p>
-              )}
-              {elderlyRank != null && (
-                <p className="m-0 mt-1 text-caption text-text-subtle">25구 중 {elderlyRank}위</p>
-              )}
-              {elderlyDate && (
-                <p className="m-0 mt-1 text-caption text-text-subtle">{elderlyDate}</p>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center justify-center h-[120px] text-text-muted text-caption">
-              데이터가 없습니다
-            </div>
-          )}
-        </Card>
-      </div>
-
-      {/* Row 3: 1-person household estimate */}
-      <div className="grid grid-cols-3 gap-5">
-        <Card padding="lg">
-          <h3 className="m-0 mb-3 text-feature-heading leading-[1.3] font-semibold text-text">
+        {/* 5. 1-person household estimate */}
+        <Card padding="md">
+          <h3 className="m-0 mb-1 text-[16px] leading-snug font-semibold text-text">
             1인 가구 추정
           </h3>
           {singleDonutData.length > 0 ? (
@@ -498,7 +453,7 @@ export default function PopulationSection({
                       animationBegin={400}
                     >
                       <Cell fill={CATEGORY_COLORS.population} />
-                      <Cell fill="var(--color-primary-soft)" />
+                      <Cell fill="var(--color-info-soft)" />
                     </Pie>
                     <Tooltip
                       contentStyle={TOOLTIP_STYLE}
@@ -510,18 +465,21 @@ export default function PopulationSection({
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <p className="m-0 text-body-base font-semibold text-text text-center tabular">
+              <p className="m-0 text-[13px] font-semibold text-text text-center tabular">
                 {singleHouseholdPct}%
               </p>
-              <p className="m-0 text-caption text-text-muted text-center">
+              <p className="m-0 text-[11px] text-text-muted text-center">
                 가구당 평균 {avgPersonsPerHousehold?.toFixed(2)}인
               </p>
-              <p className="m-0 mt-1 text-caption text-text-subtle text-center">
+              <p className="m-0 mt-1 text-[11px] text-text-subtle text-center">
                 추정값 (인구/세대 기반)
               </p>
+              {singleInsight && (
+                <span className="inline-flex items-center mt-1 px-2.5 py-1 rounded-full bg-primary-soft text-[13px] font-semibold text-primary">{singleInsight}</span>
+              )}
             </div>
           ) : (
-            <div className="flex items-center justify-center h-[140px] text-text-muted text-caption">
+            <div className="flex items-center justify-center h-[100px] text-text-muted text-micro">
               데이터가 없습니다
             </div>
           )}
