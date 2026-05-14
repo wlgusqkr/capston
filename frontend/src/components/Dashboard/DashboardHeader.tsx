@@ -35,7 +35,7 @@ export default function DashboardHeader({
                 {summaryText}
               </span>
             ) : (
-              <span className="text-caption text-text-muted whitespace-nowrap">
+              <span className="text-caption text-text whitespace-nowrap">
                 데이터 불러오는 중...
               </span>
             )}

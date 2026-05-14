@@ -162,7 +162,6 @@ function mergeStationsByName(
 /** Transit insight: combine station proximity + bus count. */
 function getTransitInsight(
   mergedStations: Array<{ walking_min: number }>,
-  busStopCount: number,
   busRouteCount: number,
 ): string | undefined {
   const hasNearStation = mergedStations.length > 0 && mergedStations[0].walking_min <= 10;
@@ -207,7 +206,7 @@ export default function TransitSection({ transit, congestion }: TransitSectionPr
     return vals.length > 0 ? Math.max(...vals) : 0;
   })();
 
-  const transitInsight = getTransitInsight(mergedStations, bus.stop_count, bus.route_count);
+  const transitInsight = getTransitInsight(mergedStations, bus.route_count);
 
   return (
     <div className="flex flex-col gap-2">

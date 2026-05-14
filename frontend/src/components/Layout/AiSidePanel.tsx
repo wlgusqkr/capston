@@ -23,7 +23,7 @@ const WELCOME_MESSAGE: Message = {
 let nextId = 1;
 
 export default function AiSidePanel() {
-  const { isOpen, close } = useAiPanel();
+  const { isOpen, close, toggle } = useAiPanel();
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -70,35 +70,40 @@ export default function AiSidePanel() {
 
   return (
     <aside
-      className={`fixed top-[var(--space-14)] right-0 bottom-0 w-[400px] bg-surface border-l border-divider z-[999] flex flex-col transform transition-transform duration-300 ease-out ${
+      className={`fixed top-[var(--space-14)] right-0 bottom-0 w-[400px] bg-surface border-l border-divider z-[999] flex flex-col transition-transform duration-500 ${
         isOpen ? 'translate-x-0' : 'translate-x-full'
       }`}
+      style={{ transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)' }}
       aria-label="AI 채팅 패널"
       aria-hidden={!isOpen}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-divider shrink-0">
-        <h2 className="text-body-large font-semibold text-text">자취맵 AI</h2>
-        <button
-          onClick={close}
-          className="w-8 h-8 flex items-center justify-center rounded-sm text-text-muted transition-colors duration-200 hover:bg-surface-alt hover:text-text"
-          aria-label="AI 패널 닫기"
+      {/* Slide toggle handle on the left edge */}
+      <button
+        onClick={toggle}
+        className="absolute left-0 top-1/2 -translate-x-full -translate-y-1/2 w-7 h-16 bg-surface border border-r-0 border-divider rounded-l-lg flex items-center justify-center text-text-muted hover:text-primary hover:bg-primary-soft transition-all duration-200 cursor-pointer shadow-sm"
+        aria-label={isOpen ? 'AI 패널 닫기' : 'AI 패널 열기'}
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 14 14"
+          fill="none"
+          aria-hidden="true"
+          className={`transition-transform duration-300 ${isOpen ? '' : 'rotate-180'}`}
         >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            aria-hidden="true"
-          >
-            <path
-              d="M12 4L4 12M4 4l8 8"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
+          <path
+            d="M9 2L4 7l5 5"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+
+      {/* Header */}
+      <div className="flex items-center px-5 py-4 border-b border-divider shrink-0">
+        <h2 className="text-body-large font-semibold text-text">자취맵 AI</h2>
       </div>
 
       {/* Messages */}

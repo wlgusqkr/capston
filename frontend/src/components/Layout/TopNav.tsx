@@ -100,23 +100,21 @@ export default function TopNav() {
         메인 콘텐츠로 건너뛰기
       </a>
 
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 h-full px-6 max-w-[1440px] mx-auto">
-        {/* Left zone: logo */}
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 no-underline text-text font-normal tracking-normal hover:text-secondary focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2 focus-visible:rounded-sm"
-          aria-label="홈으로"
-        >
-          <img src={iconSvg} alt="" className="w-[var(--control-height-sm)] h-[var(--control-height-sm)] shrink-0 object-contain" aria-hidden="true" />
-          <span className="text-body-base font-normal">슬기로운 자취생활</span>
-        </Link>
+      <div className="flex items-center justify-between h-full px-6 max-w-[1440px] mx-auto">
+        {/* Left zone: logo + nav links */}
+        <div className="flex items-center gap-6 min-w-0">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 no-underline text-text font-normal tracking-normal hover:text-secondary focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2 focus-visible:rounded-sm shrink-0"
+            aria-label="홈으로"
+          >
+            <img src={iconSvg} alt="" className="w-[var(--control-height-sm)] h-[var(--control-height-sm)] shrink-0 object-contain" aria-hidden="true" />
+            <span className="text-body-base font-semibold">자취맵</span>
+          </Link>
 
-        {/* Center zone: nav tabs + contextual title + AI button */}
-        <div className="flex items-center justify-center gap-2 min-w-0">
           {spec.showNav && (
             <>
-              {/* Nav tabs */}
-              <nav className="flex items-center gap-1 bg-surface-alt rounded-pill p-0.5" aria-label="주요 메뉴">
+              <nav className="flex items-center gap-2" aria-label="주요 메뉴">
                 <NavLink
                   to="/"
                   end
@@ -139,69 +137,51 @@ export default function TopNav() {
                 dongSlug={dongSlug}
                 user={user}
               />
-
-              {/* AI search button with shimmer border */}
-              <button
-                onClick={openAiPanel}
-                className="relative ml-3 group"
-                aria-label="AI에게 물어보기"
-              >
-                {/* Shimmer border wrapper */}
-                <span
-                  className="absolute inset-0 rounded-pill opacity-60 group-hover:opacity-100 transition-opacity duration-200"
-                  style={{
-                    background:
-                      'linear-gradient(90deg, transparent, var(--color-primary), var(--color-accent), var(--color-primary), transparent)',
-                    backgroundSize: '200% 100%',
-                    animation: 'shimmer-border 3s linear infinite',
-                    padding: '1.5px',
-                    WebkitMask:
-                      'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                    WebkitMaskComposite: 'xor',
-                    maskComposite: 'exclude',
-                  }}
-                  aria-hidden="true"
-                />
-                <span className="relative flex items-center gap-1.5 bg-surface rounded-pill px-4 py-1.5 text-text-muted text-caption cursor-pointer">
-                  <span aria-hidden="true" className="text-micro">
-                    &#10024;
-                  </span>
-                  <span>AI에게 물어보기</span>
-                </span>
-              </button>
             </>
           )}
         </div>
 
-        {/* Right zone: user menu */}
-        <nav className="flex items-center justify-end gap-3" aria-label="사용자 메뉴">
-          {spec.authVariant === 'auth-login' && (
-            <Link to="/login" className="inline-flex items-center gap-1 no-underline text-text text-caption tracking-normal py-2 px-3 rounded-sm transition-all duration-[120ms] ease-out hover:bg-primary-soft hover:text-secondary focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2">
-              로그인 →
-            </Link>
+        {/* Right zone: AI button + user menu */}
+        <div className="flex items-center gap-5">
+          {spec.showNav && (
+            <button
+              onClick={openAiPanel}
+              className="inline-flex items-center gap-1.5 rounded-full border border-divider px-4 py-1.5 text-text-muted text-caption hover:border-primary hover:text-primary transition-colors duration-200 cursor-pointer bg-surface"
+              aria-label="AI에게 물어보기"
+            >
+              <span aria-hidden="true" className="text-micro">&#10024;</span>
+              <span>AI에게 물어보기</span>
+            </button>
           )}
-          {spec.authVariant === 'auth-register' && (
-            <Link to="/register" className="inline-flex items-center gap-1 no-underline text-text text-caption tracking-normal py-2 px-3 rounded-sm transition-all duration-[120ms] ease-out hover:bg-primary-soft hover:text-secondary focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2">
-              회원가입 →
-            </Link>
-          )}
-          {spec.authVariant === 'default' &&
-            (user ? (
-              <Link to="/mypage" className="inline-flex items-center gap-1 no-underline text-text text-caption tracking-normal py-2 px-3 rounded-sm transition-all duration-[120ms] ease-out hover:bg-primary-soft hover:text-secondary focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2">
-                <span className="text-text font-medium">
-                  {(user.nickname && user.nickname.trim()) || user.username}
-                </span>
-                <span className="text-text-subtle" aria-hidden="true">
-                  {' · '}
-                </span>
-                <span>마이페이지</span>
-              </Link>
-            ) : (
-              <Link to="/login" className="inline-flex items-center gap-1 no-underline text-text-muted text-caption tracking-normal py-2 px-3 rounded-sm transition-all duration-[120ms] ease-out hover:bg-primary-soft hover:text-secondary focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2">
+          <nav className="flex items-center gap-3" aria-label="사용자 메뉴">
+            {spec.authVariant === 'auth-login' && (
+              <Link to="/login" className="inline-flex items-center gap-1 no-underline text-text text-caption tracking-normal py-2 px-3 rounded-sm transition-all duration-[120ms] ease-out hover:bg-primary-soft hover:text-secondary focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2">
                 로그인 →
               </Link>
-            ))}
-        </nav>
+            )}
+            {spec.authVariant === 'auth-register' && (
+              <Link to="/register" className="inline-flex items-center gap-1 no-underline text-text text-caption tracking-normal py-2 px-3 rounded-sm transition-all duration-[120ms] ease-out hover:bg-primary-soft hover:text-secondary focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2">
+                회원가입 →
+              </Link>
+            )}
+            {spec.authVariant === 'default' &&
+              (user ? (
+                <Link to="/mypage" className="inline-flex items-center gap-1 no-underline text-text text-caption tracking-normal py-2 px-3 rounded-sm transition-all duration-[120ms] ease-out hover:bg-primary-soft hover:text-secondary focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2">
+                  <span className="text-text font-medium">
+                    {(user.nickname && user.nickname.trim()) || user.username}
+                  </span>
+                  <span className="text-text-subtle" aria-hidden="true">
+                    {' · '}
+                  </span>
+                  <span>마이페이지</span>
+                </Link>
+              ) : (
+                <Link to="/login" className="inline-flex items-center gap-1 no-underline text-text-muted text-caption tracking-normal py-2 px-3 rounded-sm transition-all duration-[120ms] ease-out hover:bg-primary-soft hover:text-secondary focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2">
+                  로그인 →
+                </Link>
+              ))}
+          </nav>
+        </div>
       </div>
     </header>
   );

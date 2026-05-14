@@ -78,7 +78,7 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 
 ### 신규 컴포넌트 (Phase 0)
 - **AiPanelContext** (`contexts/AiPanelContext.tsx`) — AI 사이드 패널 열림/닫힘 전역 상태
-- **AiSidePanel** (`components/Layout/AiSidePanel.tsx`) — 고정 우측 슬라이드인 AI 채팅 셸 (mock 응답)
+- **AiSidePanel** (`components/Layout/AiSidePanel.tsx`) — 고정 우측 슬라이드인 AI 채팅 셸 (mock 응답). 왼쪽 면 슬라이딩 핸들(toggle)로 열기/닫기, cubic-bezier(0.22,1,0.36,1) 500ms 애니메이션
 - **DongSelector** (`components/Dashboard/DongSelector.tsx`) — 426동 검색 콤보박스, 구별 그룹핑
 - **DashboardHeader** (`components/Dashboard/DashboardHeader.tsx`) — 동 셀렉터 + 선택된 동 + 요약 텍스트
 - **Dashboard** (`routes/Dashboard.tsx`) — URL 기반 동 선택 (?dong=), Phase 1 위젯 조립
@@ -125,9 +125,10 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 - KPI 보조 카드(자취촌/활발도)의 skeleton 펄스 트리거가 `!derived`(undefined) 기준. detailLoading과 분리되어 두 영역이 동시에 끝나지 않으면 시각적으로 살짝 튐. 무해.
 
 ### TopNav 변경
-- 네비 탭 (맵/대시보드) NavLink 추가 (pill 스타일, active 상태 bg-primary-soft)
+- 서비스명 "슬기로운 자취생활" → "자취맵" (font-semibold)
+- 맵/대시보드 메뉴를 중앙 pill 토글에서 왼쪽 정렬 개별 버튼으로 변경 (3-column grid → flex justify-between)
+- AI 버튼: shimmer 애니메이션 제거, rounded-full border border-divider 스타일로 변경, 오른쪽 영역(로그인 옆)에 배치
 - 컨텍스트 타이틀 (동네 비교, 동 이름 등) 탭 우측 middot 구분
-- AI 검색 버튼 (shimmer-border keyframe 활용, AiPanelContext.open 호출)
 - 인증 페이지(login/register)에서는 탭/AI 버튼 숨김
 
 ### App.tsx 변경
