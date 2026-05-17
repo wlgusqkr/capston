@@ -19,6 +19,8 @@ from drf_spectacular.views import (
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    # Prometheus scrape endpoint (django-prometheus)
+    path("", include("django_prometheus.urls")),
     # OpenAPI / Swagger / ReDoc
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(

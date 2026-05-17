@@ -72,6 +72,7 @@ THIRD_PARTY_APPS = [
     "rest_framework",
     "corsheaders",
     "drf_spectacular",  # OpenAPI 3 schema + Swagger UI / ReDoc
+    "django_prometheus",  # /metrics — Prometheus scrape용
     # 9단계 — 사용자 명시로 카카오/allauth는 비활성화.
     # 표준 Django username/password (세션) 인증만 사용.
     # "allauth",
@@ -100,6 +101,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 # Middleware
 # ---------------------------------------------------------------------------
 MIDDLEWARE = [
+    "django_prometheus.middleware.PrometheusBeforeMiddleware",  # 요청 시각 측정 — 가장 위
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",  # CORS는 가능한 위쪽
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -109,6 +111,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # "allauth.account.middleware.AccountMiddleware",  # allauth 비활성화
+    "django_prometheus.middleware.PrometheusAfterMiddleware",  # 응답 시각 측정 — 가장 아래
 ]
 
 ROOT_URLCONF = "config.urls"
