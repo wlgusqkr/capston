@@ -14,7 +14,11 @@
 2. 응답 XML 파싱 → 법정동명(umdNm) / 면적(excluUseAr or totalFloorAr) /
    보증금(deposit) / 월세(monthlyRent) / 계약일 추출.
 3. **지오코딩**: 지번 단위만 (`{gu} {umdNm} {jibun}`) — VWorld backend key.
-   - JibunGeocodeCache 먼저 lookup, miss 시 호출 후 캐시 저장.
+   - (sub-plan 4D) 별도 지오코딩 캐시 테이블은 도입하지 않는다. V-World 호출 결과는
+     `RentDeal.location`에 직접 적재. 호출 실패 / 단독·다가구처럼 jibun 부재 →
+     ldong centroid fallback 또는 NULL.
+   - 현재 `geocode_jibun`은 NotImplementedError (V-World 호출부는 일일 업데이트
+     본격 가동 전 별도 plan에서 채움).
    - 매물(건물) 단위 정밀 좌표 금지 (SPEC 14.2).
 4. 행정동(Dong) 매핑: PostGIS spatial join (`Dong.geom__contains=point`).
    - 좌표가 없으면 (geocode 실패 OR 단독/다가구처럼 jibun 없음) → umdNm 으로
@@ -329,61 +333,21 @@ class GeocodeStats:
 def geocode_jibun(
     vworld_key: str, gu: str, umd_nm: str, jibun: str, stats: GeocodeStats
 ):
-    """지번 → (lng, lat) 또는 None. 캐시 우선. 실패 시 None."""
-    from django.contrib.gis.geos import Point
+    """지번 → (lng, lat) 또는 None. (현재 미구현 — sub-plan 4D 기준)
 
-    from apps.realestate.models import JibunGeocodeCache
+    sub-plan 4D 결정: 별도 지오코딩 캐시 테이블은 도입하지 않는다. V-World API
+    호출 결과는 `RentDeal.location`에 직접 INSERT 한다. 호출 실패 / 단독·다가구
+    처럼 jibun 부재 → ldong centroid fallback 또는 NULL 허용.
 
-    key = normalize_jibun_text(gu, umd_nm, jibun)
-    if not jibun.strip():
-        return None, key
+    본 스크립트는 `backend/scripts/update/README.md` 가 명시한 대로 일일 업데이트용
+    적재 골격(scaffold)이며, V-World 호출 본 구현은 일일 업데이트 본격 가동 전
+    별도 plan에서 채운다.
 
-    cached = JibunGeocodeCache.objects.filter(jibun_text=key).first()
-    if cached is not None:
-        stats.cache_hits += 1
-        return cached.geom, key
-
-    params = {
-        "service": "address",
-        "request": "getCoord",
-        "version": "2.0",
-        "crs": "EPSG:4326",
-        "address": key,
-        "format": "json",
-        "type": "PARCEL",
-        "key": vworld_key,
-    }
-    stats.vworld_calls += 1
-    try:
-        r = http_get_with_retry(VWORLD_GEOCODE_URL, params, timeout=10)
-    except Exception:
-        stats.vworld_fail += 1
-        return None, key
-    finally:
-        time.sleep(HTTP_SLEEP_BETWEEN_VWORLD)
-
-    try:
-        data = r.json()
-    except Exception:
-        stats.vworld_fail += 1
-        return None, key
-
-    status = (data.get("response") or {}).get("status")
-    if status != "OK":
-        stats.vworld_fail += 1
-        return None, key
-    pt = (((data.get("response") or {}).get("result") or {}).get("point") or {})
-    try:
-        lng = float(pt["x"])
-        lat = float(pt["y"])
-    except (KeyError, ValueError, TypeError):
-        stats.vworld_fail += 1
-        return None, key
-
-    point = Point(lng, lat, srid=4326)
-    # 캐시 저장 (멱등)
-    JibunGeocodeCache.objects.update_or_create(
-        jibun_text=key, defaults={"geom": point}
+    `--no-geocode` 모드는 본 함수를 호출하지 않으므로 그 경로는 영향 없음.
+    """
+    raise NotImplementedError(
+        "geocode_jibun 미구현 — V-World 호출 본 구현은 일일 업데이트 본격 가동 전 "
+        "별도 plan에서 채운다 (sub-plan 4D: RentDeal.location 직접 사용)."
     )
     stats.vworld_success += 1
     return point, key

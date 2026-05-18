@@ -15,9 +15,10 @@ from datetime import date, timedelta
 
 from django.db.models import Avg, Count, F, Min, Value
 
-from apps.amenities.models import Amenity
-from apps.realestate.models import RentDeal
-from apps.transit.models import BusStop, NearestSubway
+from apps.service.amenities.models import Amenity, AmenityAdong
+from apps.public_data.rent_deal.models import RentDeal
+from apps.public_data.bus.models import BusStop
+from apps.public_data.subway.models import NearestSubway
 
 from .detail_dummy import (
     SEOUL_AVG_BASELINE,
@@ -228,12 +229,17 @@ def _real_real_estate(dong: Dong, today: date) -> dict:
 
 
 def _real_amenities(dong: Dong) -> list[dict]:
-    """SPEC 6.3 섹션 3 — 8 카테고리 카운트 (Amenity 실 쿼리)."""
+    """SPEC 6.3 섹션 3 — 8 카테고리 카운트 (Amenity 실 쿼리).
+
+    sub-plan 4C: Amenity.dong FK 제거에 따라 AmenityAdong N:M join 사용.
+    Dong.code (10자리 행정동 PK) ↔ AmenityAdong.adong (FK to Adong, db_column='adong_code').
+    응답 dict key 보존 lock — {"category", "count", "density_per_km2", "level"}.
+    """
     counts: dict[str, int] = defaultdict(int)
     qs = (
-        Amenity.objects.filter(dong_id=dong.id)
-        .values("category")
-        .annotate(n=Count("id"))
+        AmenityAdong.objects.filter(adong=dong.code)
+        .values(category=F("amenity__category"))
+        .annotate(n=Count("amenity_id"))
     )
     for r in qs:
         counts[r["category"]] = r["n"]
