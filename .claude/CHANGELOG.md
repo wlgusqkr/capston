@@ -1,5 +1,8 @@
 # 변경 이력
 
+## 2026-05-18
+- OpenTelemetry 분산 추적 추가 — Tempo로 trace export. 백엔드 응답이 느릴 때 Grafana에서 해당 요청의 SQL/Redis/HTTP 호출까지 한 화면에서 추적 가능
+
 ## 2026-05-17
 - Prometheus 메트릭 노출 추가 — `django-prometheus` 통합, `/metrics` 엔드포인트 신설. 홈서버 모니터링 스택(Prometheus + Grafana)이 백엔드 응답 시간 p50/p95/p99과 DB·캐시 메트릭을 수집하도록 함
 
