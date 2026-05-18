@@ -22,7 +22,11 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["gunicorn", "config.wsgi:application", \
+# opentelemetry-instrument로 래핑 — 환경변수 OTEL_EXPORTER_OTLP_ENDPOINT 등이
+# 없으면 자동 계측만 활성화되고 export는 비활성(시작 실패 X). 운영 환경에서만
+# .env로 OTLP endpoint 주입하면 trace 전송 시작.
+CMD ["opentelemetry-instrument", \
+     "gunicorn", "config.wsgi:application", \
      "--bind", "0.0.0.0:8000", \
      "--workers", "3", \
      "--access-logfile", "-", \
