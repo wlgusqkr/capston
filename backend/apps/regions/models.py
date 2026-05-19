@@ -31,8 +31,8 @@ from django.db import models
 class Seoul(models.Model):
     """서울시 1행. RDS `seoul` 테이블."""
 
-    code = models.CharField(max_length=10, primary_key=True, help_text="서울시 코드 (RDS seoul.code)")
-    name = models.CharField(max_length=50, help_text="이름 (예: '서울특별시')")
+    code = models.CharField(max_length=20, primary_key=True, help_text="서울시 코드 (RDS seoul.code)")
+    name = models.CharField(max_length=100, help_text="이름 (예: '서울특별시')")
     area_m2 = models.DecimalField(
         max_digits=20, decimal_places=4, null=True, blank=True, help_text="면적 (m^2)"
     )
@@ -56,9 +56,16 @@ class Gu(models.Model):
     """자치구 25개. RDS `gu` 테이블."""
 
     gu_code = models.CharField(
-        max_length=10, primary_key=True, help_text="자치구 코드 (RDS gu.gu_code)"
+        max_length=20, primary_key=True, help_text="자치구 코드 (RDS gu.gu_code)"
     )
-    name = models.CharField(max_length=50, help_text="구 이름 (예: '중구')")
+    name = models.CharField(max_length=100, help_text="구 이름 (예: '중구')")
+    slug = models.SlugField(
+        max_length=80,
+        unique=True,
+        null=True,
+        blank=True,
+        help_text="URL용 고유 식별자. gu.name과 동일값 (예: 강남구)",
+    )
     area_m2 = models.DecimalField(
         max_digits=20, decimal_places=4, null=True, blank=True, help_text="면적 (m^2)"
     )
@@ -86,9 +93,16 @@ class Ldong(models.Model):
     """법정동 467개. RDS `ldong` 테이블."""
 
     ldong_code = models.CharField(
-        max_length=10, primary_key=True, help_text="법정동 코드 (RDS ldong.ldong_code)"
+        max_length=20, primary_key=True, help_text="법정동 코드 (RDS ldong.ldong_code)"
     )
-    name = models.CharField(max_length=50, help_text="법정동 이름")
+    name = models.CharField(max_length=100, help_text="법정동 이름")
+    slug = models.SlugField(
+        max_length=80,
+        unique=True,
+        null=True,
+        blank=True,
+        help_text="URL용 고유 식별자. 패턴: <gu_name>-<name> (예: 강남구-신사동)",
+    )
     gu = models.ForeignKey(
         Gu,
         on_delete=models.PROTECT,
@@ -126,13 +140,16 @@ class Ldong(models.Model):
 
 
 class GuAdjacency(models.Model):
-    """자치구 인접. RDS `adjacent_gu` 108행 (양방향 보존)."""
+    """자치구 인접. RDS `adjacent_gu` 108행 (양방향 보존).
+
+    sub-plan 4.5A — schema.dbml 정합: db_column gu_code_a/_b → gu1_code/gu2_code.
+    """
 
     gu_a = models.ForeignKey(
-        Gu, on_delete=models.CASCADE, related_name="adjacency_a", db_column="gu_code_a"
+        Gu, on_delete=models.CASCADE, related_name="adjacency_a", db_column="gu1_code"
     )
     gu_b = models.ForeignKey(
-        Gu, on_delete=models.CASCADE, related_name="adjacency_b", db_column="gu_code_b"
+        Gu, on_delete=models.CASCADE, related_name="adjacency_b", db_column="gu2_code"
     )
 
     class Meta:
@@ -151,13 +168,16 @@ class GuAdjacency(models.Model):
 
 
 class LdongAdjacency(models.Model):
-    """법정동 인접. RDS `adjacent_ldong` 1,948행 (양방향 보존)."""
+    """법정동 인접. RDS `adjacent_ldong` 1,948행 (양방향 보존).
+
+    sub-plan 4.5A — schema.dbml 정합: db_column ldong_code_a/_b → ldong1_code/ldong2_code.
+    """
 
     ldong_a = models.ForeignKey(
-        Ldong, on_delete=models.CASCADE, related_name="adjacency_a", db_column="ldong_code_a"
+        Ldong, on_delete=models.CASCADE, related_name="adjacency_a", db_column="ldong1_code"
     )
     ldong_b = models.ForeignKey(
-        Ldong, on_delete=models.CASCADE, related_name="adjacency_b", db_column="ldong_code_b"
+        Ldong, on_delete=models.CASCADE, related_name="adjacency_b", db_column="ldong2_code"
     )
 
     class Meta:
@@ -181,15 +201,13 @@ class AdongAdjacency(models.Model):
         "neighborhoods.Dong",
         on_delete=models.CASCADE,
         related_name="adjacency_a",
-        db_column="adong_code_a",
-        to_field="code",
+        db_column="adong1_code",
     )
     dong_b = models.ForeignKey(
         "neighborhoods.Dong",
         on_delete=models.CASCADE,
         related_name="adjacency_b",
-        db_column="adong_code_b",
-        to_field="code",
+        db_column="adong2_code",
     )
 
     class Meta:

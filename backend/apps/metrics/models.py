@@ -9,26 +9,42 @@ from django.db import models
 
 
 class Metric(models.Model):
-    """지표 메타. RDS `metric` 35행."""
+    """지표 메타. RDS `metric` 35행.
+
+    sub-plan 4.5A — schema.dbml 정합:
+    - metric_code varchar(30→50)
+    - name/unit/category NOT NULL (Char blank=False)
+    - source_item varchar(200→100)
+    - source_classification_code varchar(100→50)
+    - source_agency/source_table/cycle/generation_method/remarks NULL 허용
+    """
 
     metric_code = models.CharField(
-        max_length=30, primary_key=True, help_text="지표 코드 (RDS metric.metric_code)"
+        max_length=50, primary_key=True, help_text="지표 코드 (RDS metric.metric_code)"
     )
     name = models.CharField(max_length=100, help_text="지표 이름")
-    unit = models.CharField(max_length=30, blank=True, help_text="단위 (예: '명', '%', '원')")
-    category = models.CharField(max_length=50, blank=True, help_text="카테고리")
-    cycle = models.CharField(max_length=20, blank=True, help_text="갱신 주기")
+    unit = models.CharField(max_length=30, help_text="단위 (예: '명', '%', '원')")
+    category = models.CharField(max_length=50, help_text="카테고리")
+    cycle = models.CharField(
+        max_length=20, null=True, blank=True, help_text="갱신 주기 (A/M/D)"
+    )
     is_generated = models.BooleanField(
         default=False, help_text="생성 지표 여부 (raw가 아닌 파생)"
     )
-    generation_method = models.TextField(blank=True, help_text="생성 방법 설명")
-    source_agency = models.CharField(max_length=100, blank=True, help_text="출처 기관")
-    source_table = models.CharField(max_length=100, blank=True, help_text="출처 테이블/통계표")
-    source_item = models.CharField(max_length=200, blank=True, help_text="출처 항목명")
-    source_classification_code = models.CharField(
-        max_length=100, blank=True, help_text="출처 분류 코드"
+    generation_method = models.TextField(null=True, blank=True, help_text="생성 방법 설명")
+    source_agency = models.CharField(
+        max_length=100, null=True, blank=True, help_text="출처 기관"
     )
-    remarks = models.TextField(blank=True, help_text="비고")
+    source_table = models.CharField(
+        max_length=100, null=True, blank=True, help_text="출처 테이블/통계표"
+    )
+    source_item = models.CharField(
+        max_length=100, null=True, blank=True, help_text="출처 항목명"
+    )
+    source_classification_code = models.CharField(
+        max_length=50, null=True, blank=True, help_text="출처 분류 코드"
+    )
+    remarks = models.TextField(null=True, blank=True, help_text="비고")
 
     class Meta:
         db_table = "metric"
@@ -57,7 +73,7 @@ class GuMetric(models.Model):
         db_column="metric_code",
     )
     value = models.DecimalField(
-        max_digits=20, decimal_places=6, null=True, blank=True, help_text="지표 값"
+        max_digits=20, decimal_places=6, help_text="지표 값"
     )
 
     class Meta:
@@ -93,7 +109,7 @@ class SeoulMetric(models.Model):
         db_column="metric_code",
     )
     value = models.DecimalField(
-        max_digits=20, decimal_places=6, null=True, blank=True, help_text="지표 값"
+        max_digits=20, decimal_places=6, help_text="지표 값"
     )
 
     class Meta:

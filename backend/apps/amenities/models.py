@@ -97,16 +97,19 @@ class Amenity(models.Model):
 
 
 class BusinessCategory(models.Model):
-    """소상공인 카테고리. RDS `business_category` 247행."""
+    """소상공인 카테고리. RDS `business_category` 247행.
+
+    sub-plan 4.5A — schema.dbml 정합: 5개 컬럼 NOT NULL.
+    """
 
     subcategory_code = models.CharField(
         max_length=20, primary_key=True, help_text="소분류 코드 (RDS PK)"
     )
-    subcategory_name = models.CharField(max_length=100, blank=True, help_text="소분류명")
-    middle_category_code = models.CharField(max_length=20, blank=True, help_text="중분류 코드")
-    middle_category_name = models.CharField(max_length=100, blank=True, help_text="중분류명")
-    main_category_code = models.CharField(max_length=20, blank=True, help_text="대분류 코드")
-    main_category_name = models.CharField(max_length=100, blank=True, help_text="대분류명")
+    subcategory_name = models.CharField(max_length=100, help_text="소분류명")
+    middle_category_code = models.CharField(max_length=20, help_text="중분류 코드")
+    middle_category_name = models.CharField(max_length=100, help_text="중분류명")
+    main_category_code = models.CharField(max_length=20, help_text="대분류 코드")
+    main_category_name = models.CharField(max_length=100, help_text="대분류명")
 
     class Meta:
         db_table = "business_category"
@@ -123,16 +126,19 @@ class BusinessCategory(models.Model):
 
 
 class KsciCategory(models.Model):
-    """한국표준산업분류. RDS `ksci_category` 1,196행."""
+    """한국표준산업분류. RDS `ksci_category` 1,196행.
+
+    sub-plan 4.5A — schema.dbml 정합: 5개 컬럼 varchar(200→100) NOT NULL.
+    """
 
     ksci_code = models.CharField(
         max_length=20, primary_key=True, help_text="KSCI 코드 (RDS PK)"
     )
-    subcategory_name = models.CharField(max_length=200, blank=True, help_text="소분류명")
-    class_name = models.CharField(max_length=200, blank=True, help_text="세분류명")
-    subclass_name = models.CharField(max_length=200, blank=True, help_text="세세분류명")
-    middle_category_name = models.CharField(max_length=200, blank=True, help_text="중분류명")
-    main_category_name = models.CharField(max_length=200, blank=True, help_text="대분류명")
+    subcategory_name = models.CharField(max_length=100, help_text="소분류명")
+    class_name = models.CharField(max_length=100, help_text="세분류명")
+    subclass_name = models.CharField(max_length=100, help_text="세세분류명")
+    middle_category_name = models.CharField(max_length=100, help_text="중분류명")
+    main_category_name = models.CharField(max_length=100, help_text="대분류명")
 
     class Meta:
         db_table = "ksci_category"
