@@ -10,7 +10,6 @@
 import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
 import { CATEGORY_COLORS } from '@/lib/colors';
-import { computeAmenityPercentile } from '@/lib/percentile';
 import type { AmenityLevel, DongDetail, DongPark, DongParksResponse, DongScore } from '@/types/api';
 
 interface AmenitySectionProps {
@@ -69,12 +68,10 @@ function getAmenityInsight(amenities: DongDetail['amenities']): string | undefin
 
 export default function AmenitySection({
   amenities,
-  allDongs,
-  currentAmenityScore,
+  allDongs: _allDongs,
+  currentAmenityScore: _currentAmenityScore,
   parks,
 }: AmenitySectionProps) {
-  const percentile = computeAmenityPercentile(allDongs, '', currentAmenityScore);
-
   const dedupedParks = parks ? dedupeParks(parks.parks) : [];
   const sortedParks = [...dedupedParks].sort((a, b) => {
     const aa = a.area_m2 ?? -1;
@@ -134,9 +131,9 @@ export default function AmenitySection({
                       {a.density_per_km2.toFixed(1)}
                     </td>
                     <td className="py-2 px-3 border-b border-divider text-center">
-                      {percentile != null ? (
+                      {a.percentile != null ? (
                         <span className="text-[11px] text-text-muted tabular">
-                          TOP {percentile}%
+                          TOP {a.percentile}%
                         </span>
                       ) : (
                         <span className="text-[11px] text-text-subtle">-</span>
