@@ -1,11 +1,15 @@
-"""Transit admin (지하철역 / 버스 정류장 / 가까운 역 캐시)."""
+"""Subway admin (지하철역 / 가까운 역 캐시 / 지하철 혼잡도).
+
+sub-plan 4.5B 정합: SubwayStation PK varchar(20), adong/ldong FK 단일.
+external_id 제거, created_at/updated_at 제거.
+"""
 
 from django.contrib import admin
 
 from .models import (
-    BusCongestion,
-    BusStop,
     NearestSubway,
+    NearestSubwayAdong,
+    NearestSubwayLdong,
     SubwayCongestion,
     SubwayStation,
 )
@@ -13,20 +17,11 @@ from .models import (
 
 @admin.register(SubwayStation)
 class SubwayStationAdmin(admin.ModelAdmin):
-    list_display = ("name", "line", "external_id", "updated_at")
+    list_display = ("id", "name", "line", "adong", "ldong")
     list_filter = ("line",)
-    search_fields = ("name", "line", "external_id")
-    readonly_fields = ("geom", "created_at", "updated_at")
-    list_per_page = 50
-
-
-@admin.register(BusStop)
-class BusStopAdmin(admin.ModelAdmin):
-    list_display = ("name", "arsId", "dong", "updated_at")
-    list_filter = ("dong__gu",)
-    search_fields = ("name", "arsId", "dong__name", "dong__gu")
-    readonly_fields = ("geom", "created_at", "updated_at")
-    list_select_related = ("dong",)
+    search_fields = ("id", "name", "line")
+    readonly_fields = ("location",)
+    list_select_related = ("adong", "ldong")
     list_per_page = 50
 
 
@@ -36,6 +31,24 @@ class NearestSubwayAdmin(admin.ModelAdmin):
     list_filter = ("rank", "dong__gu")
     search_fields = ("dong__name", "dong__gu", "station__name")
     list_select_related = ("dong", "station")
+    list_per_page = 100
+
+
+@admin.register(NearestSubwayAdong)
+class NearestSubwayAdongAdmin(admin.ModelAdmin):
+    list_display = ("adong", "rank", "station_name", "distance_m")
+    list_filter = ("rank",)
+    search_fields = ("adong__name", "station_name")
+    list_select_related = ("adong",)
+    list_per_page = 100
+
+
+@admin.register(NearestSubwayLdong)
+class NearestSubwayLdongAdmin(admin.ModelAdmin):
+    list_display = ("ldong", "rank", "station_name", "distance_m")
+    list_filter = ("rank",)
+    search_fields = ("ldong__name", "station_name")
+    list_select_related = ("ldong",)
     list_per_page = 100
 
 

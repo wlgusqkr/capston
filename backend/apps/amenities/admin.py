@@ -1,8 +1,6 @@
-"""
-Amenity admin.
+"""Store / BusinessCategory / KsciCategory admin.
 
-PointField는 GISModelAdmin 위젯이 무겁기 때문에, list 화면은 평범한 ModelAdmin으로
-유지하고 geom은 readonly text로 표시한다.
+sub-plan 4.5B 정합: Store dong FK 제거 → adong FK 단일.
 """
 
 from django.contrib import admin
@@ -57,9 +55,9 @@ class KsciCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Store)
 class StoreAdmin(admin.ModelAdmin):
-    list_display = ("id", "name", "branch_name", "category", "dong", "ldong")
+    list_display = ("id", "name", "branch_name", "category", "adong", "ldong")
     list_filter = ("category__main_category_name",)
     search_fields = ("id", "name", "branch_name", "address")
-    list_select_related = ("category", "ksci", "dong", "ldong")
+    list_select_related = ("category", "ksci", "adong", "ldong")
     readonly_fields = ("location",)
     list_per_page = 50

@@ -1,17 +1,22 @@
 """
-Amenity + Store 모델 — SPEC 섹션 10 + RDS 통합 확장.
+Store + 카테고리 마스터 모델.
 
-기존 `Amenity`는 화면용 derived 테이블이라 그대로 유지.
-Phase 1에서 RDS의 raw 상가 테이블 3종을 1:1로 추가:
-- BusinessCategory : RDS `business_category` 247행 (소상공인 카테고리 마스터)
-- KsciCategory     : RDS `ksci_category` 1,196행 (한국표준산업분류 마스터)
-- Store            : RDS `store` 534,977행 (상가 raw)
+- BusinessCategory : 소상공인 카테고리 (sub-plan 4.5A 정합 완료, 본 sub-plan 영향 없음).
+- KsciCategory     : 한국표준산업분류 (sub-plan 4.5A 정합 완료).
+- Store            : 상가 raw. schema.dbml line 181~196 정합 (sub-plan 4.5B).
 
-기존 11개 카테고리 화이트리스트는 ETL 후 `Store.category_id IN (...)` 쿼리로 표현.
+Store schema.dbml 정합 (sub-plan 4.5B):
+- PK: varchar(64) → varchar(50). 'id varchar(50)'.
+- name: blank=True → NOT NULL (schema.dbml line 183).
+- branch_name: max_length 200 → 100 (schema.dbml line 184).
+- category_code: nullable → NOT NULL FK (schema.dbml line 185).
+- ksci_code: nullable 허용 (schema.dbml line 186, API 응답 결측 시 NULL).
+- adong/ldong: nullable → NOT NULL FK (schema.dbml line 187~188).
+- address: blank=True → NOT NULL, max_length 500 → 255 (schema.dbml line 189).
+- location: nullable → NOT NULL (schema.dbml line 190).
+- dong FK (neighborhoods.Dong) 제거 → adong FK (regions.Adong) 단일.
 
-데이터 출처(SPEC 14):
-- 'sba'        : 소상공인진흥공단 상가(상권)정보 (data.go.kr 15012005)
-- 'seoul_park' : 서울시 도시공원 정보 (data.seoul.go.kr)
+응답 dict key 보존 lock (lock 1) — Store는 frontend 직접 노출 없음 (Amenity로 통합).
 """
 
 from django.contrib.gis.db import models as gis_models
@@ -151,23 +156,24 @@ class KsciCategory(models.Model):
 
 
 class Store(models.Model):
-    """상가. RDS `store` 534,977행."""
+    """상가 raw. RDS `store`. schema.dbml line 181~196 정합 (sub-plan 4.5B)."""
 
+    # PK: schema.dbml 'id varchar(50)'.
     id = models.CharField(
-        max_length=64, primary_key=True, help_text="상가 ID (RDS store.id)"
+        max_length=50, primary_key=True, help_text="상가 ID (RDS store.id, varchar(50))"
     )
-    name = models.CharField(max_length=300, blank=True, help_text="상호명")
-    branch_name = models.CharField(max_length=200, blank=True, help_text="지점명")
+    name = models.CharField(max_length=100, help_text="상호명 (NOT NULL)")
+    branch_name = models.CharField(max_length=100, blank=True, help_text="지점명")
 
+    # 소상공인 카테고리 — schema.dbml NOT NULL.
     category = models.ForeignKey(
         BusinessCategory,
         on_delete=models.PROTECT,
-        null=True,
-        blank=True,
         related_name="stores",
         db_column="category_code",
-        help_text="소상공인 소분류 (RDS store.category_code → BusinessCategory.subcategory_code)",
+        help_text="소상공인 소분류 (schema.dbml NOT NULL).",
     )
+    # KSCI — schema.dbml nullable 허용 (API 응답 결측 시 NULL).
     ksci = models.ForeignKey(
         KsciCategory,
         on_delete=models.PROTECT,
@@ -175,32 +181,28 @@ class Store(models.Model):
         blank=True,
         related_name="stores",
         db_column="ksci_code",
-        help_text="한국표준산업분류 (RDS ksci_code)",
+        help_text="한국표준산업분류 (API 응답 결측 시 NULL 허용).",
     )
 
-    dong = models.ForeignKey(
-        "neighborhoods.Dong",
+    # 행정동/법정동 — schema.dbml NOT NULL. legacy dong FK(neighborhoods.Dong) 제거.
+    adong = models.ForeignKey(
+        "regions.Adong",
         on_delete=models.PROTECT,
-        null=True,
-        blank=True,
         related_name="stores",
         db_column="adong_code",
-        to_field="code",
-        help_text="행정동 (RDS adong_code → Dong.code)",
+        help_text="행정동 (schema.dbml NOT NULL).",
     )
     ldong = models.ForeignKey(
         "regions.Ldong",
         on_delete=models.PROTECT,
-        null=True,
-        blank=True,
         related_name="stores",
         db_column="ldong_code",
-        help_text="법정동 (RDS ldong_code)",
+        help_text="법정동 (schema.dbml NOT NULL).",
     )
 
-    address = models.CharField(max_length=500, blank=True, help_text="주소")
+    address = models.CharField(max_length=255, help_text="주소 (NOT NULL)")
     location = gis_models.PointField(
-        srid=4326, null=True, blank=True, help_text="상가 위치 (WGS84)"
+        srid=4326, help_text="상가 위치 (WGS84, schema.dbml NOT NULL)."
     )
 
     class Meta:
@@ -208,7 +210,7 @@ class Store(models.Model):
         verbose_name = "상가"
         verbose_name_plural = "상가"
         indexes = [
-            models.Index(fields=["dong"]),
+            models.Index(fields=["adong"]),
             models.Index(fields=["ldong"]),
             models.Index(fields=["category"]),
             models.Index(fields=["ksci"]),
@@ -216,5 +218,4 @@ class Store(models.Model):
         ]
 
     def __str__(self) -> str:
-        base = self.name or self.id
-        return f"{base} ({self.branch_name})" if self.branch_name else base
+        return f"{self.name} ({self.branch_name})" if self.branch_name else self.name

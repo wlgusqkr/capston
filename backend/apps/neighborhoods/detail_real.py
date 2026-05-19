@@ -289,9 +289,10 @@ def _real_transit(dong: Dong) -> dict:
             "walking_distance_m": 0,
         })
 
-    # 버스: stop_count = BusStop.dong=this. route_count는 노선정보 없으니 stop*3 추정.
-    # BusStop.dong 은 to_field='code' 라 dong__id join 필요.
-    stop_count = BusStop.objects.filter(dong__id=dong.id).count()
+    # 버스: stop_count = BusStop.adong=this. route_count는 노선정보 없으니 stop*3 추정.
+    # sub-plan 4.5B 정합: BusStop.dong FK 제거 → adong FK (regions.Adong, PK=adong_code).
+    # Dong.code (행정동 코드) == Adong.adong_code 이므로 adong_code로 직접 매칭.
+    stop_count = BusStop.objects.filter(adong_id=dong.code).count()
     route_count = stop_count * 3  # 단순 추정 (노선 데이터 부재)
 
     return {

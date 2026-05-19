@@ -1,18 +1,17 @@
 """
-Transit 모델 — SPEC 섹션 10 + RDS 통합 확장.
+Subway 모델 — schema.dbml line 216~242 정합 (sub-plan 4.5B).
 
-- SubwayStation : 서울시 지하철역 마스터 (~284개). RDS subway_station과 1:1.
-- BusStop       : 서울시 버스 정류장 (~12,000개), 행정동에 사전 매핑.
-- NearestSubway : 행정동별 가까운 지하철역 top-3 사전 계산 캐시.
-- SubwayCongestion : 지하철 혼잡도 (RDS subway_congestion 65,561행).
-- BusCongestion    : 버스 혼잡도 (RDS bus_congestion ~8M행).
+- SubwayStation : 서울시 지하철역 마스터. PK varchar(20) (schema.dbml).
+- SubwayCongestion : 지하철 혼잡도.
+- NearestSubway  : legacy (neighborhoods.Dong FK). lock D — 보존.
+- NearestSubwayAdong / NearestSubwayLdong : schema.dbml line 449~473 (sub-plan 2L 신설).
 
-Phase 1 (계획서 3.3):
-- SubwayStation: external_id를 unique로 변경 (RDS id), dong/ldong nullable FK 추가
-- BusStop: external_id 추가, ldong nullable FK 추가, dong을 nullable로 완화 (95% RDS adong_code 매핑, 5%는 좌표 보강)
-- SubwayCongestion / BusCongestion 신규
-
-데이터 출처: data.seoul.go.kr / 팀원 RDS dp_db.
+sub-plan 4.5B 정합:
+- SubwayStation PK: BigAutoField → CharField(max_length=20). 'id varchar(20)'.
+- SubwayStation: legacy `dong FK`(neighborhoods.Dong) 제거 → adong/ldong FK 정합.
+  schema.dbml ldong_code/adong_code NOT NULL.
+- SubwayCongestion: PK (station_id, day_type, direction, express_yn, time).
+  station FK는 새 varchar PK에 맞춰 db_column 'station_id' 유지.
 """
 
 from django.contrib.gis.db import models as gis_models
@@ -26,50 +25,43 @@ from django.db import models
 
 
 class SubwayStation(models.Model):
-    """지하철역 (RDS subway_station 마스터)."""
+    """지하철역 (RDS subway_station 마스터). schema.dbml line 216~226."""
 
-    name = models.CharField(max_length=50, help_text="역명 (예: '충무로')")
-    line = models.CharField(max_length=20, help_text="노선 (예: '3호선')")
-    external_id = models.CharField(
-        max_length=32,
-        null=True,
-        blank=True,
-        unique=True,
-        help_text="RDS subway_station.id (Phase 1: unique 제약).",
+    # PK: schema.dbml 'id varchar(20)'.
+    id = models.CharField(
+        max_length=20,
+        primary_key=True,
+        help_text="역 ID (RDS subway_station.id, varchar(20)).",
     )
-    dong = models.ForeignKey(
-        "neighborhoods.Dong",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+    name = models.CharField(max_length=100, help_text="역명 (예: '충무로')")
+    line = models.CharField(max_length=20, help_text="노선 (예: '3호선')")
+    # 행정동 FK (NOT NULL). schema.dbml line 221.
+    adong = models.ForeignKey(
+        "regions.Adong",
+        on_delete=models.PROTECT,
         related_name="subway_stations",
         db_column="adong_code",
-        to_field="code",
-        help_text="행정동 (Phase 1 신규, RDS adong_code).",
+        help_text="행정동 (schema.dbml NOT NULL).",
     )
+    # 법정동 FK (NOT NULL). schema.dbml line 220.
     ldong = models.ForeignKey(
         "regions.Ldong",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        on_delete=models.PROTECT,
         related_name="subway_stations",
         db_column="ldong_code",
-        help_text="법정동 (Phase 1 신규, RDS ldong_code).",
+        help_text="법정동 (schema.dbml NOT NULL, M-1 lock).",
     )
     geom = gis_models.PointField(srid=4326, help_text="역 위치 (WGS84). GiST 인덱스.")
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "subway_station"
         verbose_name = "지하철역"
         verbose_name_plural = "지하철역"
-        unique_together = [("name", "line")]
         indexes = [
-            GistIndex(fields=["geom"], name="subway_geom_gist_idx"),
-            models.Index(fields=["dong"]),
+            GistIndex(fields=["location"], name="subway_location_gist_idx"),
+            models.Index(fields=["adong"]),
             models.Index(fields=["ldong"]),
+            models.Index(fields=["name"]),
         ]
         ordering = ["line", "name"]
 
@@ -138,9 +130,10 @@ class BusStop(models.Model):
 
 
 class NearestSubway(models.Model):
-    """행정동별 가까운 지하철역 사전 계산 캐시.
+    """행정동별 가까운 지하철역 사전 계산 캐시 (legacy, neighborhoods.Dong FK).
 
-    rank 1~3, 동별 정확히 3행. 동 패널/상세에서 매번 PostGIS distance 계산하지 않도록.
+    sub-plan 4.5B lock D — 보존. SubwayStation PK가 varchar(20)로 바뀜에 따라
+    station FK도 varchar로 자동 cast된다 (Django ForeignKey).
     """
 
     dong = models.ForeignKey(
@@ -168,18 +161,94 @@ class NearestSubway(models.Model):
 
 
 # ---------------------------------------------------------------------------
-# 혼잡도 (Phase 1 신규)
+# NearestSubway v2 — Adong / Ldong (schema.dbml line 449~473)
+# ---------------------------------------------------------------------------
+
+
+class NearestSubwayAdong(models.Model):
+    """행정동별 가까운 지하철역 top-3 사전 계산 캐시 (Adong FK 기반)."""
+
+    adong = models.ForeignKey(
+        "regions.Adong",
+        on_delete=models.CASCADE,
+        db_column="adong_code",
+        related_name="nearest_subways",
+    )
+    rank = models.SmallIntegerField(help_text="1~3")
+    station_name = models.CharField(max_length=100, help_text="지하철역 이름 (비정규화)")
+    distance_m = models.FloatField(help_text="측지선 m (>= 0)")
+
+    class Meta:
+        db_table = "nearest_subway_adong"
+        verbose_name = "가까운 지하철역 (행정동, 사전계산)"
+        verbose_name_plural = "가까운 지하철역 (행정동, 사전계산)"
+        unique_together = [("adong", "rank")]
+        constraints = [
+            models.CheckConstraint(
+                check=Q(rank__gte=1, rank__lte=3),
+                name="ck_nearest_subway_adong_rank",
+            ),
+            models.CheckConstraint(
+                check=Q(distance_m__gte=0),
+                name="ck_nearest_subway_adong_distance",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["station_name"], name="ix_nearest_subway_adong_name"),
+        ]
+        ordering = ["adong", "rank"]
+
+    def __str__(self) -> str:
+        return f"{self.adong_id} #{self.rank} {self.station_name} ({self.distance_m:.0f}m)"
+
+
+class NearestSubwayLdong(models.Model):
+    """법정동별 가까운 지하철역 top-3 사전 계산 캐시 (Ldong FK 기반)."""
+
+    ldong = models.ForeignKey(
+        "regions.Ldong",
+        on_delete=models.CASCADE,
+        db_column="ldong_code",
+        related_name="nearest_subways",
+    )
+    rank = models.SmallIntegerField(help_text="1~3")
+    station_name = models.CharField(max_length=100, help_text="지하철역 이름 (비정규화)")
+    distance_m = models.FloatField(help_text="측지선 m (>= 0)")
+
+    class Meta:
+        db_table = "nearest_subway_ldong"
+        verbose_name = "가까운 지하철역 (법정동, 사전계산)"
+        verbose_name_plural = "가까운 지하철역 (법정동, 사전계산)"
+        unique_together = [("ldong", "rank")]
+        constraints = [
+            models.CheckConstraint(
+                check=Q(rank__gte=1, rank__lte=3),
+                name="ck_nearest_subway_ldong_rank",
+            ),
+            models.CheckConstraint(
+                check=Q(distance_m__gte=0),
+                name="ck_nearest_subway_ldong_distance",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["station_name"], name="ix_nearest_subway_ldong_name"),
+        ]
+        ordering = ["ldong", "rank"]
+
+    def __str__(self) -> str:
+        return f"{self.ldong_id} #{self.rank} {self.station_name} ({self.distance_m:.0f}m)"
+
+
+# ---------------------------------------------------------------------------
+# 혼잡도 — schema.dbml line 228~239
 # ---------------------------------------------------------------------------
 
 
 class SubwayCongestion(models.Model):
-    """지하철 혼잡도. RDS `subway_congestion` 65,561행.
+    """지하철 혼잡도.
 
-    PK = (station, day_type, direction, express_yn, time).
-    day_type/direction/express_yn은 한글값 그대로 보존:
-    - day_type: 평일 / 토요일 / 일요일
-    - direction: 상선 / 하선
-    - express_yn: 일반 / 급행
+    schema.dbml PK = (station_id, day_type, direction, express_yn, time).
+    day_type/direction/express_yn 한글값 보존.
     """
 
     station = models.ForeignKey(
@@ -188,12 +257,23 @@ class SubwayCongestion(models.Model):
         related_name="congestions",
         db_column="station_id",
     )
-    day_type = models.CharField(max_length=10, help_text="평일/토요일/일요일")
-    direction = models.CharField(max_length=10, help_text="상선/하선")
-    express_yn = models.CharField(max_length=10, help_text="일반/급행")
+    day_type = models.CharField(
+        max_length=20,
+        help_text="평일/토요일/일요일/휴일 (CHECK ck_subway_congestion_day_type 4종)",
+    )
+    direction = models.CharField(
+        max_length=20,
+        help_text="상선/하선/내선/외선 (CHECK ck_subway_congestion_direction 4종)",
+    )
+    express_yn = models.CharField(
+        max_length=10,
+        help_text="일반/급행 (CHECK ck_subway_congestion_express_yn 2종)",
+    )
     time = models.TimeField(help_text="시간대")
     congestion = models.DecimalField(
-        max_digits=10, decimal_places=4, help_text="혼잡도 (numeric NOT NULL)"
+        max_digits=12,
+        decimal_places=4,
+        help_text="혼잡도 % (서울교통공사 기준 100=정원, 0~200+ 가능)",
     )
 
     class Meta:

@@ -171,10 +171,10 @@ def _collect_bus(dong: Dong) -> dict:
     최근 BUS_RECENT_DAYS 일로 윈도우 제한 (BRIN(date) 활용).
     DOW: PostgreSQL EXTRACT(DOW FROM date) — 0=일, 6=토. 0/6 → 주말.
     """
-    # BusStop.dong 은 to_field='code' 라서 dong_id 컬럼에는 code 값이 들어간다.
-    # detail_real._real_transit 와 동일 패턴으로 dong__id 조인을 쓴다.
+    # sub-plan 4.5B 정합: BusStop은 dong FK 제거 → adong FK (regions.Adong) 단일.
+    # Dong.code (행정동 코드) == Adong.adong_code 이므로 adong_code로 직접 매칭.
     bus_stop_ids = list(
-        BusStop.objects.filter(dong__id=dong.id).values_list("id", flat=True)
+        BusStop.objects.filter(adong_id=dong.code).values_list("id", flat=True)
     )
     stop_count = len(bus_stop_ids)
     by_pattern: dict[str, list[dict]] = {k: _empty_hours() for k in BUS_PATTERN_KEYS}
