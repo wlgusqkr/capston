@@ -17,7 +17,7 @@
 
 성능 / 캐시
 ----------
-- SQL: rent_deal GROUP BY ldong__gu_code  + base filter 7건. (ldong, contract_date) +
+- SQL: rent_deal GROUP BY ldong__gu_id  + base filter 7건. (ldong, contract_date) +
   (housing_type, contract_date) 인덱스 활용.
 - Redis 5분 TTL. 캐시 키 = sha1(canonicalized filters) — default 와 같은 필드
   omit 으로 캐시 효율 ↑ (eng-review #10).
@@ -103,7 +103,7 @@ def _normalize_ratio(count: int, max_count: int) -> float:
 def compute_match_counts(filters: dict[str, Any], today: date) -> dict[str, Any]:
     """모든 동에 대해 필터 통과 거래수 + ratio. 캐시 hit 시 Redis 응답.
 
-    sub-plan 4.5D: RentDeal.dong FK 제거 → ldong__gu_code 단위 GROUP BY로 자치구별
+    sub-plan 4.5D: RentDeal.dong FK 제거 → ldong__gu_id 단위 GROUP BY로 자치구별
     거래수 집계 후, 같은 자치구의 모든 행정동에 동일 count 부여 (dong 단위 직접
     매핑 불가). 응답 dict key 보존 (count/ratio/has_data).
     """
@@ -113,12 +113,12 @@ def compute_match_counts(filters: dict[str, Any], today: date) -> dict[str, Any]
         return cached
 
     qs = apply_base_filters(RentDeal.objects.all(), filters, today)
-    # 자치구별 거래수 집계 (ldong__gu_code GROUP BY).
-    rows = qs.values("ldong__gu_code").annotate(cnt=Count("id"))
+    # 자치구별 거래수 집계 (ldong__gu_id GROUP BY; ldong.gu FK의 db_column='gu_code').
+    rows = qs.values("ldong__gu_id").annotate(cnt=Count("id"))
     counts_by_gu_code: dict[str, int] = {
-        r["ldong__gu_code"]: r["cnt"]
+        r["ldong__gu_id"]: r["cnt"]
         for r in rows
-        if r["ldong__gu_code"] is not None
+        if r["ldong__gu_id"] is not None
     }
 
     # 자치구 이름(Dong.gu) → 자치구 코드 매핑 (Dong은 Ldong/Adong 모델과 별도 legacy).
