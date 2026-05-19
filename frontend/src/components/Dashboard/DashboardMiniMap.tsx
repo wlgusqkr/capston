@@ -30,11 +30,11 @@ const VWORLD_KEY = import.meta.env.VITE_VWORLD_API_KEY as string | undefined;
 const TILE_URL =
   VWORLD_KEY && VWORLD_KEY.length > 0
     ? `https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_KEY}/Base/{z}/{y}/{x}.png`
-    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const TILE_ATTR =
   VWORLD_KEY && VWORLD_KEY.length > 0
     ? '&copy; <a href="https://www.vworld.kr/">VWorld</a>'
-    : '&copy; OpenStreetMap &copy; CARTO';
+    : '&copy; OpenStreetMap';
 
 interface LayerOption {
   key: HeatmapLayerKey;

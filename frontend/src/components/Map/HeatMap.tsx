@@ -33,12 +33,12 @@ const VWORLD_KEY = import.meta.env.VITE_VWORLD_API_KEY as string | undefined;
 const VWORLD_TILE_URL =
   VWORLD_KEY && VWORLD_KEY.length > 0
     ? `https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_KEY}/Base/{z}/{y}/{x}.png`
-    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
 const VWORLD_ATTRIBUTION =
   VWORLD_KEY && VWORLD_KEY.length > 0
     ? '&copy; <a href="https://www.vworld.kr/">VWorld</a> 국토교통부'
-    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>';
+    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
 /** 레이어 탭 — 색상의 기준이 되는 점수 축. score 모드 전용.
  *  Phase 5 cleanup 이후 호출측 (MainMap) 은 항상 'composite' 로 고정 사용 —
