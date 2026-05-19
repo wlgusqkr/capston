@@ -121,26 +121,27 @@ def compute_amenity_kernel(lat: float, lng: float) -> dict[str, dict[str, float]
 
     GROUP BY 한 쿼리로 처리. GiST 인덱스 + ST_DWithin geography 컷이라 충분히 빠름.
     """
-    # bbox 프리필터(`geom && ST_Expand`) 가 GiST 인덱스를 활용 → seq scan 회피.
+    # bbox 프리필터(`location && ST_Expand`) 가 GiST 인덱스를 활용 → seq scan 회피.
     # ST_DistanceSphere 는 geography cast 없이 좌표 거리(m)를 즉시 계산.
     # `ST_DWithin(geography, ...)` 는 amenity 의 GiST 가 geometry 라 효과 없음 (실측 8x 느림).
+    # sub-plan 4.5D: schema.dbml amenity 컬럼명은 `location` (구 `geom`에서 변경).
     sql = """
         SELECT
             category,
             SUM(EXP(
                 -POWER(
-                    ST_DistanceSphere(geom, ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326)),
+                    ST_DistanceSphere(location, ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326)),
                     2
                 ) / (2.0 * %(sigma_sq)s)
             )) AS score,
             COUNT(*) AS n
         FROM amenity
-        WHERE geom && ST_Expand(
+        WHERE location && ST_Expand(
                 ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326),
                 %(radius_deg)s
             )
           AND ST_DistanceSphere(
-                geom,
+                location,
                 ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326)
             ) <= %(radius)s
         GROUP BY category
@@ -200,23 +201,26 @@ def compute_transit(
     """
     # subway: KNN GiST(<->) + sphere distance 로 정확 미터 계산.
     # 527개 row 라 KNN <-> 가 즉시 반환 (≤10ms).
+    # sub-plan 4.5D: schema.dbml subway_station / bus_stop 컬럼명은 `location`.
     nearest_sql = """
         SELECT name, line,
-            ST_DistanceSphere(geom, ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326))
+            ST_DistanceSphere(location, ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326))
                 AS distance_m
         FROM subway_station
-        ORDER BY geom <-> ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326)
+        ORDER BY location <-> ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326)
         LIMIT 1
     """
     # bus: bbox 프리필터 + sphere 거리 (geography cast 회피).
+    # bus_stop.location은 NULL 허용 (schema.dbml line 249) → NOT NULL 필터.
     bus_sql = """
         SELECT COUNT(*) FROM bus_stop
-        WHERE geom && ST_Expand(
+        WHERE location IS NOT NULL
+          AND location && ST_Expand(
                 ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326),
                 %(radius_deg)s
             )
           AND ST_DistanceSphere(
-                geom, ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326)
+                location, ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326)
             ) <= %(radius)s
     """
     with connection.cursor() as cur:
@@ -292,22 +296,23 @@ def find_nearest_per_category(
     # 한 쿼리로 카테고리별 nearest 1개씩 — DISTINCT ON 패턴.
     # 1km bbox 프리필터 + 카테고리 필터 + 카테고리별 KNN <-> 정렬 → 첫 row 만.
     # 카테고리당 별도 쿼리(N=6) 보다 6배 적은 왕복.
+    # sub-plan 4.5D: schema.dbml amenity 컬럼명은 `location`.
     sql = """
         SELECT DISTINCT ON (category)
             category, name,
-            ST_DistanceSphere(geom, ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326))
+            ST_DistanceSphere(location, ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326))
                 AS distance_m
         FROM amenity
         WHERE category = ANY(%(cats)s)
-          AND geom && ST_Expand(
+          AND location && ST_Expand(
                 ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326),
                 %(radius_deg)s
             )
           AND ST_DistanceSphere(
-                geom, ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326)
+                location, ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326)
             ) <= %(radius)s
         ORDER BY category,
-                 geom <-> ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326)
+                 location <-> ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326)
     """
     with connection.cursor() as cur:
         cur.execute(

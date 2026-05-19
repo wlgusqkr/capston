@@ -32,6 +32,14 @@ GET /api/dongs/<slug>/explore?<filters>
 - 한 동 거래량 7.4M / 426 = 평균 17k. 6개월 자취만 ≈ 1~3k → 인덱스 충분.
 - KPI/type_avg/deposit_band/monthly_trend 는 SQL aggregation 한 방.
 - scatter 500건은 sample, deals 는 페이지네이션.
+
+sub-plan 4.5D 정합
+------------------
+- RentDeal.dong FK 제거 → ldong 기반.
+- explore는 단일 동(slug) scope. Dong.code(adong_code) → 같은 자치구의 ldong 거래로 매핑.
+- 컬럼명: deal_type → housing_type 한글 raw + serializer 영문 enum 매핑.
+  deal_date → contract_date.
+- 응답 dict key 보존 ('deal_type'/'date'/'build_year' 등 → frontend lock 1).
 """
 
 from __future__ import annotations
@@ -45,7 +53,11 @@ from django.db.models.query import QuerySet
 from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 
-from apps.realestate.models import RentDeal
+from apps.public_data.rent_deal.models import (
+    DEAL_TYPE_TO_HOUSING_TYPE,
+    HOUSING_TYPE_TO_DEAL_TYPE,
+    RentDeal,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -72,12 +84,12 @@ PERIOD_TO_DAYS: dict[str, int | None] = {
 }
 
 SORT_TO_ORDER: dict[str, tuple[str, ...]] = {
-    "date_desc": ("-deal_date", "-id"),
-    "date_asc": ("deal_date", "id"),
-    "deposit_desc": ("-deposit", "-deal_date"),
-    "deposit_asc": ("deposit", "-deal_date"),
-    "monthly_desc": ("-monthly_rent", "-deal_date"),
-    "monthly_asc": ("monthly_rent", "-deal_date"),
+    "date_desc": ("-contract_date", "-id"),
+    "date_asc": ("contract_date", "id"),
+    "deposit_desc": ("-deposit", "-contract_date"),
+    "deposit_asc": ("deposit", "-contract_date"),
+    "monthly_desc": ("-monthly_rent", "-contract_date"),
+    "monthly_asc": ("monthly_rent", "-contract_date"),
     # 환산월세는 SQL 표현식으로 정렬해야 해서 별도 처리 (apply_sort).
     "converted_desc": ("__converted_desc",),
     "converted_asc": ("__converted_asc",),
@@ -221,9 +233,18 @@ CONVERTED_EXPR: Expression = F("monthly_rent") + F("deposit") * Value(0.005)
 def apply_base_filters(
     qs: QuerySet[RentDeal], filters: dict[str, Any], today: date
 ) -> QuerySet[RentDeal]:
-    """dong 무관 base 필터만 적용 (match-counts 가 모든 동 GROUP BY 위해 사용)."""
+    """dong 무관 base 필터만 적용 (match-counts 가 모든 동 GROUP BY 위해 사용).
+
+    sub-plan 4.5D: deal_type 영문 enum → housing_type 한글 raw 변환. deal_date → contract_date.
+    """
+    # 응답 'deal_types' 영문 enum → DB 한글 housing_type 변환 (lock 1).
+    housing_types = [
+        DEAL_TYPE_TO_HOUSING_TYPE[k]
+        for k in filters["deal_types"]
+        if k in DEAL_TYPE_TO_HOUSING_TYPE
+    ]
     qs = qs.filter(
-        deal_type__in=filters["deal_types"],
+        housing_type__in=housing_types,
         deposit__gte=filters["deposit_min"],
         deposit__lte=filters["deposit_max"],
         monthly_rent__gte=filters["monthly_min"],
@@ -235,15 +256,19 @@ def apply_base_filters(
     if days is not None:
         from datetime import timedelta
 
-        qs = qs.filter(deal_date__gte=today - timedelta(days=days))
+        qs = qs.filter(contract_date__gte=today - timedelta(days=days))
     return qs
 
 
 def apply_filters(
-    qs: QuerySet[RentDeal], dong_id: int, filters: dict[str, Any], today: date
+    qs: QuerySet[RentDeal], gu_name: str, filters: dict[str, Any], today: date
 ) -> QuerySet[RentDeal]:
-    """단일 동 + base 필터. Explore 는 항상 dong scope."""
-    return apply_base_filters(qs.filter(dong_id=dong_id), filters, today)
+    """단일 동 + base 필터. Explore 는 항상 dong scope.
+
+    sub-plan 4.5D: RentDeal.dong FK 제거 → 같은 자치구(ldong__gu__name=dong.gu)
+    의 법정동 거래로 dong-단위 추적. dong_id 매개변수 → gu_name으로 변경.
+    """
+    return apply_base_filters(qs.filter(ldong__gu__name=gu_name), filters, today)
 
 
 def compute_kpi(qs: QuerySet[RentDeal]) -> dict[str, Any]:
@@ -266,12 +291,18 @@ def compute_kpi(qs: QuerySet[RentDeal]) -> dict[str, Any]:
 
 
 def compute_type_avg(qs: QuerySet[RentDeal], deal_types: tuple[str, ...]) -> list[dict]:
+    """sub-plan 4.5D: DB housing_type 한글 GROUP BY → 영문 enum 매핑."""
     rows = list(
-        qs.values("deal_type").annotate(
+        qs.values("housing_type").annotate(
             avg_converted=Avg(CONVERTED_EXPR), n=Count("id")
         )
     )
-    by_type = {r["deal_type"]: r for r in rows}
+    # DB 한글 → 영문 enum 매핑 (응답 key 'deal_type' 보존).
+    by_type: dict[str, dict] = {}
+    for r in rows:
+        en = HOUSING_TYPE_TO_DEAL_TYPE.get(r["housing_type"])
+        if en is not None:
+            by_type[en] = r
     out = []
     for key in deal_types:  # 사용자가 선택한 유형만, 선택 순서 유지
         rec = by_type.get(key)
@@ -297,15 +328,21 @@ def compute_type_avg(qs: QuerySet[RentDeal], deal_types: tuple[str, ...]) -> lis
 
 
 def compute_scatter(qs: QuerySet[RentDeal]) -> list[dict]:
-    rows = qs.order_by("-deal_date").values(
-        "deal_type", "area_m2", "monthly_rent", "deposit"
-    )[:SCATTER_SAMPLE_SIZE]
+    """sub-plan 4.5D: DB housing_type 한글 → 영문 enum 매핑. area_m2 NULL 제외."""
+    rows = (
+        qs.filter(area_m2__isnull=False)
+        .order_by("-contract_date")
+        .values("housing_type", "area_m2", "monthly_rent", "deposit")[:SCATTER_SAMPLE_SIZE]
+    )
     out = []
     for r in rows:
+        deal_type_en = HOUSING_TYPE_TO_DEAL_TYPE.get(r["housing_type"])
+        if deal_type_en is None:
+            continue
         converted = int(round(float(r["monthly_rent"]) + float(r["deposit"]) * 0.005))
         out.append(
             {
-                "deal_type": r["deal_type"],
+                "deal_type": deal_type_en,
                 "area_m2": round(float(r["area_m2"]), 1),
                 "converted_rent": converted,
             }
@@ -332,7 +369,10 @@ def compute_deposit_band(qs: QuerySet[RentDeal]) -> list[dict]:
 
 
 def compute_monthly_trend(qs: QuerySet[RentDeal], period: str, today: date) -> list[dict]:
-    """월별 deal_type 평균 monthly_rent. period 가 길면 그 만큼 월 라벨 생성."""
+    """월별 housing_type 평균 monthly_rent. period 가 길면 그 만큼 월 라벨 생성.
+
+    sub-plan 4.5D: contract_date / housing_type 한글. 응답 key는 영문 enum 보존.
+    """
     days = PERIOD_TO_DAYS[period] or 365  # all 일 때도 1년 그래프로 컷
     months = max(3, min(24, days // 30))
 
@@ -346,11 +386,17 @@ def compute_monthly_trend(qs: QuerySet[RentDeal], period: str, today: date) -> l
     seq.reverse()
 
     rows = list(
-        qs.extra(select={"month": "TO_CHAR(deal_date, 'YYYY-MM')"})
-        .values("month", "deal_type")
+        qs.extra(select={"month": "TO_CHAR(contract_date, 'YYYY-MM')"})
+        .values("month", "housing_type")
         .annotate(avg_rent=Avg("monthly_rent"), n=Count("id"))
     )
-    by_key = {(r["month"], r["deal_type"]): (r["avg_rent"], r["n"]) for r in rows}
+    # (month, deal_type 영문 enum) → (avg, n) — 응답 dict key 영문 보존.
+    by_key: dict[tuple[str, str], tuple[float | None, int]] = {}
+    for r in rows:
+        en = HOUSING_TYPE_TO_DEAL_TYPE.get(r["housing_type"])
+        if en is None:
+            continue
+        by_key[(r["month"], en)] = (r["avg_rent"], r["n"])
 
     out = []
     for d in seq:
@@ -375,9 +421,9 @@ def paginate_deals(
 
     sort_key = SORT_TO_ORDER[sort]
     if sort_key[0] == "__converted_desc":
-        qs = qs.annotate(__c=CONVERTED_EXPR).order_by("-__c", "-deal_date")
+        qs = qs.annotate(__c=CONVERTED_EXPR).order_by("-__c", "-contract_date")
     elif sort_key[0] == "__converted_asc":
-        qs = qs.annotate(__c=CONVERTED_EXPR).order_by("__c", "-deal_date")
+        qs = qs.annotate(__c=CONVERTED_EXPR).order_by("__c", "-contract_date")
     else:
         qs = qs.order_by(*sort_key)
 
@@ -387,32 +433,37 @@ def paginate_deals(
     end = start + page_size
 
     items = []
+    # sub-plan 4.5D: contract_date / construction_year 컬럼명 정합.
+    # 응답 dict 'date'/'build_year'/'deal_type' key는 보존 (frontend lock 1).
     for r in qs.values(
-        "deal_date",
+        "contract_date",
         "housing_type",
-        "deal_type",
         "area_m2",
         "deposit",
         "monthly_rent",
         "house_name",
-        "build_year",
+        "construction_year",
         "floor",
     )[start:end]:
+        deal_type_en = HOUSING_TYPE_TO_DEAL_TYPE.get(r["housing_type"], "")
         converted = int(
             round(float(r["monthly_rent"]) + float(r["deposit"]) * 0.005)
         )
+        area_val = (
+            round(float(r["area_m2"]), 1) if r["area_m2"] is not None else None
+        )
         items.append(
             {
-                "date": r["deal_date"].isoformat(),
-                "type": r["housing_type"]
-                or DEAL_TYPE_LABEL.get(r["deal_type"], r["deal_type"]),
-                "deal_type": r["deal_type"],
-                "area_m2": round(float(r["area_m2"]), 1),
+                "date": r["contract_date"].isoformat(),
+                "type": r["housing_type"],
+                "deal_type": deal_type_en,
+                "area_m2": area_val,
                 "deposit": int(r["deposit"]),
                 "monthly_rent": int(r["monthly_rent"]),
                 "converted_rent": converted,
                 "house_name": (r["house_name"] or "")[:50],
-                "build_year": r["build_year"],
+                # 응답 key 'build_year' 보존 (frontend lock 1).
+                "build_year": r["construction_year"],
                 "floor": r["floor"],
             }
         )
@@ -431,9 +482,10 @@ def paginate_deals(
 # ---------------------------------------------------------------------------
 
 def build_explore_response(dong, request: Request, today: date) -> dict[str, Any]:
+    """sub-plan 4.5D: dong_id 매칭 불가 → 같은 자치구의 ldong 거래로 추적 (dong.gu)."""
     filters = parse_explore_filters(request)
 
-    qs = apply_filters(RentDeal.objects.all(), dong.id, filters, today)
+    qs = apply_filters(RentDeal.objects.all(), dong.gu, filters, today)
 
     return {
         "dong": {"slug": dong.slug, "code": dong.code, "name": dong.name, "gu": dong.gu},

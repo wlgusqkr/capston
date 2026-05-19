@@ -6,6 +6,17 @@ BusStop 실 쿼리로 교체. reviews 와 similar_dongs 는 데이터 부재/점
 detail_dummy 의 helper 를 그대로 재사용.
 
 응답 형식은 detail_dummy.build_dummy_detail 과 100% 동일 (DongDetail 타입 호환).
+
+sub-plan 4.5D 정합:
+- RentDeal.dong FK 제거 → ldong FK 기반. dong_id=dong.id 직접 매칭 불가.
+  → ldong__gu__name=dong.gu로 같은 자치구의 법정동 거래 집계.
+- 컬럼명: deal_type → housing_type 한글 raw + serializer 영문 enum 매핑.
+  deal_date → contract_date.
+- NearestSubway: legacy(neighborhoods.Dong FK) → NearestSubwayAdong(regions.Adong FK).
+  dong.code(adong_code) 매칭.
+- BusStop.adong FK는 sub-plan 4.5B에서 정합 완료 (adong_id=dong.code).
+
+응답 dict key 보존 (frontend lock 1).
 """
 
 from __future__ import annotations
@@ -16,9 +27,13 @@ from datetime import date, timedelta
 from django.db.models import Avg, Count, F, Min, Value
 
 from apps.service.amenities.models import Amenity, AmenityAdong
-from apps.public_data.rent_deal.models import RentDeal
+from apps.public_data.rent_deal.models import (
+    DEAL_TYPE_TO_HOUSING_TYPE,
+    HOUSING_TYPE_TO_DEAL_TYPE,
+    RentDeal,
+)
 from apps.public_data.bus.models import BusStop
-from apps.public_data.subway.models import NearestSubway
+from apps.public_data.subway.models import NearestSubwayAdong
 
 from .detail_dummy import (
     SEOUL_AVG_BASELINE,
@@ -44,6 +59,10 @@ TREND_KEYS = ("villa", "dagagu", "danok", "officetel")
 # 자취 시장 필터 — 아파트는 매매성/가족 시장이라 자취 시세 감 잡기엔 노이즈.
 # deposit 5억(=50000만원) 초과는 매매성 임대로 보고 제외.
 STUDIO_DEAL_TYPES = ("villa", "dagagu", "danok", "officetel")
+# sub-plan 4.5D: DB는 housing_type 한글. 응답 'deal_type'은 영문 enum 보존.
+STUDIO_HOUSING_TYPES = tuple(
+    DEAL_TYPE_TO_HOUSING_TYPE[k] for k in STUDIO_DEAL_TYPES
+)
 STUDIO_DEPOSIT_CAP = 50000  # 만원 단위 (= 5억)
 
 # 유형 라벨 매핑 (영문 enum → 한글). 차트 라벨에 사용.
@@ -70,8 +89,18 @@ AMENITY_DISPLAY: list[tuple[str, list[str], float]] = [
 
 
 def _real_real_estate(dong: Dong, today: date) -> dict:
-    """SPEC 6.3 섹션 2 — 부동산 시세 (RentDeal SQL aggregation)."""
-    # ---- 1) 최근 6개월 monthly_trend (deal_type별 평균 monthly_rent) ----
+    """SPEC 6.3 섹션 2 — 부동산 시세 (RentDeal SQL aggregation).
+
+    sub-plan 4.5D 정합:
+    - RentDeal.dong FK 제거 → ldong 기반. Dong은 행정동, ldong은 법정동.
+      직접 1:1 매핑 부재 → 같은 자치구(ldong__gu__name=dong.gu)의 법정동 거래 집계.
+    - housing_type 한글 → DEAL_TYPE_LABEL 영문 enum 매핑(응답 dict key 'deal_type' 보존).
+    - deal_date → contract_date 컬럼명 정합.
+    """
+    # 같은 자치구의 ldong 거래로 dong-단위 추적 (sub-plan 4.5D).
+    base_qs = RentDeal.objects.filter(ldong__gu__name=dong.gu)
+
+    # ---- 1) 최근 6개월 monthly_trend (housing_type별 평균 monthly_rent) ----
     # 6개월 전 1일 기준
     start_year, start_month = today.year, today.month - 5
     while start_month <= 0:
@@ -79,18 +108,21 @@ def _real_real_estate(dong: Dong, today: date) -> dict:
         start_year -= 1
     start = date(start_year, start_month, 1)
 
-    # SQL: GROUP BY 월 + deal_type, 거래 3건 미만은 None
-    # PG: TO_CHAR(deal_date, 'YYYY-MM')
+    # SQL: GROUP BY 월 + housing_type, 거래 3건 미만은 None
+    # PG: TO_CHAR(contract_date, 'YYYY-MM')
     rows = list(
-        RentDeal.objects.filter(dong_id=dong.id, deal_date__gte=start)
-        .extra(select={"month": "TO_CHAR(deal_date, 'YYYY-MM')"})
-        .values("month", "deal_type")
+        base_qs.filter(contract_date__gte=start)
+        .extra(select={"month": "TO_CHAR(contract_date, 'YYYY-MM')"})
+        .values("month", "housing_type")
         .annotate(avg_rent=Avg("monthly_rent"), n=Count("id"))
     )
-    # (month, deal_type) → (avg, n)
+    # (month, deal_type 영문) → (avg, n). DB는 한글 housing_type → 영문 enum 매핑.
     by_key: dict[tuple[str, str], tuple[float, int]] = {}
     for r in rows:
-        by_key[(r["month"], r["deal_type"])] = (float(r["avg_rent"] or 0), r["n"])
+        deal_type_en = HOUSING_TYPE_TO_DEAL_TYPE.get(r["housing_type"])
+        if deal_type_en is None:
+            continue
+        by_key[(r["month"], deal_type_en)] = (float(r["avg_rent"] or 0), r["n"])
 
     # 6개월 month 라벨 만들기 (오래된 → 최신)
     months: list[str] = []
@@ -129,9 +161,9 @@ def _real_real_estate(dong: Dong, today: date) -> dict:
     ]
     deposit_band_avg = []
     for label, lo, hi in BAND_RANGES:
-        agg = RentDeal.objects.filter(
-            dong_id=dong.id, deposit__gte=lo, deposit__lt=hi
-        ).aggregate(avg=Avg("monthly_rent"), n=Count("id"))
+        agg = base_qs.filter(deposit__gte=lo, deposit__lt=hi).aggregate(
+            avg=Avg("monthly_rent"), n=Count("id")
+        )
         if agg["n"] and agg["n"] >= 5 and agg["avg"] is not None:
             avg = max(5.0, _round1(float(agg["avg"])))
         else:
@@ -139,12 +171,11 @@ def _real_real_estate(dong: Dong, today: date) -> dict:
         deposit_band_avg.append({"band": label, "avg_monthly_rent": avg})
 
     # ---- 3) 자취 거래 베이스 쿼리셋 (apt 제외, 보증금 5억 이하, 최근 6개월) ----
-    studio_qs = RentDeal.objects.filter(
-        dong_id=dong.id,
-        deal_type__in=STUDIO_DEAL_TYPES,
+    studio_qs = base_qs.filter(
+        housing_type__in=STUDIO_HOUSING_TYPES,
         deposit__lte=STUDIO_DEPOSIT_CAP,
     )
-    studio_recent_qs = studio_qs.filter(deal_date__gte=start)
+    studio_recent_qs = studio_qs.filter(contract_date__gte=start)
 
     # ---- 3a) KPI 4종 (자취 시장 한눈에) ----
     converted_expr = F("monthly_rent") + F("deposit") * Value(0.005)
@@ -163,10 +194,15 @@ def _real_real_estate(dong: Dong, today: date) -> dict:
 
     # ---- 3b) 유형별 평균 환산월세 (가로 막대 차트용) ----
     type_avg_rows = list(
-        studio_recent_qs.values("deal_type")
+        studio_recent_qs.values("housing_type")
         .annotate(avg_converted=Avg(converted_expr), n=Count("id"))
     )
-    type_avg_map = {r["deal_type"]: r for r in type_avg_rows}
+    # DB 한글 housing_type → 영문 enum 매핑 (응답 dict key 'deal_type' 보존).
+    type_avg_map: dict[str, dict] = {}
+    for r in type_avg_rows:
+        en = HOUSING_TYPE_TO_DEAL_TYPE.get(r["housing_type"])
+        if en is not None:
+            type_avg_map[en] = r
     type_avg = []
     for key in STUDIO_DEAL_TYPES:
         rec = type_avg_map.get(key)
@@ -188,32 +224,40 @@ def _real_real_estate(dong: Dong, today: date) -> dict:
 
     # ---- 3c) 면적-환산월세 산점도 (최근 6개월 자취 거래 sample 200건) ----
     # ORDER BY '?' 는 비싸서 최근 200건으로 단순화. 표본이 시점 편향되지만
-    # 6개월 윈도우라 시즌성 영향 작음.
+    # 6개월 윈도우라 시즌성 영향 작음. area_m2 NULL 제외 (응답 dict 정합).
     scatter_rows = (
-        studio_recent_qs.order_by("-deal_date")
-        .values("deal_type", "area_m2", "monthly_rent", "deposit")[:200]
+        studio_recent_qs.filter(area_m2__isnull=False)
+        .order_by("-contract_date")
+        .values("housing_type", "area_m2", "monthly_rent", "deposit")[:200]
     )
     scatter = []
     for r in scatter_rows:
+        deal_type_en = HOUSING_TYPE_TO_DEAL_TYPE.get(r["housing_type"])
+        if deal_type_en is None:
+            continue
         converted = int(round(float(r["monthly_rent"]) + float(r["deposit"]) * 0.005))
         scatter.append({
-            "deal_type": r["deal_type"],
+            "deal_type": deal_type_en,
             "area_m2": _round1(float(r["area_m2"])),
             "converted_rent": converted,
         })
 
     # ---- 3d) 최근 자취 거래 5건 (apt 제외) ----
     recent_qs = (
-        studio_qs.order_by("-deal_date", "-id")
-        .values("deal_date", "housing_type", "deal_type", "area_m2", "deposit", "monthly_rent")[:5]
+        studio_qs.order_by("-contract_date", "-id")
+        .values("contract_date", "housing_type", "area_m2", "deposit", "monthly_rent")[:5]
     )
     recent_deals = []
     for r in recent_qs:
-        type_label = r["housing_type"] or DEAL_TYPE_LABEL.get(r["deal_type"], r["deal_type"])
+        # type label은 한글 housing_type 그대로(응답 dict 'type' 보존).
+        type_label = r["housing_type"]
+        area_val = (
+            _round1(float(r["area_m2"])) if r["area_m2"] is not None else None
+        )
         recent_deals.append({
-            "date": r["deal_date"].isoformat(),
+            "date": r["contract_date"].isoformat(),
             "type": type_label,
-            "area_m2": _round1(float(r["area_m2"])),
+            "area_m2": area_val,
             "deposit": int(r["deposit"]),
             "monthly_rent": int(r["monthly_rent"]),
         })
@@ -261,21 +305,37 @@ def _real_amenities(dong: Dong) -> list[dict]:
 
 
 def _real_transit(dong: Dong) -> dict:
-    """SPEC 6.3 섹션 4 — 가까운 역 top-3 + 버스 정류장 카운트."""
-    # NearestSubway 사전계산 (compute_nearest_subway.py)
+    """SPEC 6.3 섹션 4 — 가까운 역 top-3 + 버스 정류장 카운트.
+
+    sub-plan 4.5D 정합:
+    - legacy NearestSubway(neighborhoods.Dong FK) → NearestSubwayAdong(regions.Adong FK).
+    - Dong.code(행정동 10자리) = Adong.adong_code, 직접 매칭.
+    - station FK 제거 → station_name 비정규화 컬럼. line은 SubwayStation에서 lookup.
+    """
+    from apps.public_data.subway.models import SubwayStation  # noqa: WPS433
+
+    # NearestSubwayAdong 사전계산 (compute_nearest_subway.py).
     rows = list(
-        NearestSubway.objects.filter(dong_id=dong.id)
-        .order_by("rank")
-        .select_related("station")[:3]
+        NearestSubwayAdong.objects.filter(adong_id=dong.code)
+        .order_by("rank")[:3]
     )
+    # 한꺼번에 line lookup (같은 name 환승역은 첫 line만 부여, frontend가 mergeStationsByName).
+    names = [r.station_name for r in rows]
+    line_by_name: dict[str, str] = {}
+    if names:
+        for s_name, s_line in SubwayStation.objects.filter(name__in=names).values_list(
+            "name", "line"
+        ):
+            # 첫 매칭 line만 보존 (환승역은 frontend가 mergeStationsByName으로 통합).
+            line_by_name.setdefault(s_name, s_line)
     nearest_stations = []
     for ns in rows:
         # 도보 시간: 직선거리 / 70m/min (1.2배 우회 + 4.8km/h ≈ dummy 패턴 유지)
         walking_min = max(1, int(round(ns.distance_m / 70)))
         nearest_stations.append({
             "rank": ns.rank,
-            "name": ns.station.name,
-            "line": ns.station.line,
+            "name": ns.station_name,
+            "line": line_by_name.get(ns.station_name, "-"),
             "walking_min": walking_min,
             "walking_distance_m": int(round(ns.distance_m)),
         })

@@ -17,10 +17,17 @@
 
 성능 / 캐시
 ----------
-- SQL: rent_deal GROUP BY dong_id  + base filter 7건. (dong_id, deal_date) +
-  (deal_type, deal_date) 인덱스 활용.
+- SQL: rent_deal GROUP BY ldong__gu_code  + base filter 7건. (ldong, contract_date) +
+  (housing_type, contract_date) 인덱스 활용.
 - Redis 5분 TTL. 캐시 키 = sha1(canonicalized filters) — default 와 같은 필드
   omit 으로 캐시 효율 ↑ (eng-review #10).
+
+sub-plan 4.5D 정합:
+- RentDeal.dong FK 제거 → ldong/gu 단위 집계.
+- match-counts는 모든 동(slug) 응답 필수 → 같은 자치구의 ldong 거래수를 dong들에
+  동일하게 부여(자치구 내 dong은 동일 count, ratio 동일).
+- match-detail은 단일 dong → dong.gu 기반.
+- 컬럼명: deal_type → housing_type, deal_date → contract_date.
 
 ratio 정규화 (eng-review #3)
 ---------------------------
@@ -46,7 +53,10 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.realestate.models import RentDeal
+from apps.public_data.rent_deal.models import (
+    DEAL_TYPE_TO_HOUSING_TYPE,
+    RentDeal,
+)
 
 from .explore import (
     PERIOD_TO_DAYS,
@@ -91,27 +101,41 @@ def _normalize_ratio(count: int, max_count: int) -> float:
 
 
 def compute_match_counts(filters: dict[str, Any], today: date) -> dict[str, Any]:
-    """모든 동에 대해 필터 통과 거래수 + ratio. 캐시 hit 시 Redis 응답."""
+    """모든 동에 대해 필터 통과 거래수 + ratio. 캐시 hit 시 Redis 응답.
+
+    sub-plan 4.5D: RentDeal.dong FK 제거 → ldong__gu_code 단위 GROUP BY로 자치구별
+    거래수 집계 후, 같은 자치구의 모든 행정동에 동일 count 부여 (dong 단위 직접
+    매핑 불가). 응답 dict key 보존 (count/ratio/has_data).
+    """
     cache_key = f"match-counts:{canonicalize_filters(filters)}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
 
     qs = apply_base_filters(RentDeal.objects.all(), filters, today)
-    rows = (
-        qs.values("dong_id")
-        .annotate(cnt=Count("id"))
-    )
-    counts: dict[int, int] = {r["dong_id"]: r["cnt"] for r in rows if r["dong_id"] is not None}
+    # 자치구별 거래수 집계 (ldong__gu_code GROUP BY).
+    rows = qs.values("ldong__gu_code").annotate(cnt=Count("id"))
+    counts_by_gu_code: dict[str, int] = {
+        r["ldong__gu_code"]: r["cnt"]
+        for r in rows
+        if r["ldong__gu_code"] is not None
+    }
 
-    # 모든 동 (count 0 도 응답에 포함 — has_data 표시용)
-    all_dongs = list(Dong.objects.values("id", "code", "slug"))
-    max_count = max(counts.values()) if counts else 0
-    total_matched = sum(counts.values())
+    # 자치구 이름(Dong.gu) → 자치구 코드 매핑 (Dong은 Ldong/Adong 모델과 별도 legacy).
+    # Ldong.gu = regions.Gu(gu_code PK). Dong.gu는 한글 이름 → Gu.name → gu_code 매핑.
+    from apps.public_data.regions.models import Gu  # noqa: WPS433 (지역 import)
+
+    gu_name_to_code = {g.name: g.gu_code for g in Gu.objects.only("name", "gu_code")}
+
+    # 모든 동 (count 0 도 응답에 포함 — has_data 표시용).
+    all_dongs = list(Dong.objects.values("id", "code", "slug", "gu"))
+    max_count = max(counts_by_gu_code.values()) if counts_by_gu_code else 0
+    total_matched = sum(counts_by_gu_code.values())
 
     dong_items: list[dict[str, Any]] = []
     for d in all_dongs:
-        cnt = counts.get(d["id"], 0)
+        gu_code = gu_name_to_code.get(d["gu"])
+        cnt = counts_by_gu_code.get(gu_code, 0) if gu_code else 0
         dong_items.append(
             {
                 "code": d["code"],
@@ -151,10 +175,13 @@ class DongMatchCountsView(APIView):
 
 
 def compute_match_detail(dong: Dong, filters: dict[str, Any], today: date) -> dict[str, Any]:
-    """단일 동의 매칭 통계 + 분모(같은 동·기간·유형 set 전체).
+    """단일 동의 매칭 통계 + 분모(같은 자치구·기간·유형 set 전체).
 
-    매칭률 = (필터 통과 거래) / (같은 동·같은 기간·deal_types set 전체) * 100.
+    매칭률 = (필터 통과 거래) / (같은 자치구·같은 기간·deal_types set 전체) * 100.
     eng-review #7 정의.
+
+    sub-plan 4.5D: RentDeal.dong FK 제거 → 같은 자치구(ldong__gu__name=dong.gu)
+    의 법정동 거래로 dong-단위 추적. 컬럼명 housing_type/contract_date 정합.
     """
     cache_key = (
         f"match-detail:{dong.id}:{canonicalize_filters(filters)}"
@@ -165,7 +192,7 @@ def compute_match_detail(dong: Dong, filters: dict[str, Any], today: date) -> di
 
     # 1) 필터 통과 거래 (이 동 + base filter)
     matched_qs = apply_base_filters(
-        RentDeal.objects.filter(dong_id=dong.id), filters, today
+        RentDeal.objects.filter(ldong__gu__name=dong.gu), filters, today
     )
     matched_agg = matched_qs.aggregate(
         n=Count("id"),
@@ -173,14 +200,20 @@ def compute_match_detail(dong: Dong, filters: dict[str, Any], today: date) -> di
         avg_deposit=Avg("deposit"),
     )
 
-    # 2) 분모 — 같은 동/기간/deal_types set 전체 (deposit/monthly/area 무관)
+    # 2) 분모 — 같은 자치구/기간/deal_types set 전체 (deposit/monthly/area 무관).
+    # 응답 영문 enum → DB 한글 housing_type 변환 (lock 1).
+    housing_types = [
+        DEAL_TYPE_TO_HOUSING_TYPE[k]
+        for k in filters["deal_types"]
+        if k in DEAL_TYPE_TO_HOUSING_TYPE
+    ]
     period_qs = RentDeal.objects.filter(
-        dong_id=dong.id, deal_type__in=filters["deal_types"]
+        ldong__gu__name=dong.gu, housing_type__in=housing_types
     )
     days = PERIOD_TO_DAYS[filters["period"]]
     if days is not None:
         from datetime import timedelta
-        period_qs = period_qs.filter(deal_date__gte=today - timedelta(days=days))
+        period_qs = period_qs.filter(contract_date__gte=today - timedelta(days=days))
     period_total = period_qs.count()
 
     count = int(matched_agg["n"] or 0)

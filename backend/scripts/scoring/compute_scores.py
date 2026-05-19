@@ -43,11 +43,12 @@ setup()
 
 from django.db.models import Avg, Count, F, Value  # noqa: E402
 
-from apps.amenities.models import Amenity  # noqa: E402
-from apps.neighborhoods.models import Dong  # noqa: E402
-from apps.realestate.models import RentDeal  # noqa: E402
-from apps.realestate.utils import convert_to_monthly  # noqa: E402
-from apps.transit.models import BusStop, NearestSubway  # noqa: E402
+from apps.service.amenities.models import Amenity, AmenityAdong  # noqa: E402
+from apps.service.neighborhoods.models import Dong  # noqa: E402
+from apps.public_data.rent_deal.models import RentDeal  # noqa: E402
+from apps.public_data.rent_deal.utils import convert_to_monthly  # noqa: E402
+from apps.public_data.bus.models import BusStop  # noqa: E402
+from apps.public_data.subway.models import NearestSubwayAdong  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -145,23 +146,27 @@ def _percentile_scores(values: List[Optional[float]], reverse: bool = False) -> 
 # Step 1: 동별 raw metric 수집
 # ---------------------------------------------------------------------------
 def _collect_rent_metrics(dongs: List[Dong]) -> Dict[int, Optional[float]]:
-    """동별 평균 환산월세. <3건은 None (구 평균 → 서울 중위 fallback 후 처리).
+    """자치구별 평균 환산월세. dong.gu 단위로 group_by 후 dong에 부여.
 
-    7.4M RentDeal 행을 메모리에 적재하지 않고 SQL aggregation 으로 동별 평균을 계산.
+    sub-plan 4.5D: RentDeal.dong FK 제거 → ldong__gu_code 기반 자치구 평균.
+    같은 자치구의 모든 dong은 동일 자치구 평균을 부여 (행정동↔법정동 N:M 매핑 부재).
+    <3건은 None (구 평균 → 서울 중위 fallback 후 처리).
+
+    7.4M RentDeal 행을 메모리에 적재하지 않고 SQL aggregation 으로 자치구별 평균 계산.
     환산식: monthly_rent + deposit * 0.005 (utils.convert_to_monthly 와 동일 계수).
     """
     qs = (
-        RentDeal.objects.values("dong_id")
+        RentDeal.objects.values("ldong__gu__name")
         .annotate(
             avg_rent=Avg(F("monthly_rent") + F("deposit") * Value(0.005)),
             n=Count("id"),
         )
     )
-    agg = {row["dong_id"]: (row["avg_rent"], row["n"]) for row in qs}
+    agg = {row["ldong__gu__name"]: (row["avg_rent"], row["n"]) for row in qs}
 
     result: Dict[int, Optional[float]] = {}
     for dong in dongs:
-        rec = agg.get(dong.id)
+        rec = agg.get(dong.gu)
         if rec is None or rec[1] < 3:
             result[dong.id] = None
         else:
@@ -201,23 +206,23 @@ def _apply_rent_fallback(
 
 
 def _collect_amenity_metrics(dongs: List[Dong]) -> Dict[int, float]:
-    """동별 amenity 가중 점수 — 11 카테고리별 카운트 → log1p → AMENITY_WEIGHTS 가중합.
+    """행정동별 amenity 가중 점수 — 카테고리별 카운트 → log1p → AMENITY_WEIGHTS 가중합.
 
-    Amenity 테이블은 ETL 18_amenity_from_store.py 로 Store(category_code 매핑) +
-    Park 에서 derived 적재됨 (~187k row). Amenity.dong 은 default FK (Dong.id) 라
-    그대로 dong_id 로 GROUP BY.
+    sub-plan 4.5D: Amenity.dong FK 제거 → AmenityAdong N:M. adong_code(=Dong.code) GROUP BY.
     """
-    counts: Dict[int, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    # adong_code별 카테고리 카운트.
+    counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
     for row in (
-        Amenity.objects.values("dong_id", "category")
-        .annotate(n=Count("id"))
+        AmenityAdong.objects.values("adong_id", "amenity__category")
+        .annotate(n=Count("amenity_id"))
         .iterator()
     ):
-        counts[row["dong_id"]][row["category"]] = row["n"]
+        counts[row["adong_id"]][row["amenity__category"]] = row["n"]
 
     result: Dict[int, float] = {}
     for dong in dongs:
-        cdict = counts.get(dong.id, {})
+        # Dong.code(10자리 행정동) == Adong.adong_code.
+        cdict = counts.get(dong.code, {})
         score = 0.0
         for cat, weight in AMENITY_WEIGHTS.items():
             cnt = cdict.get(cat, 0)
@@ -227,29 +232,35 @@ def _collect_amenity_metrics(dongs: List[Dong]) -> Dict[int, float]:
 
 
 def _collect_transit_metrics(dongs: List[Dong]) -> Dict[int, float]:
-    """동별 transit raw metric (지하철 가중 + 버스 카운트 가중)."""
-    # 가까운 지하철 (rank=1) 거리
-    nearest_dist: Dict[int, float] = {}
-    for ns in NearestSubway.objects.filter(rank=1).values_list("dong_id", "distance_m"):
-        nearest_dist[ns[0]] = ns[1]
+    """행정동별 transit raw metric (지하철 가중 + 버스 카운트 가중).
 
-    # 버스 정류장 카운트 — BusStop.dong 은 to_field="code" 라서 dong__id 로 join.
-    bus_counts: Dict[int, int] = {}
+    sub-plan 4.5D: NearestSubwayAdong(adong FK) + BusStop.adong FK 사용.
+    Dong.code(10자리 행정동) == Adong.adong_code.
+    """
+    # 가까운 지하철 (rank=1) 거리 — NearestSubwayAdong.
+    nearest_dist: Dict[str, float] = {}
+    for adong_code, dist in NearestSubwayAdong.objects.filter(rank=1).values_list(
+        "adong_id", "distance_m"
+    ):
+        nearest_dist[adong_code] = dist
+
+    # 버스 정류장 카운트 — BusStop.adong (regions.Adong, PK=adong_code).
+    bus_counts: Dict[str, int] = {}
     for row in (
-        BusStop.objects.filter(dong__isnull=False)
-        .values("dong__id")
+        BusStop.objects.filter(adong__isnull=False)
+        .values("adong_id")
         .annotate(n=Count("id"))
     ):
-        bus_counts[row["dong__id"]] = row["n"]
+        bus_counts[row["adong_id"]] = row["n"]
 
     result: Dict[int, float] = {}
     log_cap = math.log1p(BUS_COUNT_CAP)
     for dong in dongs:
-        dist = nearest_dist.get(dong.id, SUBWAY_DISTANCE_CAP_M)
+        dist = nearest_dist.get(dong.code, SUBWAY_DISTANCE_CAP_M)
         # 0..1: 거리 0m=1, 1000m=0
         subway_score = max(0.0, 1.0 - dist / SUBWAY_DISTANCE_CAP_M)
 
-        cnt = bus_counts.get(dong.id, 0)
+        cnt = bus_counts.get(dong.code, 0)
         # 0..1: log scale, 50개 = 1.0 (그 이상은 1.0 클램프)
         bus_score = min(1.0, math.log1p(cnt) / log_cap)
 

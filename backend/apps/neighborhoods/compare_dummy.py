@@ -43,19 +43,17 @@ RENT_MIN_DEALS_FOR_DIRECT_AVG = 3
 def compute_rent_converted_avgs(dongs: Iterable[Dong]) -> Dict[str, Optional[int]]:
     """동별 환산월세(만원, 정수) 평균 사전 계산.
 
-    fallback 정책 (compute_scores._apply_rent_fallback 와 동일 정신):
-      1. RentDeal ≥3건 → 직접 평균
-      2. <3건 → 같은 구의 ≥3건 충족 동 평균 (gu_avg)
-      3. gu_avg 도 없으면 서울 전체 중위
-      4. 어떤 데이터도 없으면 None (응답에서 null)
+    sub-plan 4.5D 정합:
+    - RentDeal.dong FK 제거 → ldong 기반. dong(행정동)과 ldong(법정동)은 N:M.
+    - 직접 1:1 매핑 부재 → 같은 자치구(ldong__gu__name=dong.gu)의 법정동 거래로
+      자치구 단위 평균을 dong에 부여.
+    - direct_avg / gu_avg / seoul_median fallback 흐름은 유지하되 group key가
+      dong_id → gu_name으로 변경. 응답 dict key '환산월세'는 slug → int 보존.
 
-    파라미터
-    --------
-    dongs : 비교 대상 Dong iterable. 응답 행 빌드 직전에 한 번만 호출.
-
-    반환
-    ----
-    {slug: int (만원) or None} — 입력 dong slug 키.
+    fallback 정책:
+      1. 자치구 ≥3건 → 자치구 평균(같은 자치구 dong들 모두 동일 값)
+      2. 부족 → 서울 전체 중위
+      3. 데이터 없음 → None
     """
     target_dongs = list(dongs)
     if not target_dongs:
@@ -63,43 +61,27 @@ def compute_rent_converted_avgs(dongs: Iterable[Dong]) -> Dict[str, Optional[int
 
     target_gus = {d.gu for d in target_dongs}
 
-    # ---- 동별 deals 수집 (대상 + 같은 구 동의 RentDeal 만 가져옴) ----
-    # gu fallback 계산을 위해 같은 구의 다른 동도 필요.
-    # 서울 중위 fallback 까지 필요하면 전체를 가져와야 하지만, 5개 비교 응답 위해
-    # 전체 27,050건 fetch 는 과함. 대신 25개 구 × 평균 deal 분포로 처리.
-    # 현실적 절충: 같은 구 + 5개 구 외 dong 들은 seoul_median fallback 으로 직접 처리.
-    deals_by_dong: Dict[int, List[float]] = defaultdict(list)
-    for dong_id, deposit, rent in RentDeal.objects.filter(
-        dong__gu__in=target_gus
-    ).values_list("dong_id", "deposit", "monthly_rent"):
-        deals_by_dong[dong_id].append(convert_to_monthly(deposit, rent))
+    # ---- 자치구별 deals 수집 (자치구 이름 기반) ----
+    # RentDeal에 자치구 정보가 직접 없음 → ldong__gu__name 조인.
+    deals_by_gu: Dict[str, List[float]] = defaultdict(list)
+    for gu_name, deposit, rent in RentDeal.objects.filter(
+        ldong__gu__name__in=target_gus
+    ).values_list("ldong__gu__name", "deposit", "monthly_rent"):
+        if gu_name is None:
+            continue
+        deals_by_gu[gu_name].append(convert_to_monthly(deposit, rent))
 
-    # ---- 각 dong 의 직접 평균 (≥3건만) ----
-    direct_avg: Dict[int, float] = {}
-    for dong_id, vals in deals_by_dong.items():
+    # ---- 자치구 평균 (≥3건만) ----
+    gu_avg: Dict[str, float] = {}
+    for gu_name, vals in deals_by_gu.items():
         if len(vals) >= RENT_MIN_DEALS_FOR_DIRECT_AVG:
-            direct_avg[dong_id] = sum(vals) / len(vals)
+            gu_avg[gu_name] = sum(vals) / len(vals)
 
-    # ---- gu_avg: 같은 구 내 직접 평균 충족 동들의 평균 ----
-    by_gu: Dict[str, List[float]] = defaultdict(list)
-    # 같은 구의 모든 dong 을 가져와야 (대상 외 dong 도 ≥3건 충족 시 gu_avg 기여)
-    gu_dong_lookup = {
-        d_id: gu
-        for d_id, gu in Dong.objects.filter(gu__in=target_gus).values_list("id", "gu")
-    }
-    for d_id, avg in direct_avg.items():
-        gu = gu_dong_lookup.get(d_id)
-        if gu is not None:
-            by_gu[gu].append(avg)
-    gu_avg: Dict[str, float] = {gu: sum(vs) / len(vs) for gu, vs in by_gu.items() if vs}
+    # ---- seoul_median: 서울 전체 자치구 평균 분포 중위 ----
+    from django.db.models import Avg, Count as _Count  # noqa: WPS433
 
-    # ---- seoul_median: 서울 전체에서 ≥3건 충족 동의 환산월세 평균 분포 중위 ----
-    # 대상 구에 데이터가 없으면 (예: 용산구만 비교) gu_avg 분포가 비어 fallback 실패.
-    # → 서울 전체에서 ≥3건 충족 동들의 평균 분포 중위를 SQL 집계로 한 번에 산출.
-    from django.db.models import Avg, Count as _Count  # noqa: WPS433 (지역 import)
-
-    per_dong_aggs = (
-        RentDeal.objects.values("dong_id")
+    per_gu_aggs = (
+        RentDeal.objects.values("ldong__gu__name")
         .annotate(
             n=_Count("id"),
             avg_dep=Avg("deposit"),
@@ -107,13 +89,14 @@ def compute_rent_converted_avgs(dongs: Iterable[Dong]) -> Dict[str, Optional[int
         )
         .filter(n__gte=RENT_MIN_DEALS_FOR_DIRECT_AVG)
     )
-    seoul_dong_avgs: List[float] = [
-        convert_to_monthly(r["avg_dep"], r["avg_rent"]) for r in per_dong_aggs
+    seoul_gu_avgs: List[float] = [
+        convert_to_monthly(r["avg_dep"], r["avg_rent"])
+        for r in per_gu_aggs
+        if r["ldong__gu__name"] is not None
     ]
-    if seoul_dong_avgs:
-        seoul_median: Optional[float] = statistics.median(seoul_dong_avgs)
+    if seoul_gu_avgs:
+        seoul_median: Optional[float] = statistics.median(seoul_gu_avgs)
     elif gu_avg:
-        # 안전망: 서울 집계도 비면 대상 구 gu_avg 분포 사용.
         seoul_median = statistics.median(gu_avg.values())
     else:
         seoul_median = None
@@ -121,19 +104,15 @@ def compute_rent_converted_avgs(dongs: Iterable[Dong]) -> Dict[str, Optional[int
     # ---- 결과 빌드 ----
     result: Dict[str, Optional[int]] = {}
     for dong in target_dongs:
-        # 1) 직접 평균
-        if dong.id in direct_avg:
-            result[dong.slug] = round(direct_avg[dong.id])
-            continue
-        # 2) gu_avg
+        # 1) 자치구 평균
         if dong.gu in gu_avg:
             result[dong.slug] = round(gu_avg[dong.gu])
             continue
-        # 3) seoul_median
+        # 2) seoul_median
         if seoul_median is not None:
             result[dong.slug] = round(seoul_median)
             continue
-        # 4) 데이터 없음
+        # 3) 데이터 없음
         result[dong.slug] = None
     return result
 
