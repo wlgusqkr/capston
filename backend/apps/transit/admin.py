@@ -7,7 +7,6 @@ external_id 제거, created_at/updated_at 제거.
 from django.contrib import admin
 
 from .models import (
-    NearestSubway,
     NearestSubwayAdong,
     NearestSubwayLdong,
     SubwayCongestion,
@@ -23,15 +22,6 @@ class SubwayStationAdmin(admin.ModelAdmin):
     readonly_fields = ("location",)
     list_select_related = ("adong", "ldong")
     list_per_page = 50
-
-
-@admin.register(NearestSubway)
-class NearestSubwayAdmin(admin.ModelAdmin):
-    list_display = ("dong", "rank", "station", "distance_m")
-    list_filter = ("rank", "dong__gu")
-    search_fields = ("dong__name", "dong__gu", "station__name")
-    list_select_related = ("dong", "station")
-    list_per_page = 100
 
 
 @admin.register(NearestSubwayAdong)

@@ -3,7 +3,6 @@ Subway 모델 — schema.dbml line 216~242 정합 (sub-plan 4.5B).
 
 - SubwayStation : 서울시 지하철역 마스터. PK varchar(20) (schema.dbml).
 - SubwayCongestion : 지하철 혼잡도.
-- NearestSubway  : legacy (neighborhoods.Dong FK). lock D — 보존.
 - NearestSubwayAdong / NearestSubwayLdong : schema.dbml line 449~473 (sub-plan 2L 신설).
 
 sub-plan 4.5B 정합:
@@ -12,6 +11,10 @@ sub-plan 4.5B 정합:
   schema.dbml ldong_code/adong_code NOT NULL.
 - SubwayCongestion: PK (station_id, day_type, direction, express_yn, time).
   station FK는 새 varchar PK에 맞춰 db_column 'station_id' 유지.
+
+sub-plan 7G-C (결정 4A):
+- legacy NearestSubway(neighborhoods.Dong FK) 모델 및 nearest_subway 테이블 완전 폐기.
+  NearestSubwayAdong / NearestSubwayLdong이 대체. compute_nearest_subway.py 폐기.
 """
 
 from django.contrib.gis.db import models as gis_models
@@ -69,99 +72,11 @@ class SubwayStation(models.Model):
         return f"{self.name}({self.line})"
 
 
-class BusStop(models.Model):
-    """버스 정류장."""
-
-    external_id = models.CharField(
-        max_length=32,
-        null=True,
-        blank=True,
-        unique=True,
-        help_text="RDS bus_stop.id (Phase 1 신규). RDS PK 1:1.",
-    )
-    dong = models.ForeignKey(
-        "neighborhoods.Dong",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="bus_stops",
-        db_column="adong_code",
-        to_field="code",
-        help_text="행정동 (Phase 1: nullable로 완화. RDS 95% 매핑, 5%는 좌표 보강).",
-    )
-    ldong = models.ForeignKey(
-        "regions.Ldong",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="bus_stops",
-        db_column="ldong_code",
-        help_text="법정동 (Phase 1 신규, RDS ldong_code).",
-    )
-    name = models.CharField(max_length=100, help_text="정류장 명칭")
-    arsId = models.CharField(
-        max_length=10,
-        blank=True,
-        help_text="정류소번호 (서울 BIS arsId). RDS stop_number 1:1.",
-    )
-    geom = gis_models.PointField(
-        srid=4326,
-        null=True,
-        blank=True,
-        help_text="정류장 위치 (WGS84). GiST 인덱스. RDS에 NULL 719건 존재.",
-    )
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = "bus_stop"
-        verbose_name = "버스 정류장"
-        verbose_name_plural = "버스 정류장"
-        indexes = [
-            models.Index(fields=["dong"]),
-            models.Index(fields=["ldong"]),
-            models.Index(fields=["arsId"]),
-            GistIndex(fields=["geom"], name="busstop_geom_gist_idx"),
-        ]
-
-    def __str__(self) -> str:
-        return f"{self.name} ({self.arsId})" if self.arsId else self.name
-
-
-class NearestSubway(models.Model):
-    """행정동별 가까운 지하철역 사전 계산 캐시 (legacy, neighborhoods.Dong FK).
-
-    sub-plan 4.5B lock D — 보존. SubwayStation PK가 varchar(20)로 바뀜에 따라
-    station FK도 varchar로 자동 cast된다 (Django ForeignKey).
-    """
-
-    dong = models.ForeignKey(
-        "neighborhoods.Dong",
-        on_delete=models.CASCADE,
-        related_name="nearest_subways",
-    )
-    station = models.ForeignKey(
-        SubwayStation,
-        on_delete=models.CASCADE,
-        related_name="dong_rankings",
-    )
-    rank = models.PositiveSmallIntegerField(help_text="1~3")
-    distance_m = models.FloatField(help_text="동 centroid → 역 직선 거리 (m)")
-
-    class Meta:
-        db_table = "nearest_subway"
-        verbose_name = "가까운 지하철역 (사전계산)"
-        verbose_name_plural = "가까운 지하철역 (사전계산)"
-        unique_together = [("dong", "rank")]
-        ordering = ["dong", "rank"]
-
-    def __str__(self) -> str:
-        return f"{self.dong} #{self.rank} {self.station} ({self.distance_m:.0f}m)"
-
-
 # ---------------------------------------------------------------------------
 # NearestSubway v2 — Adong / Ldong (schema.dbml line 449~473)
+#
+# sub-plan 7G-C (결정 4A): legacy NearestSubway(neighborhoods.Dong FK) 폐기.
+# 이하 Adong/Ldong 기반 캐시만 사용.
 # ---------------------------------------------------------------------------
 
 
