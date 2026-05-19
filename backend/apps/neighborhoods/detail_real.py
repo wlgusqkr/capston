@@ -35,6 +35,7 @@ from apps.public_data.rent_deal.models import (
 from apps.public_data.bus.models import BusStop
 from apps.public_data.subway.models import NearestSubwayAdong
 
+from .adong_compat import build_adong_qs, composite_score as _composite_score, wrap
 from .detail_dummy import (
     SEOUL_AVG_BASELINE,
     _amenity_level,
@@ -43,7 +44,6 @@ from .detail_dummy import (
     _format_month,
     _round1,
 )
-from .models import Dong
 from .summary import generate_summary
 
 
@@ -88,7 +88,7 @@ AMENITY_DISPLAY: list[tuple[str, list[str], float]] = [
 ]
 
 
-def _real_real_estate(dong: Dong, today: date) -> dict:
+def _real_real_estate(dong, today: date) -> dict:
     """SPEC 6.3 섹션 2 — 부동산 시세 (RentDeal SQL aggregation).
 
     sub-plan 4.5D 정합:
@@ -272,7 +272,7 @@ def _real_real_estate(dong: Dong, today: date) -> dict:
     }
 
 
-def _real_amenities(dong: Dong) -> list[dict]:
+def _real_amenities(dong) -> list[dict]:
     """SPEC 6.3 섹션 3 — 8 카테고리 카운트 (Amenity 실 쿼리).
 
     sub-plan 4C: Amenity.dong FK 제거에 따라 AmenityAdong N:M join 사용.
@@ -304,7 +304,7 @@ def _real_amenities(dong: Dong) -> list[dict]:
     return out
 
 
-def _real_transit(dong: Dong) -> dict:
+def _real_transit(dong) -> dict:
     """SPEC 6.3 섹션 4 — 가까운 역 top-3 + 버스 정류장 카운트.
 
     sub-plan 4.5D 정합:
@@ -369,7 +369,7 @@ def _real_transit(dong: Dong) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def build_real_detail(dong: Dong, weights: dict, today: date | None = None) -> dict:
+def build_real_detail(dong, weights: dict, today: date | None = None) -> dict:
     """SPEC 6.3 동네 상세 응답 dict — 실 DB 쿼리 기반.
 
     detail_dummy.build_dummy_detail 과 응답 키/형식 100% 동일. 차이는 값이
@@ -386,8 +386,10 @@ def build_real_detail(dong: Dong, weights: dict, today: date | None = None) -> d
         today = date.today()
 
     # ---- Hero (Dong 컬럼 직접) ----
+    # 7G-B1: Dong.composite_score 메서드 제거 → adong_compat.composite_score 함수 호출.
     score = round(
-        dong.composite_score(
+        _composite_score(
+            dong,
             w_rent=weights["rent"],
             w_amenity=weights["amenity"],
             w_transit=weights["transit"],
@@ -406,11 +408,9 @@ def build_real_detail(dong: Dong, weights: dict, today: date | None = None) -> d
     }
 
     # ---- 비슷한 동네 (점수 기반, dummy helper 재사용) ----
-    all_dongs = list(
-        Dong.objects.only(
-            "slug", "name", "gu", "score_rent", "score_amenity", "score_transit"
-        )
-    )
+    # 7G-B1: Adong + current_score 합성 후 wrap. _build_similar_dongs는 slug/name/gu/
+    # score_* 만 사용 → wrap 객체 호환.
+    all_dongs = [wrap(a) for a in build_adong_qs()]
     similar_dongs = _build_similar_dongs(dong, all_dongs)
 
     return {

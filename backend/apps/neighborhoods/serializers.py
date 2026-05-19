@@ -16,9 +16,9 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+from .adong_compat import composite_score as _composite_score
 from .detail_dummy import build_dummy_detail  # legacy fallback
 from .detail_real import build_real_detail
-from .models import Dong
 from .summary import generate_summary
 
 
@@ -41,33 +41,29 @@ SINGLE_HOUSEHOLD_PCT_FALLBACK: dict[str, float] = {
 }
 
 
-class DongScoreSerializer(serializers.ModelSerializer):
-    """메인 지도 히트맵용 — 가중합 종합 점수 + 중심점 좌표 + raw 점수 3종."""
+class DongScoreSerializer(serializers.Serializer):
+    """메인 지도 히트맵용 — 가중합 종합 점수 + 중심점 좌표 + raw 점수 3종.
 
+    7G-B1: ModelSerializer(Dong) → Serializer(Adong wrap). 응답 dict key 보존 lock.
+    """
+
+    slug = serializers.CharField()
+    code = serializers.CharField()  # 행정동 코드 10자리 — frontend HeatMap GeoJSON adm_cd2 매칭용
+    name = serializers.CharField()
+    gu = serializers.CharField()
     score = serializers.SerializerMethodField()
     lat = serializers.SerializerMethodField()
     lng = serializers.SerializerMethodField()
+    # SPEC 14.3: 클라이언트 재계산을 위해 raw 점수 3종 노출.
+    score_rent = serializers.FloatField()
+    score_amenity = serializers.FloatField()
+    score_transit = serializers.FloatField()
 
-    class Meta:
-        model = Dong
-        fields = (
-            "slug",
-            "code",  # 행정동 코드 10자리 — frontend HeatMap GeoJSON adm_cd2 매칭용
-            "name",
-            "gu",
-            "score",
-            "lat",
-            "lng",
-            # SPEC 14.3: 클라이언트 재계산을 위해 raw 점수 3종 노출.
-            "score_rent",
-            "score_amenity",
-            "score_transit",
-        )
-
-    def get_score(self, obj: Dong) -> float:
+    def get_score(self, obj) -> float:
         weights = self.context.get("weights", {"rent": 1 / 3, "amenity": 1 / 3, "transit": 1 / 3})
         return round(
-            obj.composite_score(
+            _composite_score(
+                obj,
                 w_rent=weights["rent"],
                 w_amenity=weights["amenity"],
                 w_transit=weights["transit"],
@@ -75,23 +71,28 @@ class DongScoreSerializer(serializers.ModelSerializer):
             2,
         )
 
-    def get_lat(self, obj: Dong) -> float:
+    def get_lat(self, obj) -> float:
         # PostGIS PointField: x = lng, y = lat
         return round(obj.centroid.y, 6) if obj.centroid else 0.0
 
-    def get_lng(self, obj: Dong) -> float:
+    def get_lng(self, obj) -> float:
         return round(obj.centroid.x, 6) if obj.centroid else 0.0
 
 
-class DongSummarySerializer(serializers.ModelSerializer):
+class DongSummarySerializer(serializers.Serializer):
     """
     동네 패널(SPEC 6.2)용 요약 응답.
 
     note: rent_avg / nearest_station / amenity_level / single_household_pct /
     safety_level은 현재 점수 기반 휴리스틱 또는 slug 매핑으로 더미 값 산출. 10단계
     실데이터 적재 후 raw 데이터 기반으로 교체 예정.
+
+    7G-B1: ModelSerializer(Dong) → Serializer(Adong wrap). 응답 dict key 보존 lock.
     """
 
+    slug = serializers.CharField()
+    name = serializers.CharField()
+    gu = serializers.CharField()
     score = serializers.SerializerMethodField()
     summary = serializers.SerializerMethodField()
     rent_avg = serializers.SerializerMethodField()
@@ -100,26 +101,12 @@ class DongSummarySerializer(serializers.ModelSerializer):
     single_household_pct = serializers.SerializerMethodField()
     safety_level = serializers.SerializerMethodField()
 
-    class Meta:
-        model = Dong
-        fields = (
-            "slug",
-            "name",
-            "gu",
-            "score",
-            "summary",
-            "rent_avg",
-            "nearest_station",
-            "amenity_level",
-            "single_household_pct",
-            "safety_level",
-        )
-
     # ---- 점수 (가중합) ----
-    def get_score(self, obj: Dong) -> float:
+    def get_score(self, obj) -> float:
         weights = self.context.get("weights", {"rent": 1 / 3, "amenity": 1 / 3, "transit": 1 / 3})
         return round(
-            obj.composite_score(
+            _composite_score(
+                obj,
                 w_rent=weights["rent"],
                 w_amenity=weights["amenity"],
                 w_transit=weights["transit"],
@@ -128,7 +115,7 @@ class DongSummarySerializer(serializers.ModelSerializer):
         )
 
     # ---- 한 줄 요약 (SPEC 11.3 룰베이스) ----
-    def get_summary(self, obj: Dong) -> str:
+    def get_summary(self, obj) -> str:
         return generate_summary(
             score_rent=obj.score_rent,
             score_amenity=obj.score_amenity,
@@ -137,18 +124,18 @@ class DongSummarySerializer(serializers.ModelSerializer):
 
     # ---- 더미: 평균 월세 (만원). score_rent가 높을수록 저렴 ----
     # 룰: 120 - score_rent (점수 100 → 20만원, 점수 50 → 70만원, 점수 0 → 120만원)
-    def get_rent_avg(self, obj: Dong) -> int:
+    def get_rent_avg(self, obj) -> int:
         return max(0, int(120 - obj.score_rent))
 
     # ---- 더미: 가까운 지하철 역 ----
-    def get_nearest_station(self, obj: Dong) -> dict[str, object]:
+    def get_nearest_station(self, obj) -> dict[str, object]:
         return NEAREST_STATION_FALLBACK.get(
             obj.slug,
             {"name": "정보 없음", "line": "-", "walking_min": 0},
         )
 
     # ---- amenity_level: score_amenity 구간 ----
-    def get_amenity_level(self, obj: Dong) -> str:
+    def get_amenity_level(self, obj) -> str:
         score = obj.score_amenity
         if score >= 70:
             return "sufficient"
@@ -157,12 +144,12 @@ class DongSummarySerializer(serializers.ModelSerializer):
         return "lacking"
 
     # ---- 더미: 자취생 비율 ----
-    def get_single_household_pct(self, obj: Dong) -> float:
+    def get_single_household_pct(self, obj) -> float:
         return SINGLE_HOUSEHOLD_PCT_FALLBACK.get(obj.slug, 40.0)
 
     # ---- 더미: 안전 지수 (현재 transit 점수 기반 임시 매핑) ----
     # 실데이터(범죄율, CCTV 등)는 5/24 이후 정밀화.
-    def get_safety_level(self, obj: Dong) -> str:
+    def get_safety_level(self, obj) -> str:
         score = obj.score_transit
         if score >= 70:
             return "high"
@@ -209,7 +196,7 @@ class DongDetailSerializer(serializers.Serializer):
     build_dummy_detail 로 폴백.
     """
 
-    def to_representation(self, instance: Dong) -> dict:
+    def to_representation(self, instance) -> dict:
         weights = self.context.get(
             "weights", {"rent": 1 / 3, "amenity": 1 / 3, "transit": 1 / 3}
         )

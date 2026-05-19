@@ -28,9 +28,9 @@ from rest_framework.views import APIView
 
 from datetime import date
 
+from .adong_compat import build_adong_qs, wrap
 from .compare_dummy import build_compare_row, compute_rent_converted_avgs
 from .explore import build_explore_response
-from .models import Dong
 from .score_point import compute_point_score
 from .serializers import (
     DongCompareItemSerializer,
@@ -146,18 +146,13 @@ class DongScoresView(APIView):
     def get(self, request: Request) -> Response:
         weights = _parse_and_validate_weights(request)
 
-        # 426개 정도라 단일 쿼리 + 메모리 정렬. 인덱스/공간 쿼리 불필요.
-        qs = Dong.objects.all().only(
-            "slug",
-            "code",
-            "name",
-            "gu",
-            "centroid",
-            "score_rent",
-            "score_amenity",
-            "score_transit",
-        )
-        serialized = DongScoreSerializer(qs, many=True, context={"weights": weights}).data
+        # 425개 정도라 단일 쿼리 + 메모리 정렬. 인덱스/공간 쿼리 불필요.
+        # 7G-B1: Adong + current_score(LEFT) + Gu 합성. score_rent NULL→0 (결정 1A).
+        adongs = build_adong_qs()
+        wrapped = [wrap(a) for a in adongs]
+        serialized = DongScoreSerializer(
+            wrapped, many=True, context={"weights": weights}
+        ).data
         # score 내림차순 정렬 (SPEC 6.1: 사용자가 "어디가 좋은가"를 보기 편함)
         serialized.sort(key=lambda d: d["score"], reverse=True)
 
@@ -182,18 +177,15 @@ class DongSummaryView(APIView):
     def get(self, request: Request, slug: str) -> Response:
         weights = _parse_and_validate_weights(request)
 
+        # 7G-B1: Adong + current_score 조회. DoesNotExist는 Adong 쪽으로 위임.
+        from apps.public_data.regions.models import Adong  # noqa: WPS433
+
         try:
-            dong = Dong.objects.only(
-                "slug",
-                "name",
-                "gu",
-                "score_rent",
-                "score_amenity",
-                "score_transit",
-            ).get(slug=slug)
-        except Dong.DoesNotExist as exc:
+            adong = build_adong_qs().get(slug=slug)
+        except Adong.DoesNotExist as exc:
             raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
 
+        dong = wrap(adong)
         data = DongSummarySerializer(dong, context={"weights": weights}).data
         return Response(data, status=status.HTTP_200_OK)
 
@@ -221,22 +213,15 @@ class DongDetailView(APIView):
     def get(self, request: Request, slug: str) -> Response:
         weights = _parse_and_validate_weights(request)
 
+        # 7G-B1: Adong + current_score 조회. 비슷한 동네 계산은 detail builder가 별도 조회.
+        from apps.public_data.regions.models import Adong  # noqa: WPS433
+
         try:
-            # 비슷한 동네 계산을 위해 detail_dummy.build_dummy_detail이 다른 동네를
-            # 별도로 조회한다. 여기선 대상 동만 가져온다.
-            dong = Dong.objects.only(
-                "slug",
-                "name",
-                "gu",
-                "centroid",
-                "area_km2",
-                "score_rent",
-                "score_amenity",
-                "score_transit",
-            ).get(slug=slug)
-        except Dong.DoesNotExist as exc:
+            adong = build_adong_qs().get(slug=slug)
+        except Adong.DoesNotExist as exc:
             raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
 
+        dong = wrap(adong)
         data = DongDetailSerializer(dong, context={"weights": weights}).data
         return Response(data, status=status.HTTP_200_OK)
 
@@ -288,15 +273,9 @@ class CompareView(APIView):
 
         # ---- 한 번의 쿼리로 fetch 후 dict 룩업 ----
         # 입력 슬러그 순서 그대로 응답하기 위해 dict로 매핑.
-        qs = Dong.objects.filter(slug__in=slugs).only(
-            "slug",
-            "name",
-            "gu",
-            "score_rent",
-            "score_amenity",
-            "score_transit",
-        )
-        by_slug = {d.slug: d for d in qs}
+        # 7G-B1: Adong + current_score 합성 후 wrap.
+        qs = build_adong_qs().filter(slug__in=slugs)
+        by_slug = {a.slug: wrap(a) for a in qs}
 
         missing = [s for s in slugs if s not in by_slug]
         if missing:
@@ -488,13 +467,15 @@ class DongExploreView(APIView):
     """GET /api/dongs/<slug>/explore?<filters>"""
 
     def get(self, request: Request, slug: str) -> Response:
+        # 7G-B1: Adong + current_score 합성. explore는 dong.code/gu(string)만 사용 (B2 확인 영역).
+        from apps.public_data.regions.models import Adong  # noqa: WPS433
+
         try:
-            dong = Dong.objects.only(
-                "id", "slug", "code", "name", "gu"
-            ).get(slug=slug)
-        except Dong.DoesNotExist as exc:
+            adong = build_adong_qs().get(slug=slug)
+        except Adong.DoesNotExist as exc:
             raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
 
+        dong = wrap(adong)
         data = build_explore_response(dong, request, today=date.today())
         return Response(data, status=status.HTTP_200_OK)
 
@@ -509,15 +490,21 @@ from apps.regions.models import AdongPopulation, Gu
 from apps.metrics.models import GuMetric, Metric, SeoulMetric
 
 
-def _get_dong_or_404(slug: str) -> Dong:
-    """slug로 Dong을 조회. 없으면 404."""
+def _get_dong_or_404(slug: str):
+    """slug로 Adong(+current_score+Gu)을 조회 후 Dong 인터페이스 호환 wrap 반환. 없으면 404.
+
+    7G-B1: legacy Dong → Adong 합성. 응답 dict key 보존 lock 유지.
+    """
+    from apps.public_data.regions.models import Adong  # noqa: WPS433
+
     try:
-        return Dong.objects.only("id", "slug", "code", "name", "gu").get(slug=slug)
-    except Dong.DoesNotExist as exc:
+        adong = build_adong_qs().get(slug=slug)
+    except Adong.DoesNotExist as exc:
         raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
+    return wrap(adong)
 
 
-def _dong_header(dong: Dong) -> dict:
+def _dong_header(dong) -> dict:
     """공통 dong 식별 dict."""
     return {"slug": dong.slug, "name": dong.name, "gu": dong.gu}
 

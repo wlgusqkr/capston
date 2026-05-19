@@ -27,8 +27,8 @@ from typing import Dict, Iterable, List, Optional
 from apps.realestate.models import RentDeal
 from apps.realestate.utils import convert_to_monthly
 
+from .adong_compat import composite_score as _composite_score
 from .detail_dummy import NEAREST_STATIONS_FALLBACK, REVIEW_POOL
-from .models import Dong
 from .serializers import SINGLE_HOUSEHOLD_PCT_FALLBACK
 
 
@@ -40,7 +40,7 @@ TRANSIT_MIN_FALLBACK = 10
 RENT_MIN_DEALS_FOR_DIRECT_AVG = 3
 
 
-def compute_rent_converted_avgs(dongs: Iterable[Dong]) -> Dict[str, Optional[int]]:
+def compute_rent_converted_avgs(dongs: Iterable) -> Dict[str, Optional[int]]:
     """동별 환산월세(만원, 정수) 평균 사전 계산.
 
     sub-plan 4.5D 정합:
@@ -145,7 +145,7 @@ def _seeded_rng(slug: str, salt: str) -> random.Random:
     return random.Random(h)
 
 
-def _review_summary(dong: Dong) -> tuple[float, int]:
+def _review_summary(dong) -> tuple[float, int]:
     """
     detail_dummy._build_reviews와 동일한 룰로 (avg_rating, count) 산출.
 
@@ -164,7 +164,7 @@ def _review_summary(dong: Dong) -> tuple[float, int]:
 
 
 def build_compare_row(
-    dong: Dong,
+    dong,
     weights: dict,
     rent_converted_avg: Optional[int] = None,
 ) -> dict:
@@ -180,8 +180,10 @@ def build_compare_row(
 
     반환: snake_case dict (CompareResponse.dongs[i] 그대로).
     """
+    # 7G-B1: Dong.composite_score 메서드 제거 → adong_compat.composite_score 함수.
     score = round(
-        dong.composite_score(
+        _composite_score(
+            dong,
             w_rent=weights["rent"],
             w_amenity=weights["amenity"],
             w_transit=weights["transit"],

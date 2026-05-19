@@ -46,7 +46,7 @@ from typing import Optional
 from django.contrib.gis.geos import Point
 from django.db import connection
 
-from apps.neighborhoods.models import Dong
+from apps.service.neighborhoods.adong_compat import build_adong_qs, wrap
 
 
 logger = logging.getLogger(__name__)
@@ -261,17 +261,18 @@ def compute_transit(
 # ---------------------------------------------------------------------------
 # Rent — Dong score 활용
 # ---------------------------------------------------------------------------
-def compute_rent_score(lat: float, lng: float) -> tuple[float, Optional[Dong]]:
+def compute_rent_score(lat: float, lng: float) -> tuple[float, Optional[object]]:
     """
     포인트가 속한 행정동의 score_rent 를 그대로 반환.
 
     행정동 매핑 실패 → 50.0 (중간값) + warning.
+
+    7G-B1: legacy Dong(geom 컬럼) → Adong(boundary 컬럼) + current_score 합성.
+    공간 검색 인덱스: adong_boundary_gist_idx (regions.models.Adong.Meta.indexes).
     """
     point = Point(lng, lat, srid=4326)
-    dong = Dong.objects.filter(geom__contains=point).only(
-        "id", "slug", "name", "gu", "score_rent"
-    ).first()
-    if dong is None:
+    adong = build_adong_qs().filter(boundary__contains=point).first()
+    if adong is None:
         logger.warning(
             "score_point: dong 매핑 실패 lat=%s lng=%s (서울 외 또는 경계). "
             "score_rent fallback=50.0",
@@ -279,6 +280,7 @@ def compute_rent_score(lat: float, lng: float) -> tuple[float, Optional[Dong]]:
             lng,
         )
         return 50.0, None
+    dong = wrap(adong)
     return float(dong.score_rent), dong
 
 

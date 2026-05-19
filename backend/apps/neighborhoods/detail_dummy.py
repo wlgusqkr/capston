@@ -22,7 +22,7 @@ import random
 from datetime import date, timedelta
 from typing import Iterable
 
-from .models import Dong
+from .adong_compat import build_adong_qs, composite_score as _composite_score, wrap
 from .summary import generate_summary
 
 
@@ -178,7 +178,7 @@ def _round1(x: float) -> float:
 # ---------------------------------------------------------------------------
 
 
-def _build_real_estate(dong: Dong, today: date) -> dict:
+def _build_real_estate(dong, today: date) -> dict:
     """SPEC 6.3 섹션 2 — 부동산 시세."""
     rng = _seeded_rng(dong.slug, salt="real_estate")
 
@@ -260,7 +260,7 @@ def _build_real_estate(dong: Dong, today: date) -> dict:
     }
 
 
-def _build_amenities(dong: Dong) -> list[dict]:
+def _build_amenities(dong) -> list[dict]:
     """SPEC 6.3 섹션 3 — 편의시설 8개 카테고리."""
     rng = _seeded_rng(dong.slug, salt="amenities")
     level = _amenity_level(dong.score_amenity)
@@ -281,7 +281,7 @@ def _build_amenities(dong: Dong) -> list[dict]:
     return out
 
 
-def _build_transit(dong: Dong) -> dict:
+def _build_transit(dong) -> dict:
     """SPEC 6.3 섹션 4 — 교통."""
     rng = _seeded_rng(dong.slug, salt="transit")
 
@@ -310,7 +310,7 @@ def _build_transit(dong: Dong) -> dict:
     }
 
 
-def _build_reviews(dong: Dong, today: date) -> dict:
+def _build_reviews(dong, today: date) -> dict:
     """SPEC 6.3 섹션 5 — 자취생 리뷰."""
     rng = _seeded_rng(dong.slug, salt="reviews")
 
@@ -343,7 +343,7 @@ def _build_reviews(dong: Dong, today: date) -> dict:
     }
 
 
-def _build_similar_dongs(dong: Dong, all_dongs: Iterable[Dong]) -> list[dict]:
+def _build_similar_dongs(dong, all_dongs: Iterable) -> list[dict]:
     """
     SPEC 6.3 섹션 6 — 비슷한 동네 (시간 되면).
     POI 기반 임베딩은 9/10단계 작업. 현재는 raw 점수 3종 유클리드 거리 기반
@@ -353,7 +353,7 @@ def _build_similar_dongs(dong: Dong, all_dongs: Iterable[Dong]) -> list[dict]:
     if not others:
         return []
 
-    def feat(x: Dong) -> tuple[float, float, float]:
+    def feat(x) -> tuple[float, float, float]:
         return (x.score_rent, x.score_amenity, x.score_transit)
 
     base_feat = feat(dong)
@@ -385,7 +385,7 @@ def _build_similar_dongs(dong: Dong, all_dongs: Iterable[Dong]) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
-def build_dummy_detail(dong: Dong, weights: dict, today: date | None = None) -> dict:
+def build_dummy_detail(dong, weights: dict, today: date | None = None) -> dict:
     """
     SPEC 6.3 동네 상세 응답 dict를 빌드.
 
@@ -400,8 +400,10 @@ def build_dummy_detail(dong: Dong, weights: dict, today: date | None = None) -> 
         today = date.today()
 
     # ---- 종합 점수 ----
+    # 7G-B1: Dong.composite_score 메서드 제거 → adong_compat.composite_score 함수 호출.
     score = round(
-        dong.composite_score(
+        _composite_score(
+            dong,
             w_rent=weights["rent"],
             w_amenity=weights["amenity"],
             w_transit=weights["transit"],
@@ -426,11 +428,8 @@ def build_dummy_detail(dong: Dong, weights: dict, today: date | None = None) -> 
     }
 
     # ---- 비슷한 동네 (전체 동 셋에서 top 3) ----
-    all_dongs = list(
-        Dong.objects.only(
-            "slug", "name", "gu", "score_rent", "score_amenity", "score_transit"
-        )
-    )
+    # 7G-B1: Adong + current_score wrap. _build_similar_dongs는 slug/name/gu/score_*만 사용.
+    all_dongs = [wrap(a) for a in build_adong_qs()]
     similar_dongs = _build_similar_dongs(dong, all_dongs)
 
     return {

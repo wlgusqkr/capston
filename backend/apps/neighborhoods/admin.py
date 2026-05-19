@@ -1,21 +1,8 @@
-from django.contrib.gis.admin import GISModelAdmin
-from django.contrib import admin
+"""SLGI step 7G-B1: legacy `DongAdmin` 제거.
 
-from .models import Dong
+기존 `neighborhoods.Dong` 모델은 7G-C에서 제거 예정 (사용자 결정 5A — neighborhoods
+빈 앱 유지). admin 등록은 신규 마스터인 regions.Adong (apps.public_data.regions.admin
+에서 이미 등록) 으로 이관되었으므로 본 admin 파일은 빈 상태로 유지한다.
+"""
 
-
-@admin.register(Dong)
-class DongAdmin(GISModelAdmin):
-    list_display = ("gu", "name", "slug", "code", "score_rent", "score_amenity", "score_transit")
-    list_filter = ("gu",)
-    search_fields = ("name", "gu", "slug", "code")
-    readonly_fields = ("created_at", "updated_at")
-    fieldsets = (
-        ("식별자", {"fields": ("slug", "code", "name", "gu")}),
-        ("공간 데이터", {"fields": ("geom", "centroid", "area_km2")}),
-        (
-            "점수 (사전 계산)",
-            {"fields": ("score_rent", "score_amenity", "score_transit")},
-        ),
-        ("타임스탬프", {"fields": ("created_at", "updated_at")}),
-    )
+# 의도적으로 비움. apps.public_data.regions.admin.AdongAdmin 사용.

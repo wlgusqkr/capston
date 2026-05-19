@@ -58,12 +58,12 @@ from apps.public_data.rent_deal.models import (
     RentDeal,
 )
 
+from .adong_compat import build_adong_qs, wrap
 from .explore import (
     PERIOD_TO_DAYS,
     apply_base_filters,
     parse_base_filters,
 )
-from .models import Dong
 
 
 # 표본 부족 동 임계 (eng-review #3)
@@ -128,17 +128,24 @@ def compute_match_counts(filters: dict[str, Any], today: date) -> dict[str, Any]
     gu_name_to_code = {g.name: g.gu_code for g in Gu.objects.only("name", "gu_code")}
 
     # 모든 동 (count 0 도 응답에 포함 — has_data 표시용).
-    all_dongs = list(Dong.objects.values("id", "code", "slug", "gu"))
+    # 7G-B1: Dong.objects → Adong.objects. 응답 dict key 보존 (code=adong_code, gu=gu.name).
+    from apps.public_data.regions.models import Adong  # noqa: WPS433
+
+    all_dongs = list(
+        Adong.objects.select_related("gu").values(
+            "adong_code", "slug", "gu__name"
+        )
+    )
     max_count = max(counts_by_gu_code.values()) if counts_by_gu_code else 0
     total_matched = sum(counts_by_gu_code.values())
 
     dong_items: list[dict[str, Any]] = []
     for d in all_dongs:
-        gu_code = gu_name_to_code.get(d["gu"])
+        gu_code = gu_name_to_code.get(d["gu__name"])
         cnt = counts_by_gu_code.get(gu_code, 0) if gu_code else 0
         dong_items.append(
             {
-                "code": d["code"],
+                "code": d["adong_code"],
                 "slug": d["slug"],
                 "count": cnt,
                 "ratio": _normalize_ratio(cnt, max_count),
@@ -174,7 +181,7 @@ class DongMatchCountsView(APIView):
 # ---------------------------------------------------------------------------
 
 
-def compute_match_detail(dong: Dong, filters: dict[str, Any], today: date) -> dict[str, Any]:
+def compute_match_detail(dong, filters: dict[str, Any], today: date) -> dict[str, Any]:
     """단일 동의 매칭 통계 + 분모(같은 자치구·기간·유형 set 전체).
 
     매칭률 = (필터 통과 거래) / (같은 자치구·같은 기간·deal_types set 전체) * 100.
@@ -245,10 +252,14 @@ class DongMatchDetailView(APIView):
     """GET /api/dongs/<slug>/match-detail?<filters>"""
 
     def get(self, request: Request, slug: str) -> Response:
+        # 7G-B1: Adong + current_score 합성. compute_match_detail은 slug/code/name/gu/id만 사용.
+        from apps.public_data.regions.models import Adong  # noqa: WPS433
+
         try:
-            dong = Dong.objects.only("id", "slug", "code", "name", "gu").get(slug=slug)
-        except Dong.DoesNotExist as exc:
+            adong = build_adong_qs().get(slug=slug)
+        except Adong.DoesNotExist as exc:
             raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
+        dong = wrap(adong)
         filters = parse_base_filters(request)
         data = compute_match_detail(dong, filters, today=date.today())
         return Response(data, status=status.HTTP_200_OK)
