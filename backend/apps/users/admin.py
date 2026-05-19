@@ -25,8 +25,8 @@ class CustomUserAdmin(UserAdmin):
 
 @admin.register(Favorite)
 class FavoriteAdmin(admin.ModelAdmin):
-    list_display = ("user", "dong", "created_at")
-    list_select_related = ("user", "dong")
-    search_fields = ("user__username", "dong__slug", "dong__name")
+    list_display = ("user", "adong", "created_at")
+    list_select_related = ("user", "adong")
+    search_fields = ("user__username", "adong__slug", "adong__name")
     autocomplete_fields = ()
-    raw_id_fields = ("user", "dong")
+    raw_id_fields = ("user", "adong")

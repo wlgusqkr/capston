@@ -50,7 +50,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.service.neighborhoods.models import Dong
+# sub-plan 7G-B2 (결정 6A): Dong → Adong 치환 + null fallback 단순화.
+# Adong.adong_code를 직접 사용하여 dong.id → dong.code 매핑 우회.
+from apps.public_data.regions.models import Adong
 from apps.public_data.populations.models import AdongPopulation
 
 from apps.public_data.rent_deal.models import (
@@ -318,12 +320,9 @@ def _compute_all_dongs_derived(today: date) -> dict[str, dict]:
     """
     cutoff = today - timedelta(days=WINDOW_DAYS)
 
-    # 1) 426개 동 마스터 (id, code, slug, name, gu)
-    dongs = list(
-        Dong.objects.all().only("id", "code", "slug", "name", "gu")
-    )
+    # 1) 행정동 마스터 (Adong + Gu join). sub-plan 7G-B2 (결정 6A): Dong → Adong 직접 사용.
+    dongs = list(Adong.objects.select_related("gu").all())
     total_dongs = len(dongs)
-    code_to_dong = {d.code: d for d in dongs}
 
     # 2) ldong_code별 RentDeal 집계 (최근 12개월).
     # rent_deal에는 adong_code가 없으므로 ldong_code 단위 raw 집계.
@@ -337,36 +336,32 @@ def _compute_all_dongs_derived(today: date) -> dict[str, dict]:
         )
     )
 
-    # 3) ldong-단위 집계 → dong(=행정동) slug에 매핑.
-    # rent_deal.ldong_code(법정동) → Dong(행정동) 매핑이 없어 임시로
-    # 코드 prefix(첫 10자)가 동일한 dong에 할당하지 않는다 (행정동≠법정동).
-    # 4.5C에서 adong↔ldong N:M 매핑(adong_population/AdongLdong) 도입 후 보강.
+    # 3) ldong-단위 집계 → adong(=행정동) slug에 매핑.
+    # rent_deal.ldong_code(법정동) → Adong(행정동) 매핑이 없어 임시로
+    # 코드 prefix가 동일한 동에 할당하지 않는다 (행정동≠법정동).
+    # 4.5C에서 adong↔ldong N:M 매핑 도입 후 보강.
     # 본 sub-plan에서는 응답 구조만 보장 — 모든 동에 score=None으로 폴백.
-    # (캐시 hit 시 dict 조회만 발생, frontend는 null 처리 가능)
     _ = agg_rows  # 통계 보존 — 4.5C에서 사용 예정
 
     # 4) 최신 인구 per 행정동 (DISTINCT ON adong_id).
+    # sub-plan 7G-B2 (결정 6A): adong_code 직접 키. Dong.id 매핑 단계 제거.
     pop_rows = list(
         AdongPopulation.objects
         .order_by("dong_id", "-date")
         .distinct("dong_id")
         .values("dong_id", "total_population")
     )
-    pop_by_dong_id: dict[int, Optional[int]] = {}
-    for r in pop_rows:
-        code = r["dong_id"]
-        d = code_to_dong.get(code)
-        if d is None:
-            continue
-        pop_by_dong_id[d.id] = r["total_population"]
+    pop_by_adong_code: dict[str, Optional[int]] = {
+        r["adong_id"]: r["total_population"] for r in pop_rows
+    }
 
     # 5) 결과 dict (slug → payload) — sub-plan 4.5B 임시 null 폴백.
     # rent_deal-side 정확 매핑은 4.5C에서 처리. 응답 dict 구조는 보존.
     result: dict[str, dict] = {}
     for d in dongs:
-        pop = pop_by_dong_id.get(d.id)
+        pop = pop_by_adong_code.get(d.adong_code)
         result[d.slug] = {
-            "dong": {"slug": d.slug, "name": d.name, "gu": d.gu},
+            "dong": {"slug": d.slug, "name": d.name, "gu": d.gu.name},
             "studio_index": {
                 "score": None,
                 "percentile": None,
@@ -424,7 +419,8 @@ class DongDerivedIndicesView(APIView):
 
         payload = all_indices.get(slug)
         if payload is None:
-            if not Dong.objects.filter(slug=slug).exists():
+            # sub-plan 7G-B2 (결정 6A): Dong → Adong.
+            if not Adong.objects.filter(slug=slug).exists():
                 raise NotFound({"detail": "동을 찾을 수 없습니다."})
             cache.delete(cache_key)
             all_indices = _compute_all_dongs_derived(today)

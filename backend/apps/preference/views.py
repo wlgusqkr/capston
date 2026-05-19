@@ -15,6 +15,8 @@ from __future__ import annotations
 
 from itertools import combinations
 
+from django.db.models import F, FloatField, Value
+from django.db.models.functions import Coalesce
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
@@ -23,9 +25,11 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.neighborhoods.compare_dummy import compute_rent_converted_avgs
-from apps.neighborhoods.detail_dummy import NEAREST_STATIONS_FALLBACK
-from apps.neighborhoods.models import Dong
+from apps.service.neighborhoods.compare_dummy import compute_rent_converted_avgs
+from apps.service.neighborhoods.detail_dummy import NEAREST_STATIONS_FALLBACK
+# sub-plan 7G-B2: Dong → Adong + CurrentAdong join 치환.
+# 결정 1A: current_adong 미존재 또는 score_rent NULL → 0 fallback.
+from apps.public_data.regions.models import Adong
 
 from .optimizer import estimate_weights, to_integer_percent
 
@@ -64,7 +68,7 @@ def _transit_min(slug: str) -> int:
 
 
 def _build_card(
-    dong: Dong,
+    dong: Adong,
     weights: dict[str, float],
     rent_converted: int | None = None,
 ) -> dict:
@@ -79,27 +83,29 @@ def _build_card(
         문제를 해결. 5번 비교에서 사용자가 보는 "월세" 표기는 이 값 사용.
       - amenity_label: 한국어.
       - transit_min: NEAREST_STATIONS_FALLBACK 1위.
+
+    sub-plan 7G-B2: Adong + CurrentAdong annotate 합성. score_* 속성은
+    queryset annotate(`score_rent`/`score_amenity`/`score_transit`)로 노출.
+    응답 dict key는 보존 (slug/name/gu/rent_avg/rent_converted/transit_min/
+    amenity_label/score).
     """
     rent_avg = max(0, int(120 - dong.score_rent))
     transit_min = _transit_min(dong.slug)
     level = _amenity_level(dong.score_amenity)
-    score = round(
-        dong.composite_score(
-            w_rent=weights["rent"],
-            w_amenity=weights["amenity"],
-            w_transit=weights["transit"],
-        ),
-        2,
+    composite = (
+        dong.score_rent * weights["rent"]
+        + dong.score_amenity * weights["amenity"]
+        + dong.score_transit * weights["transit"]
     )
     return {
         "slug": dong.slug,
         "name": dong.name,
-        "gu": dong.gu,
+        "gu": dong.gu.name,
         "rent_avg": rent_avg,
         "rent_converted": rent_converted,
         "transit_min": transit_min,
         "amenity_label": AMENITY_LABEL_KO[level],
-        "score": score,
+        "score": round(composite, 2),
     }
 
 
@@ -108,7 +114,7 @@ def _build_card(
 # ---------------------------------------------------------------------------
 
 
-def _select_pairs(dongs: list[Dong], count: int) -> list[tuple[Dong, Dong]]:
+def _select_pairs(dongs: list[Adong], count: int) -> list[tuple[Adong, Adong]]:
     """
     정보량 최대화 휴리스틱.
 
@@ -208,14 +214,25 @@ class PreferencePairsView(APIView):
         if not 1 <= count <= 20:
             raise ValidationError({"count": "1~20 범위여야 합니다."})
 
+        # sub-plan 7G-B2: Adong + CurrentAdong join + annotate score_*.
+        # 결정 1A: current_adong 미존재/score NULL → 0.
         dongs = list(
-            Dong.objects.only(
-                "slug",
-                "name",
-                "gu",
-                "score_rent",
-                "score_amenity",
-                "score_transit",
+            Adong.objects.select_related("gu").annotate(
+                score_rent=Coalesce(
+                    F("current_score__score_rent"),
+                    Value(0.0),
+                    output_field=FloatField(),
+                ),
+                score_amenity=Coalesce(
+                    F("current_score__score_amenity"),
+                    Value(0.0),
+                    output_field=FloatField(),
+                ),
+                score_transit=Coalesce(
+                    F("current_score__score_transit"),
+                    Value(0.0),
+                    output_field=FloatField(),
+                ),
             )
         )
         if len(dongs) < 2:
@@ -324,11 +341,26 @@ class PreferenceSubmitView(APIView):
             slugs_needed.add(won)
             slugs_needed.add(lost)
 
-        # 슬러그 → Dong 일괄 조회 (N+1 방지)
-        dong_map: dict[str, Dong] = {
+        # 슬러그 → Adong 일괄 조회 (N+1 방지). sub-plan 7G-B2.
+        # CurrentAdong join + Coalesce annotate. 결정 1A: NULL → 0.
+        dong_map: dict[str, Adong] = {
             d.slug: d
-            for d in Dong.objects.only(
-                "slug", "score_rent", "score_amenity", "score_transit"
+            for d in Adong.objects.annotate(
+                score_rent=Coalesce(
+                    F("current_score__score_rent"),
+                    Value(0.0),
+                    output_field=FloatField(),
+                ),
+                score_amenity=Coalesce(
+                    F("current_score__score_amenity"),
+                    Value(0.0),
+                    output_field=FloatField(),
+                ),
+                score_transit=Coalesce(
+                    F("current_score__score_transit"),
+                    Value(0.0),
+                    output_field=FloatField(),
+                ),
             ).filter(slug__in=slugs_needed)
         }
         missing = sorted(slugs_needed - set(dong_map.keys()))

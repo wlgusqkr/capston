@@ -31,9 +31,11 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.neighborhoods.models import Dong
-
-from .models import BusCongestion, BusStop, NearestSubway, SubwayCongestion
+# sub-plan 7G-B2 (결정 4A): NearestSubway(legacy) → NearestSubwayAdong 표면 치환.
+# Dong → Adong + Gu join. dong.code(=adong_code) 호환 lock 유지.
+from apps.public_data.regions.models import Adong
+from apps.public_data.subway.models import NearestSubwayAdong
+from apps.public_data.bus.models import BusCongestion, BusStop  # noqa: F401  (BusCongestion is queried via raw SQL only)
 
 
 # 가까운 역 N개 (NearestSubway 사전계산은 rank 1~3) — TOP 3 사용.
@@ -61,9 +63,12 @@ RATIO_MIDDAY_TO_MORNING_HIGH = 0.8  # 낮 고른 분포
 RATIO_WEEKEND_TO_WEEKDAY = 1.2   # 주말 피크 강
 
 
-def _dong_header(dong: Dong) -> dict:
-    """공통 dong 식별 dict — apps.neighborhoods.views._dong_header 와 동일 포맷."""
-    return {"slug": dong.slug, "name": dong.name, "gu": dong.gu}
+def _dong_header(dong: Adong) -> dict:
+    """공통 dong 식별 dict — apps.service.neighborhoods.views._dong_header 와 동일 포맷.
+
+    sub-plan 7G-B2: adong.gu(FK) → adong.gu.name. 응답 dict key 보존.
+    """
+    return {"slug": dong.slug, "name": dong.name, "gu": dong.gu.name}
 
 
 def _empty_hours() -> list[dict]:
@@ -104,22 +109,42 @@ def _avg_all(points: list[dict]) -> Optional[float]:
 # ---------------------------------------------------------------------------
 
 
-def _collect_subway(dong: Dong) -> dict:
+def _collect_subway(dong: Adong) -> dict:
     """가까운 지하철역 N개의 day_type x hour 평균 혼잡도.
 
     direction(상선/하선/내선/외선)·express_yn(일반/급행)은 전부 평균에 포함.
     "휴일" day_type 은 "일요일" 버킷으로 합쳐 일요일 평균 계산.
+
+    sub-plan 7G-B2 (결정 4A):
+    - legacy NearestSubway(neighborhoods.Dong FK) → NearestSubwayAdong(regions.Adong FK).
+    - NearestSubwayAdong은 station FK 없이 station_name(비정규화)만 보유 →
+      SubwayStation을 station_name으로 join하여 line/station_id 회수.
+    - 응답 dict key (`stations` 안 `name`/`line`) 보존.
     """
+    from apps.public_data.subway.models import SubwayStation
+
     ns_rows = list(
-        NearestSubway.objects.filter(dong_id=dong.id)
-        .order_by("rank")
-        .select_related("station")[:NEAREST_SUBWAY_N]
+        NearestSubwayAdong.objects.filter(adong=dong)
+        .order_by("rank")[:NEAREST_SUBWAY_N]
     )
-    stations_meta = [
-        {"name": ns.station.name, "line": ns.station.line}
-        for ns in ns_rows
-    ]
-    station_ids = [ns.station_id for ns in ns_rows]
+    station_names = [ns.station_name for ns in ns_rows]
+    # station_name → SubwayStation row 매핑 (line/id 회수).
+    station_by_name: dict[str, SubwayStation] = {
+        s.name: s
+        for s in SubwayStation.objects.filter(name__in=station_names).only(
+            "id", "name", "line"
+        )
+    }
+    stations_meta = []
+    station_ids: list[str] = []
+    for ns in ns_rows:
+        st = station_by_name.get(ns.station_name)
+        if st is None:
+            # SubwayStation 매스터 부재 — line 빈 문자열 fallback. station_id 누락 시 혼잡도 0.
+            stations_meta.append({"name": ns.station_name, "line": ""})
+            continue
+        stations_meta.append({"name": st.name, "line": st.line})
+        station_ids.append(st.id)
 
     by_day: dict[str, list[dict]] = {k: _empty_hours() for k in SUBWAY_DAY_KEYS}
 
@@ -165,16 +190,16 @@ def _collect_subway(dong: Dong) -> dict:
     return {"stations": stations_meta, "by_day": by_day}
 
 
-def _collect_bus(dong: Dong) -> dict:
+def _collect_bus(dong: Adong) -> dict:
     """동에 매핑된 BusStop 들의 평일/주말 x hour 평균 혼잡도.
 
     최근 BUS_RECENT_DAYS 일로 윈도우 제한 (BRIN(date) 활용).
     DOW: PostgreSQL EXTRACT(DOW FROM date) — 0=일, 6=토. 0/6 → 주말.
+
+    sub-plan 7G-B2: dong.code → adong.adong_code 직접 매칭 (값 동일).
     """
-    # sub-plan 4.5B 정합: BusStop은 dong FK 제거 → adong FK (regions.Adong) 단일.
-    # Dong.code (행정동 코드) == Adong.adong_code 이므로 adong_code로 직접 매칭.
     bus_stop_ids = list(
-        BusStop.objects.filter(adong_id=dong.code).values_list("id", flat=True)
+        BusStop.objects.filter(adong=dong).values_list("id", flat=True)
     )
     stop_count = len(bus_stop_ids)
     by_pattern: dict[str, list[dict]] = {k: _empty_hours() for k in BUS_PATTERN_KEYS}
@@ -399,9 +424,10 @@ class DongTransitCongestionView(APIView):
     """
 
     def get(self, request: Request, slug: str) -> Response:
+        # sub-plan 7G-B2: Dong → Adong + Gu join.
         try:
-            dong = Dong.objects.only("id", "slug", "name", "gu").get(slug=slug)
-        except Dong.DoesNotExist as exc:
+            dong = Adong.objects.select_related("gu").get(slug=slug)
+        except Adong.DoesNotExist as exc:
             raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
 
         cache_key = f"dong_transit_congestion:v1:{slug}"

@@ -54,8 +54,8 @@ class CsrfExemptSessionAuthentication(SessionAuthentication):
     def enforce_csrf(self, request):  # type: ignore[no-untyped-def]
         return  # 무시
 
-from apps.neighborhoods.models import Dong
-from apps.preference.models import UserPreference
+from apps.public_data.regions.models import Adong
+from apps.service.preference.models import UserPreference
 
 from .models import Favorite, User
 from .serializers import (
@@ -328,18 +328,12 @@ class FavoritesView(_AuthRequiredMixin, APIView):
         return preference_to_floats(pref)
 
     def get(self, request: Request) -> Response:
+        # sub-plan 7G-B2 (F1-A): dong → adong 치환.
+        # score는 CurrentAdong join(`adong__current_score`)으로 합성.
+        # 결정 1A: current_adong 미존재 또는 score_rent NULL → 0 fallback (serializer 측에서 처리).
         favs = (
             Favorite.objects.filter(user=request.user)
-            .select_related("dong")
-            .only(
-                "created_at",
-                "dong__slug",
-                "dong__name",
-                "dong__gu",
-                "dong__score_rent",
-                "dong__score_amenity",
-                "dong__score_transit",
-            )
+            .select_related("adong", "adong__gu", "adong__current_score")
         )
         weights = self._user_weights(request)
         items = [build_favorite_item(f, weights) for f in favs]
@@ -357,17 +351,10 @@ class FavoritesView(_AuthRequiredMixin, APIView):
             )
         slug = slug.strip()
 
+        # sub-plan 7G-B2 (F1-A): Dong → Adong + CurrentAdong join.
         try:
-            dong = Dong.objects.only(
-                "id",
-                "slug",
-                "name",
-                "gu",
-                "score_rent",
-                "score_amenity",
-                "score_transit",
-            ).get(slug=slug)
-        except Dong.DoesNotExist:
+            adong = Adong.objects.select_related("gu", "current_score").get(slug=slug)
+        except Adong.DoesNotExist:
             return Response(
                 {"detail": f"찾을 수 없는 동네: {slug}"},
                 status=status.HTTP_404_NOT_FOUND,
@@ -375,7 +362,7 @@ class FavoritesView(_AuthRequiredMixin, APIView):
 
         try:
             with transaction.atomic():
-                fav = Favorite.objects.create(user=request.user, dong=dong)
+                fav = Favorite.objects.create(user=request.user, adong=adong)
         except IntegrityError:
             return Response(
                 {"detail": "이미 찜한 동네입니다."},
@@ -400,8 +387,9 @@ class FavoriteDetailView(_AuthRequiredMixin, APIView):
     """DELETE /api/users/me/favorites/<slug> — 찜 해제. 204 또는 404."""
 
     def delete(self, request: Request, slug: str) -> Response:
+        # sub-plan 7G-B2 (F1-A): dong__slug → adong__slug.
         deleted, _ = Favorite.objects.filter(
-            user=request.user, dong__slug=slug
+            user=request.user, adong__slug=slug
         ).delete()
         if deleted == 0:
             raise NotFound({"detail": f"찜 목록에 없는 동네: {slug}"})

@@ -202,20 +202,28 @@ class FavoriteItemSerializer(serializers.Serializer):
 
 
 def build_favorite_item(fav: Favorite, weights: dict[str, float]) -> dict:
-    """Favorite 인스턴스 + 사용자 가중치 → dict."""
-    dong = fav.dong
+    """Favorite 인스턴스 + 사용자 가중치 → dict.
+
+    sub-plan 7G-B2 (F1-A): Favorite.dong → Favorite.adong 치환.
+    - score는 CurrentAdong.score_{rent,amenity,transit}로 합성.
+      current_adong 미존재 또는 score_rent NULL은 결정 1A에 따라 0으로 fallback.
+    - 응답 dict key set은 보존 (FavoriteItem schema lock — slug/name/gu/score/created_at).
+    """
+    adong = fav.adong
+    current = getattr(adong, "current_score", None)
+    score_rent = (current.score_rent if current is not None else 0.0) or 0.0
+    score_amenity = (current.score_amenity if current is not None else 0.0) or 0.0
+    score_transit = (current.score_transit if current is not None else 0.0) or 0.0
     score = round(
-        dong.composite_score(
-            w_rent=weights["w_rent"],
-            w_amenity=weights["w_amenity"],
-            w_transit=weights["w_transit"],
-        ),
+        score_rent * weights["w_rent"]
+        + score_amenity * weights["w_amenity"]
+        + score_transit * weights["w_transit"],
         2,
     )
     return {
-        "slug": dong.slug,
-        "name": dong.name,
-        "gu": dong.gu,
+        "slug": adong.slug,
+        "name": adong.name,
+        "gu": adong.gu.name,
         "score": score,
         "created_at": fav.created_at,
     }

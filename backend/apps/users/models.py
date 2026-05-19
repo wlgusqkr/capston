@@ -58,8 +58,10 @@ class Favorite(models.Model):
         related_name="favorites",
         on_delete=models.CASCADE,
     )
-    dong = models.ForeignKey(
-        "neighborhoods.Dong",
+    # sub-plan 7G-B2 (F1-A): Dong → Adong FK 치환.
+    # related_name 유지(`favorited_by`)는 cross-app 영향이 있을 수 있어 그대로 둔다.
+    adong = models.ForeignKey(
+        "regions.Adong",
         related_name="favorited_by",
         on_delete=models.CASCADE,
     )
@@ -69,11 +71,11 @@ class Favorite(models.Model):
         db_table = "user_favorite"
         verbose_name = "찜한 동네"
         verbose_name_plural = "찜한 동네"
-        unique_together = ("user", "dong")
+        unique_together = ("user", "adong")
         ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["user", "-created_at"]),
         ]
 
     def __str__(self) -> str:
-        return f"{self.user} ♡ {self.dong}"
+        return f"{self.user} ♡ {self.adong}"

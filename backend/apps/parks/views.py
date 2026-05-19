@@ -21,14 +21,18 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.neighborhoods.models import Dong
+# sub-plan 7G-B2: Dong → Adong + Gu join 치환.
+from apps.public_data.regions.models import Adong
 
 from .models import ParkDong
 
 
-def _dong_header(dong: Dong) -> dict:
-    """공통 dong 식별 dict — apps.neighborhoods.views._dong_header 와 동일 포맷."""
-    return {"slug": dong.slug, "name": dong.name, "gu": dong.gu}
+def _dong_header(dong: Adong) -> dict:
+    """공통 dong 식별 dict — apps.service.neighborhoods.views._dong_header 와 동일 포맷.
+
+    응답 dict key set 보존 lock (slug/name/gu). adong.gu는 FK이므로 `.name` 접근.
+    """
+    return {"slug": dong.slug, "name": dong.name, "gu": dong.gu.name}
 
 
 @extend_schema(
@@ -71,12 +75,10 @@ class DongParksView(APIView):
     """
 
     def get(self, request: Request, slug: str) -> Response:
-        # slug 존재 확인 (없으면 404). centroid도 필요하므로 only에 포함.
+        # sub-plan 7G-B2: Dong → Adong 치환. adong.location ← (구) dong.centroid.
         try:
-            dong = Dong.objects.only(
-                "id", "slug", "name", "gu", "code", "centroid"
-            ).get(slug=slug)
-        except Dong.DoesNotExist as exc:
+            dong = Adong.objects.select_related("gu").get(slug=slug)
+        except Adong.DoesNotExist as exc:
             raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
 
         cache_key = f"dong_parks:v1:{slug}"
@@ -87,22 +89,23 @@ class DongParksView(APIView):
         # park_adong 매핑 → park join.
         # 거리 계산: ST_DistanceSphere 는 4326 그대로 받아서 m 단위 좌표 거리 산출
         # (프로젝트 표준 패턴, score_point.py 참조). geography cast 없이 빠름.
-        # location 또는 centroid 중 하나라도 NULL 이면 결과도 NULL.
+        # park.location 또는 adong.location 중 하나라도 NULL 이면 결과도 NULL.
         # 'park.location' 은 ParkDong.select_related("park") 시 SQL 별칭이 그대로
         # 테이블명("park")이 된다 (Park.Meta.db_table = "park"). RawSQL은 join 컨텍스트
         # 안에서 평가되므로 join 별칭을 직접 참조한다.
+        # sub-plan 7G-B2: dong.id(int) → adong.adong_code(string). adong 테이블 location 사용.
         distance_sql = (
             'ST_DistanceSphere('
             '  "park"."location", '
-            '  (SELECT centroid FROM dong WHERE dong.id = %s)'
+            '  (SELECT location FROM adong WHERE adong.adong_code = %s)'
             ')'
         )
         qs = (
             ParkDong.objects
-            .filter(dong=dong.code)
+            .filter(adong=dong.adong_code)
             .select_related("park")
             .annotate(
-                distance_m=RawSQL(distance_sql, (dong.id,)),
+                distance_m=RawSQL(distance_sql, (dong.adong_code,)),
             )
             .order_by(F("park__area_m2").desc(nulls_last=True))
             .values(
