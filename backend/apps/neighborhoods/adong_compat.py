@@ -50,7 +50,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any
 
-from django.db.models import F, FloatField, QuerySet, Value
+from django.db.models import ExpressionWrapper, F, FloatField, QuerySet, Value
 from django.db.models.functions import Coalesce
 
 
@@ -70,7 +70,10 @@ def build_adong_qs() -> "QuerySet":
     return (
         Adong.objects.select_related("gu", "current_score")
         .annotate(
-            area_km2_anno=F("area_m2") / Value(1_000_000.0, output_field=FloatField()),
+            area_km2_anno=ExpressionWrapper(
+                F("area_m2") / Value(1_000_000.0),
+                output_field=FloatField(),
+            ),
             score_rent_anno=Coalesce(
                 F("current_score__score_rent"),
                 Value(0.0),
