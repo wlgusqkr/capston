@@ -85,8 +85,12 @@ class RentDeal(models.Model):
     )
 
     # 지번 / 건물명 / 면적 (NULL 허용 — 응답 결측 시 그대로).
-    jibun = models.CharField(max_length=50, blank=True, help_text="'법정동 + 지번' 원문")
-    house_name = models.CharField(max_length=100, blank=True, help_text="건물명")
+    jibun = models.CharField(
+        max_length=50, null=True, blank=True, help_text="'법정동 + 지번' 원문 (NULL 허용)"
+    )
+    house_name = models.CharField(
+        max_length=100, null=True, blank=True, help_text="건물명 (NULL 허용)"
+    )
     area_m2 = models.DecimalField(
         max_digits=12,
         decimal_places=4,
@@ -112,6 +116,7 @@ class RentDeal(models.Model):
     contract_end_date = models.DateField(null=True, blank=True, help_text="계약 종료일")
     contract_type = models.CharField(
         max_length=20,
+        null=True,
         blank=True,
         help_text="신규, 갱신 (CHECK ck_rent_deal_contract_type, NULL 허용)",
     )

@@ -35,8 +35,12 @@ class BusStop(models.Model):
     )
     stop_number = models.CharField(
         max_length=20,
+        null=True,
         blank=True,
-        help_text="정류소번호 (서울 BIS arsId). RDS bus_stop.stop_number 1:1.",
+        help_text=(
+            "정류소번호 (서울 BIS arsId). RDS bus_stop.stop_number 1:1. "
+            "schema.dbml NULL 허용 (line 245)."
+        ),
     )
     name = models.CharField(max_length=100, help_text="정류장 명칭 (NOT NULL)")
 

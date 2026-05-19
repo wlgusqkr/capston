@@ -163,7 +163,12 @@ class Store(models.Model):
         max_length=50, primary_key=True, help_text="상가 ID (RDS store.id, varchar(50))"
     )
     name = models.CharField(max_length=100, help_text="상호명 (NOT NULL)")
-    branch_name = models.CharField(max_length=100, blank=True, help_text="지점명")
+    branch_name = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        help_text="지점명 (schema.dbml NULL 허용)",
+    )
 
     # 소상공인 카테고리 — schema.dbml NOT NULL.
     category = models.ForeignKey(

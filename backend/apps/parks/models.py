@@ -1,12 +1,15 @@
 """
-공원 (Park) 모델 — Phase 1 RDS 통합용.
+공원 (Park) 모델 — schema.dbml line 268~299 정합 (sub-plan 4.5C).
 
-RDS(`dp_db`) 측 park 1,886행 + park_adong / park_ldong 다대다 관계 테이블을
-1:1로 매핑한다. 기존 amenities.Amenity의 'park' 카테고리는 그대로 두고,
-이쪽은 raw 적재용.
+DP_DB park 1,886행 + park_adong / park_ldong 다대다 관계 테이블을 1:1로 매핑.
 
-RDS Park.boundary 타입(POLYGON vs MULTIPOLYGON)은 Phase 2 ETL에서 검증 — 일단
-MultiPolygonField로 정의하고 단일 POLYGON은 ST_Multi()로 캐스팅하여 적재 (계획서 5).
+sub-plan 4.5C 정합:
+- PK: varchar(64) → varchar(50). 'id varchar(50)' (schema.dbml line 269).
+- name: NOT NULL (이미 OK).
+- category: blank=False, NOT NULL (schema.dbml line 271).
+- area_m2: NOT NULL (schema.dbml line 272). max_digits/decimal_places 보존.
+- boundary: NOT NULL (schema.dbml line 273).
+- location: NOT NULL (schema.dbml line 274).
 """
 
 from django.contrib.gis.db import models as gis_models
@@ -15,21 +18,37 @@ from django.db import models
 
 
 class Park(models.Model):
-    """공원. RDS `park` 1,886행."""
+    """공원. DP_DB `park` 1,886행. schema.dbml line 268~275."""
 
     id = models.CharField(
-        max_length=64, primary_key=True, help_text="공원 ID (RDS park.id, varchar)"
+        max_length=50,
+        primary_key=True,
+        help_text=(
+            "공원 ID (RDS park.id, varchar(50)). "
+            "SHP UPIS_SHP_ZON216의 ID에서 끝 4자리 추출 후 P prefix. "
+            "예: 생활서비스시설_공원_0033 → P0033"
+        ),
     )
-    name = models.CharField(max_length=200, help_text="공원 이름")
-    category = models.CharField(max_length=50, blank=True, help_text="공원 분류")
+    name = models.CharField(max_length=200, help_text="공원 이름 (NOT NULL)")
+    category = models.CharField(
+        max_length=50,
+        help_text=(
+            "공원 분류 (NOT NULL). 근린공원/어린이공원/도시자연공원/마을마당/광장 "
+            "등 SHP LABEL의 첫 분류 토큰"
+        ),
+    )
     area_m2 = models.DecimalField(
-        max_digits=20, decimal_places=4, null=True, blank=True, help_text="면적 (m^2)"
+        max_digits=20,
+        decimal_places=4,
+        help_text="면적 (m^2, NOT NULL)",
     )
     boundary = gis_models.MultiPolygonField(
-        srid=4326, null=True, blank=True, help_text="공원 경계 (WGS84)"
+        srid=4326,
+        help_text="공원 경계 (WGS84, NOT NULL)",
     )
     location = gis_models.PointField(
-        srid=4326, null=True, blank=True, help_text="중심점 (WGS84)"
+        srid=4326,
+        help_text="중심점 (WGS84, NOT NULL)",
     )
 
     class Meta:
