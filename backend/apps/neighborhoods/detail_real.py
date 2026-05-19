@@ -273,12 +273,14 @@ def _real_real_estate(dong, today: date) -> dict:
 
 
 def _real_amenities(dong) -> list[dict]:
-    """SPEC 6.3 섹션 3 — 8 카테고리 카운트 (Amenity 실 쿼리).
+    """SPEC 6.3 섹션 3 — 8 카테고리 카운트 + 카테고리별 실 카운트 percentile.
 
     sub-plan 4C: Amenity.dong FK 제거에 따라 AmenityAdong N:M join 사용.
-    Dong.code (10자리 행정동 PK) ↔ AmenityAdong.adong (FK to Adong, db_column='adong_code').
-    응답 dict key 보존 lock — {"category", "count", "density_per_km2", "level"}.
+    응답 dict key — {"category", "count", "density_per_km2", "percentile", "level"}.
+    percentile: 카테고리별 실 카운트 기반 TOP X% (1=최상위, 100=최하위). NULL=산출 불가.
     """
+    from apps.public_data.regions.models import Adong  # noqa: WPS433
+
     counts: dict[str, int] = defaultdict(int)
     qs = (
         AmenityAdong.objects.filter(adong=dong.code)
@@ -288,6 +290,22 @@ def _real_amenities(dong) -> list[dict]:
     for r in qs:
         counts[r["category"]] = r["n"]
 
+    all_qs = (
+        AmenityAdong.objects.values(
+            adong_code=F("adong_id"),
+            category=F("amenity__category"),
+        )
+        .annotate(n=Count("amenity_id"))
+    )
+    counts_by_label: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    for r in all_qs:
+        for label, internal_keys, _w in AMENITY_DISPLAY:
+            if r["category"] in internal_keys:
+                counts_by_label[label][r["adong_code"]] += r["n"]
+                break
+
+    total_adong = Adong.objects.count()
+
     level = _amenity_level(dong.score_amenity)
     area = max(0.1, dong.area_km2 or 0.25)
 
@@ -295,10 +313,24 @@ def _real_amenities(dong) -> list[dict]:
     for label, internal_keys, _weight in AMENITY_DISPLAY:
         cnt = sum(counts.get(k, 0) for k in internal_keys)
         density = round(cnt / area, 1)
+
+        peer_counts: list[int] = list(counts_by_label.get(label, {}).values())
+        zeros = max(0, total_adong - len(peer_counts))
+        peer_counts.extend([0] * zeros)
+
+        percentile: int | None
+        if not peer_counts or max(peer_counts) == min(peer_counts):
+            percentile = None
+        else:
+            lower = sum(1 for c in peer_counts if c < cnt)
+            pct = (lower / len(peer_counts)) * 100
+            percentile = max(1, min(100, round(100 - pct)))
+
         out.append({
             "category": label,
             "count": cnt,
             "density_per_km2": density,
+            "percentile": percentile,
             "level": level,
         })
     return out

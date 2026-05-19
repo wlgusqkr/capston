@@ -159,6 +159,8 @@ export interface DongDetail {
     category: string;
     count: number;
     density_per_km2: number;
+    /** 카테고리별 실 카운트 기반 TOP X% (1=최상위, 100=최하위). 산출 불가 시 null. */
+    percentile: number | null;
     level: AmenityLevel;
   }>;
 
