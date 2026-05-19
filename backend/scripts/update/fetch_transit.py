@@ -41,8 +41,9 @@ setup()
 from django.contrib.gis.geos import Point  # noqa: E402
 from django.db import connection, transaction  # noqa: E402
 
-from apps.neighborhoods.models import Dong  # noqa: E402
-from apps.transit.models import BusStop, NearestSubway, SubwayStation  # noqa: E402
+from apps.service.neighborhoods.models import Dong  # noqa: E402
+from apps.public_data.bus.models import BusStop  # noqa: E402
+from apps.public_data.subway.models import NearestSubway, SubwayStation  # noqa: E402
 
 
 SUBWAY_ENDPOINT_TMPL = (
@@ -111,7 +112,7 @@ def _ingest_subway(rows: Iterable[dict]) -> dict[str, int]:
             line=line,
             defaults={
                 "external_id": ext_id,
-                "geom": Point(lng, lat, srid=4326),
+                "location": Point(lng, lat, srid=4326),
             },
         )
         if was_created:
@@ -189,7 +190,7 @@ def _ingest_bus_stops(rows: Iterable[dict]) -> dict[str, int]:
             defaults={
                 "dong": dong,
                 "name": name,
-                "geom": point,
+                "location": point,
             },
         )
         if was_created:
@@ -211,7 +212,7 @@ def _ingest_bus_stops(rows: Iterable[dict]) -> dict[str, int]:
 def precompute_nearest_subway(top_k: int = 3) -> dict[str, int]:
     """Dong centroid → 가장 가까운 SubwayStation top_k 를 NearestSubway 캐시에 채운다.
 
-    정확한 미터 거리: ST_Distance(geom::geography, centroid::geography).
+    정확한 미터 거리: ST_Distance(location::geography, centroid::geography).
     재실행 시 기존 캐시 삭제 후 재생성 (멱등).
     """
 
@@ -222,9 +223,9 @@ def precompute_nearest_subway(top_k: int = 3) -> dict[str, int]:
 
     # bulk delete + bulk create 트랜잭션
     sql = """
-        SELECT s.id, ST_Distance(s.geom::geography, %s::geography) AS dist_m
+        SELECT s.id, ST_Distance(s.location::geography, %s::geography) AS dist_m
         FROM subway_station s
-        ORDER BY s.geom <-> %s
+        ORDER BY s.location <-> %s
         LIMIT %s;
     """
 

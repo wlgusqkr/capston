@@ -7,7 +7,7 @@
     아파트→apt, 오피스텔→officetel, 다세대/연립/연립다세대→villa,
     다가구→dagagu, 단독→danok
 - ldong_code → ldong FK
-- location → geom
+- location → location (1:1)
 - dong FK (PROTECT, NOT NULL): 2단계 매핑
     1) INSERT 시점에 ldong → 대표 dong fallback (메모리 lookup) 사용.
     2) 모든 INSERT 후 geom 있는 row에 ST_Contains 로 정확한 dong 으로 UPDATE.
@@ -52,7 +52,7 @@ def derive_deal_type(housing_type: str | None) -> str:
 SQL_INSERT = """
 INSERT INTO rent_deal
   (external_id, deal_type, housing_type, ldong_id, dong_id,
-   geom,
+   location,
    deal_date, contract_end_date, contract_type, renewal_request_right_used,
    area_m2, deposit, monthly_rent,
    previous_deposit, previous_monthly_rent,
@@ -71,7 +71,7 @@ ON CONFLICT (external_id) DO UPDATE SET
   housing_type = EXCLUDED.housing_type,
   ldong_id = EXCLUDED.ldong_id,
   dong_id = EXCLUDED.dong_id,
-  geom = EXCLUDED.geom,
+  location = EXCLUDED.location,
   deal_date = EXCLUDED.deal_date,
   contract_end_date = EXCLUDED.contract_end_date,
   contract_type = EXCLUDED.contract_type,

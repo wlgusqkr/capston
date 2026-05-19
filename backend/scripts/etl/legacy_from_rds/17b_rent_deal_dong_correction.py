@@ -41,9 +41,9 @@ def main() -> int:
                     FROM (
                         SELECT r2.id AS rd_id, d.id AS dong_id
                         FROM rent_deal r2
-                        JOIN dong d ON ST_Contains(d.geom, r2.geom)
+                        JOIN dong d ON ST_Contains(d.geom, r2.location)
                         WHERE r2.ldong_id = %s
-                          AND r2.geom IS NOT NULL
+                          AND r2.location IS NOT NULL
                     ) sub
                     WHERE r.id = sub.rd_id
                       AND r.dong_id <> sub.dong_id
@@ -68,22 +68,22 @@ def main() -> int:
 
         print(f"[17b] total corrected: {total_corrected:,}")
 
-        # 검증: 모든 rent_deal 이 dong과 일관된 좌표 관계인지 (geom 있는 row 한정)
+        # 검증: 모든 rent_deal 이 dong과 일관된 좌표 관계인지 (location 있는 row 한정)
         with local.cursor() as lcur:
             lcur.execute(
                 """
                 SELECT COUNT(*) FROM rent_deal r
                 LEFT JOIN dong d ON r.dong_id = d.id
-                WHERE r.geom IS NOT NULL
-                  AND NOT ST_Contains(d.geom, r.geom)
+                WHERE r.location IS NOT NULL
+                  AND NOT ST_Contains(d.geom, r.location)
                 """
             )
             mismatch = lcur.fetchone()[0]
-            lcur.execute("SELECT COUNT(*) FROM rent_deal WHERE geom IS NOT NULL")
-            with_geom = lcur.fetchone()[0]
+            lcur.execute("SELECT COUNT(*) FROM rent_deal WHERE location IS NOT NULL")
+            with_location = lcur.fetchone()[0]
         print(
-            f"[17b] verify: {mismatch:,}/{with_geom:,} rows where dong "
-            f"does NOT contain geom (likely on boundary or fallback-only)"
+            f"[17b] verify: {mismatch:,}/{with_location:,} rows where dong "
+            f"does NOT contain location (likely on boundary or fallback-only)"
         )
     return 0
 

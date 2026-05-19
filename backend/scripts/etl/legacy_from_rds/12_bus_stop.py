@@ -5,7 +5,7 @@
 - stop_number → arsId
 - adong_code → dong FK (95% 커버, NULL 5%는 좌표 ST_Contains 백필)
 - ldong_code → ldong FK
-- location → geom
+- location → location (1:1)
 
 NULL adong을 좌표로 백필: 첫 패스에서 INSERT 모두 끝난 뒤 별도 UPDATE.
 """
@@ -53,7 +53,7 @@ def main() -> int:
                     lcur.executemany(
                         """
                         INSERT INTO bus_stop
-                          (external_id, "arsId", name, adong_code, ldong_code, geom,
+                          (external_id, "arsId", name, adong_code, ldong_code, location,
                            created_at, updated_at)
                         VALUES (%s, %s, %s, %s, %s, ST_GeomFromEWKT(%s), NOW(), NOW())
                         ON CONFLICT (external_id) DO UPDATE SET
@@ -61,7 +61,7 @@ def main() -> int:
                           name = EXCLUDED.name,
                           adong_code = EXCLUDED.adong_code,
                           ldong_code = EXCLUDED.ldong_code,
-                          geom = EXCLUDED.geom,
+                          location = EXCLUDED.location,
                           updated_at = NOW()
                         """,
                         coerced,
@@ -71,6 +71,7 @@ def main() -> int:
             prog.finish()
 
         # 백필: adong_code IS NULL인 행을 좌표 → Dong.geom ST_Contains로 채움
+        # (bus_stop.location은 sub-plan 2I에서 geom → location 컬럼 rename)
         with local.cursor() as lcur:
             lcur.execute("SELECT COUNT(*) FROM bus_stop WHERE adong_code IS NULL")
             null_before = lcur.fetchone()[0]
@@ -82,8 +83,8 @@ def main() -> int:
                 SET adong_code = d.code
                 FROM dong d
                 WHERE b.adong_code IS NULL
-                  AND b.geom IS NOT NULL
-                  AND ST_Contains(d.geom, b.geom)
+                  AND b.location IS NOT NULL
+                  AND ST_Contains(d.geom, b.location)
                 """
             )
             updated = lcur.rowcount

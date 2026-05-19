@@ -15,7 +15,7 @@ import { Button, Card, Badge, Score, MetricBar } from '../components/ui';
  * Grouped to match the comment structure in the source file.
  * ----------------------------------------------------------------------- */
 
-const BASE_PATH = 'C:/Users/HSY/Desktop/capston/frontend/src';
+const BASE_PATH = 'frontend/src';
 
 interface ColorToken {
   name: string;

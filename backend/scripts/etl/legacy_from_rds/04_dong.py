@@ -10,7 +10,7 @@
 - slug 생성: f"{gu_slug}-{name_slug}" (Django slugify 한글 OK).
 - score_rent/amenity/transit = 0.0 (Phase 4에서 재계산)
 
-Dong은 PROTECT FK가 5종(realestate.RentDeal, amenities.Store 등)이므로
+Dong은 PROTECT FK가 5종(rent_deal.RentDeal, store.Store 등)이므로
 삭제는 절대 하지 말고 ON CONFLICT(code) DO UPDATE만.
 """
 

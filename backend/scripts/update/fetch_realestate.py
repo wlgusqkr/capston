@@ -25,7 +25,7 @@
      같은 구 내 같은 이름 Dong fallback. 매칭 실패 시 skip.
 5. 사전 컷: deposit==0 AND monthly_rent==0 → skip; monthly_rent > 5000 → skip.
 6. IQR 1.5배 클리핑: area_m2 / deposit / monthly_rent.
-7. apps.realestate.RentDeal `update_or_create(external_hash=...)` (idempotent).
+7. apps.public_data.rent_deal.RentDeal `update_or_create(external_hash=...)` (idempotent).
 
 Usage
 -----
@@ -349,8 +349,6 @@ def geocode_jibun(
         "geocode_jibun 미구현 — V-World 호출 본 구현은 일일 업데이트 본격 가동 전 "
         "별도 plan에서 채운다 (sub-plan 4D: RentDeal.location 직접 사용)."
     )
-    stats.vworld_success += 1
-    return point, key
 
 
 # ---- 행정동 매핑 ------------------------------------------------------
@@ -359,7 +357,7 @@ def resolve_dong(point, gu: str, umd_nm: str):
 
     반환: Dong 인스턴스 또는 None.
     """
-    from apps.neighborhoods.models import Dong
+    from apps.service.neighborhoods.models import Dong
 
     if point is not None:
         d = Dong.objects.filter(geom__contains=point).first()
@@ -406,7 +404,7 @@ def persist(
     stats: GeocodeStats,
 ) -> tuple[int, int, int]:
     """rows → DB. 반환: (inserted, updated, skipped)."""
-    from apps.realestate.models import RentDeal
+    from apps.public_data.rent_deal.models import RentDeal
 
     inserted = updated = skipped = 0
     for r in rows:
@@ -432,7 +430,7 @@ def persist(
             "floor": r.get("floor"),
             "build_year": r.get("build_year"),
             "jibun": (r.get("jibun") or "")[:64],
-            "geom": point,
+            "location": point,
         }
         _, created = RentDeal.objects.update_or_create(
             external_hash=ext_hash, defaults=defaults

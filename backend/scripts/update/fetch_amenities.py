@@ -221,7 +221,7 @@ def _dong_lookup(lng: float, lat: float, gu: str | None = None):
     `gu` 힌트가 있으면 해당 구만 우선 검색해 비용 절감 (모든 dong 25배 빠름).
     """
 
-    from apps.neighborhoods.models import Dong  # noqa: WPS433
+    from apps.service.neighborhoods.models import Dong  # noqa: WPS433
 
     point = Point(lng, lat, srid=4326)
     qs = Dong.objects.filter(geom__contains=point)
@@ -238,7 +238,7 @@ def _dong_lookup(lng: float, lat: float, gu: str | None = None):
 def _persist_stores(items: Iterable[dict], gu: str | None) -> dict[str, int]:
     """items → Amenity rows. 카운트 dict 반환 (categories + skipped 사유)."""
 
-    from apps.amenities.models import Amenity  # noqa: WPS433
+    from apps.service.amenities.models import Amenity  # noqa: WPS433
 
     stats = {
         "seen": 0,
@@ -327,7 +327,7 @@ def fetch_parks(api_key: str, *, dry_run: bool = False) -> list[dict]:
 
 
 def _persist_parks(rows: Iterable[dict]) -> dict[str, int]:
-    from apps.amenities.models import Amenity  # noqa: WPS433
+    from apps.service.amenities.models import Amenity  # noqa: WPS433
 
     stats = {"seen": 0, "no_coord": 0, "no_dong": 0, "upserted": 0}
     for r in rows:
@@ -372,7 +372,7 @@ def _persist_parks(rows: Iterable[dict]) -> dict[str, int]:
 # 메인 흐름
 # ---------------------------------------------------------------------------
 def _run_stores(args, api_key: str) -> int:
-    from apps.neighborhoods.models import Dong  # noqa: WPS433
+    from apps.service.neighborhoods.models import Dong  # noqa: WPS433
 
     if not Dong.objects.exists():
         print("[WARN] Dong 테이블이 비어 있습니다. 먼저 load_dongs 적재 필요.")
@@ -423,7 +423,7 @@ def _run_stores(args, api_key: str) -> int:
 
 
 def _run_parks(args, api_key: str) -> int:
-    from apps.neighborhoods.models import Dong  # noqa: WPS433
+    from apps.service.neighborhoods.models import Dong  # noqa: WPS433
 
     if not Dong.objects.exists():
         print("[WARN] Dong 테이블이 비어 있습니다. 먼저 load_dongs 적재 필요.")

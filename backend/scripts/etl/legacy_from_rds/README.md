@@ -86,7 +86,7 @@ done
 1. **Geometry**: RDS에서 `ST_AsEWKT(col)`로 텍스트 export → local에서 `ST_GeomFromEWKT(%s)` 로 캐스팅. PG18→PG16 binary EWKB도 호환되지만 디버깅 편의상 EWKT.
 2. **FK lookup**: RDS의 varchar id (subway_station/bus_stop) → Django auto bigint id 매핑은 메모리 dict 한 번 적재 후 사용.
 3. **dong 매핑 (rent_deal)**: 2-pass — 1) ldong→대표 dong fallback INSERT, 2) ST_Contains UPDATE 보정.
-4. **bus_stop 좌표 백필**: adong_code IS NULL인 5%를 좌표 → ST_Contains(Dong.geom, geom) 으로 채움.
+4. **bus_stop 좌표 백필**: adong_code IS NULL인 5%를 좌표 → ST_Contains(Dong.geom, bus_stop.location) 으로 채움.
 5. **검증**: 각 스크립트 끝에 RDS vs LOCAL `COUNT(*)` 비교 출력.
 
 ## 알려진 이슈

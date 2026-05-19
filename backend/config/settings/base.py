@@ -82,15 +82,21 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
-    "apps.users",
-    "apps.neighborhoods",
-    "apps.preference",
-    "apps.regions",
-    "apps.metrics",
-    "apps.parks",
-    "apps.amenities",
-    "apps.transit",
-    "apps.realestate",
+    "apps.web.users",
+    "apps.service.neighborhoods",
+    "apps.service.preference",
+    "apps.public_data.regions",
+    "apps.public_data.metrics",
+    "apps.public_data.park",
+    "apps.service.amenities",
+    "apps.service.scoring",
+    "apps.public_data.populations",
+    "apps.public_data.rent_deal",
+    "apps.public_data.store",
+    "apps.public_data.subway",
+    "apps.public_data.bus",
+    "apps.public_data.univ",
+    "apps.public_data.library",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

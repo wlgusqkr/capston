@@ -2,7 +2,7 @@
 
 알고리즘 (SPEC 11.2)
 --------------------
-- score_rent: 환산월세(만원/월) = monthly_rent + deposit * 0.005 (apps.realestate.utils
+- score_rent: 환산월세(만원/월) = monthly_rent + deposit * 0.005 (apps.public_data.rent_deal.utils
   와 단일 진실). 동별 평균 → 백분위 invert (저렴할수록 높음).
   RentDeal 7.4M 은 SQL aggregation (Avg, Count) 으로 처리, 메모리 안전.
 - score_amenity: 동별 Store 카운트 + Park 카운트 → log scale 가중합 → 백분위.
@@ -78,12 +78,12 @@ BUS_COUNT_CAP = 50
 
 
 # ---------------------------------------------------------------------------
-# 헬퍼: 환산 월세 — 표준식 (apps.realestate.utils 와 단일 진실)
+# 헬퍼: 환산 월세 — 표준식 (apps.public_data.rent_deal.utils 와 단일 진실)
 # ---------------------------------------------------------------------------
 def _converted_rent(deposit: int, monthly_rent: int) -> float:
     """표준 환산식 (만원/월): monthly_rent + deposit × 0.005.
 
-    구현은 apps.realestate.utils.convert_to_monthly 에 위임한다 (단일 진실).
+    구현은 apps.public_data.rent_deal.utils.convert_to_monthly 에 위임한다 (단일 진실).
     score_rent 와 API 응답(`converted_rent`, `rent_converted_avg`) 가 동일한
     계수/공식을 공유해야 표시값과 점수가 정합한다.
 
@@ -394,7 +394,7 @@ def _check_models() -> int:
     from django.apps import apps as django_apps
 
     required = [
-        ("realestate", "RentDeal"),
+        ("rent_deal", "RentDeal"),
         ("amenities", "Amenity"),
         ("transit", "SubwayStation"),
         ("transit", "BusStop"),

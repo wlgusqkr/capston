@@ -1,7 +1,9 @@
 """ETL 공통 헬퍼 — RDS(dp_db) → local slgi.
 
 설계 원칙
-- 환경변수 RDS_DSN / LOCAL_DSN 또는 CLI 인자(--rds-dsn / --local-dsn)로 접속.
+- DSN은 환경변수 DSN_RDS / DSN_LOCAL_DP_DB 또는 CLI 인자(--rds-dsn / --local-dsn)로 주입.
+  레거시 호환을 위해 RDS_DSN / LOCAL_DSN 환경변수도 fallback으로 인정.
+  default 하드코딩 DSN(password 포함)은 보안상 제거됨.
 - 모든 스크립트는 멱등 (ON CONFLICT DO UPDATE/NOTHING).
 - 큰 테이블은 fetchmany 배치 + COPY FROM stdin (psycopg3 stream API).
 - Geometry는 RDS에서 ST_AsEWKT로 read, local에는 ST_GeomFromEWKT로 write.
@@ -10,6 +12,7 @@
 - argparse는 표준 (--limit 옵션은 개발/샘플 실행용).
 
 사용 예
+    # .env 또는 셸 환경에 DSN_RDS, DSN_LOCAL_DP_DB 등록 후
     python 01_seoul.py
     python 17_rent_deal.py --limit 10000   # 1만 row만 적재 (샘플 검증)
 """
@@ -25,13 +28,19 @@ from typing import Iterator
 
 import psycopg
 
-# 검증된 기본값 — 홈서버 이관 시 환경변수만 바꾸면 됨.
-DEFAULT_RDS_DSN = (
-    "host=capstonedesign.c5yi4uwikm7d.ap-northeast-2.rds.amazonaws.com "
-    "port=5432 dbname=dp_db user=backend_reader "
-    "password=CSC2026rcq2AbJytX3PS6LtkoxL!!"
-)
-DEFAULT_LOCAL_DSN = "host=localhost port=5433 dbname=slgi user=slgi password=slgi"
+
+# ---------------------------------------------------------------------------
+# DSN 해석 — 환경변수만 사용. 하드코딩 default 없음.
+# ---------------------------------------------------------------------------
+
+
+def _resolve_dsn(*env_names: str) -> str | None:
+    """주어진 환경변수 이름들을 순서대로 확인, 첫 비어있지 않은 값을 반환."""
+    for name in env_names:
+        v = os.environ.get(name)
+        if v:
+            return v
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -43,13 +52,13 @@ def make_argparser(description: str) -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=description)
     p.add_argument(
         "--rds-dsn",
-        default=os.environ.get("RDS_DSN", DEFAULT_RDS_DSN),
-        help="RDS DSN (default: env RDS_DSN, fallback to verified prod RDS).",
+        default=_resolve_dsn("DSN_RDS", "RDS_DSN"),
+        help="RDS DSN (default: env DSN_RDS, fallback RDS_DSN). 미지정 시 connect()에서 오류.",
     )
     p.add_argument(
         "--local-dsn",
-        default=os.environ.get("LOCAL_DSN", DEFAULT_LOCAL_DSN),
-        help="Local DSN (default: env LOCAL_DSN, fallback to local docker compose).",
+        default=_resolve_dsn("DSN_LOCAL_DP_DB", "LOCAL_DSN"),
+        help="Local DSN (default: env DSN_LOCAL_DP_DB, fallback LOCAL_DSN). 미지정 시 connect()에서 오류.",
     )
     p.add_argument(
         "--limit",
@@ -67,7 +76,12 @@ def make_argparser(description: str) -> argparse.ArgumentParser:
 
 
 @contextmanager
-def connect(dsn: str, *, autocommit: bool = False) -> Iterator[psycopg.Connection]:
+def connect(dsn: str | None, *, autocommit: bool = False) -> Iterator[psycopg.Connection]:
+    if not dsn:
+        raise RuntimeError(
+            "DSN이 설정되지 않았습니다. 환경변수 DSN_RDS / DSN_LOCAL_DP_DB "
+            "(레거시: RDS_DSN / LOCAL_DSN)를 설정하거나 --rds-dsn/--local-dsn 인자를 사용하세요."
+        )
     conn = psycopg.connect(dsn, autocommit=autocommit)
     try:
         yield conn

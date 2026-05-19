@@ -5,7 +5,7 @@
 - name, line 1:1
 - adong_code → dong FK (db_column='adong_code', to_field='code')
 - ldong_code → ldong FK (db_column='ldong_code')
-- location → geom
+- location → location (1:1)
 - Django auto bigint id 별도 생성됨
 
 멱등 키 = external_id (unique). ON CONFLICT (external_id).
@@ -38,7 +38,7 @@ def main() -> int:
                 lcur.execute(
                     """
                     INSERT INTO subway_station
-                      (external_id, name, line, adong_code, ldong_code, geom,
+                      (external_id, name, line, adong_code, ldong_code, location,
                        created_at, updated_at)
                     VALUES (%s, %s, %s, %s, %s, ST_GeomFromEWKT(%s), NOW(), NOW())
                     ON CONFLICT (external_id) DO UPDATE SET
@@ -46,7 +46,7 @@ def main() -> int:
                       line = EXCLUDED.line,
                       adong_code = EXCLUDED.adong_code,
                       ldong_code = EXCLUDED.ldong_code,
-                      geom = EXCLUDED.geom,
+                      location = EXCLUDED.location,
                       updated_at = NOW()
                     """,
                     (ext_id, name, line, adong, ldong, geom),
