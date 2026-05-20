@@ -66,11 +66,11 @@ class Park(models.Model):
         return self.name
 
 
-class ParkDong(models.Model):
+class ParkAdong(models.Model):
     """공원-행정동 다대다 매핑. RDS `park_adong` 2,353행.
 
-    sub-plan 2O — Adong 마스터 FK로 치환 (이전: neighborhoods.Dong FK + to_field='code').
-    db_column은 `adong_code` 유지 → DB 변경 0. 클래스명 ParkDong은 유지 (db_table=park_adong).
+    sub-plan 2O — Adong 마스터 FK로 치환 (이전: neighborhoods.Adong FK + to_field='code').
+    db_column은 `adong_code` 유지 → DB 변경 0. 클래스명 ParkAdong은 유지 (db_table=park_adong).
     """
 
     park = models.ForeignKey(

@@ -13,10 +13,10 @@
 //
 // Click semantics:
 //   - GeoJSON polygon clicks DO bubble to the map by default. To keep the
-//     polygon-click → DongPanel behavior intact while still letting the user
+//     polygon-click → AdongPanel behavior intact while still letting the user
 //     score "empty" map areas, we accept ALL clicks including ones over a
 //     polygon. The parent then decides which panel takes precedence
-//     (polygon click also fires DongPanel; we open kernel panel either way
+//     (polygon click also fires AdongPanel; we open kernel panel either way
 //     since they're mutually exclusive).
 //
 // Why a separate file: mirrors TransactionPinLayer's pattern. HeatMap.tsx

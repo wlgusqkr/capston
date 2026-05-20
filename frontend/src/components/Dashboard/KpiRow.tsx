@@ -20,20 +20,20 @@ import {
 
 import Gauge from '@/components/ui/Gauge';
 import { CHART_COLORS } from '@/lib/colors';
-import type { DongDerivedIndicesResponse, DongDetail, DongScore, DongSummary } from '@/types/api';
+import type { AdongDerivedIndicesResponse, AdongDetail, AdongScore, AdongSummary } from '@/types/api';
 
 import KpiCard from './KpiCard';
 
 interface KpiRowProps {
-  detail: DongDetail | undefined;
-  summary: DongSummary | undefined;
-  derived: DongDerivedIndicesResponse | undefined;
-  allDongs: DongScore[] | undefined;
+  detail: AdongDetail | undefined;
+  summary: AdongSummary | undefined;
+  derived: AdongDerivedIndicesResponse | undefined;
+  allAdongs: AdongScore[] | undefined;
   isLoading: boolean;
 }
 
 /** Map safety_level to a 0-100 numeric score for the gauge. */
-function safetyLevelToScore(level: DongSummary['safety_level']): number {
+function safetyLevelToScore(level: AdongSummary['safety_level']): number {
   switch (level) {
     case 'high':
       return 85;
@@ -47,7 +47,7 @@ function safetyLevelToScore(level: DongSummary['safety_level']): number {
 }
 
 /** Map safety_level to Korean text. */
-function safetyLevelLabel(level: DongSummary['safety_level']): string {
+function safetyLevelLabel(level: AdongSummary['safety_level']): string {
   switch (level) {
     case 'high':
       return '높음';
@@ -62,7 +62,7 @@ function safetyLevelLabel(level: DongSummary['safety_level']): string {
 
 /** Compute weighted average deposit from deposit_band_avg. */
 function computeAvgDeposit(
-  bands: DongDetail['real_estate']['deposit_band_avg'],
+  bands: AdongDetail['real_estate']['deposit_band_avg'],
 ): number | null {
   if (!bands || bands.length === 0) return null;
   const bandMidpoints: Record<string, number> = {
@@ -85,7 +85,7 @@ function computeAvgDeposit(
 
 /** Build mini line data from monthly_trend (last 6 months, summing all types). */
 function buildMiniLineData(
-  trend: DongDetail['real_estate']['monthly_trend'],
+  trend: AdongDetail['real_estate']['monthly_trend'],
 ): Array<{ m: string; v: number }> {
   const last6 = trend.slice(-6);
   return last6.map((t) => {
@@ -101,7 +101,7 @@ function buildMiniLineData(
 
 /** Build mini bar data from monthly_trend (deal count proxy — count non-null types per month). */
 function buildMiniBarData(
-  trend: DongDetail['real_estate']['monthly_trend'],
+  trend: AdongDetail['real_estate']['monthly_trend'],
 ): Array<{ m: string; v: number }> {
   const last6 = trend.slice(-6);
   return last6.map((t) => ({
@@ -112,11 +112,11 @@ function buildMiniBarData(
 
 /** Compute percentile of a value within a sorted-desc array. Returns "상위 N%" string. */
 function computeRentPercentile(
-  allDongs: DongScore[] | undefined,
+  allAdongs: AdongScore[] | undefined,
   rentValue: number,
 ): string | undefined {
-  if (!allDongs || allDongs.length === 0) return undefined;
-  const rents = allDongs.map((d) => d.score_rent).sort((a, b) => b - a);
+  if (!allAdongs || allAdongs.length === 0) return undefined;
+  const rents = allAdongs.map((d) => d.score_rent).sort((a, b) => b - a);
   const idx = rents.findIndex((r) => rentValue >= r);
   const percentile = idx >= 0 ? Math.max(1, Math.round(((idx + 1) / rents.length) * 100)) : 100;
   return `상위 ${percentile}%`;
@@ -131,7 +131,7 @@ function getDepositInsight(avgDeposit: number | null): string | undefined {
 }
 
 /** Get safety insight text. */
-function getSafetyInsight(level: DongSummary['safety_level']): string {
+function getSafetyInsight(level: AdongSummary['safety_level']): string {
   switch (level) {
     case 'high':
       return '안전 등급이 높은 구예요';
@@ -144,7 +144,7 @@ function getSafetyInsight(level: DongSummary['safety_level']): string {
   }
 }
 
-export default function KpiRow({ detail, summary, derived, allDongs, isLoading }: KpiRowProps) {
+export default function KpiRow({ detail, summary, derived, allAdongs, isLoading }: KpiRowProps) {
   const kpi = detail?.real_estate.studio_kpi;
   const avgDeposit = detail ? computeAvgDeposit(detail.real_estate.deposit_band_avg) : null;
   const miniLineData = detail ? buildMiniLineData(detail.real_estate.monthly_trend) : [];
@@ -169,10 +169,10 @@ export default function KpiRow({ detail, summary, derived, allDongs, isLoading }
 
   // Percentile computations for KPI cards
   const rentBadge = kpi?.avg_converted_rent != null
-    ? computeRentPercentile(allDongs, kpi.avg_converted_rent)
+    ? computeRentPercentile(allAdongs, kpi.avg_converted_rent)
     : undefined;
-  const rentInsight = kpi?.avg_converted_rent != null && allDongs && allDongs.length > 0
-    ? `서울 ${allDongs.length}개 동 중 월세가 ${(kpi.avg_converted_rent <= 50) ? '저렴한' : (kpi.avg_converted_rent <= 70) ? '평균 수준인' : '높은'} 편이에요`
+  const rentInsight = kpi?.avg_converted_rent != null && allAdongs && allAdongs.length > 0
+    ? `서울 ${allAdongs.length}개 동 중 월세가 ${(kpi.avg_converted_rent <= 50) ? '저렴한' : (kpi.avg_converted_rent <= 70) ? '평균 수준인' : '높은'} 편이에요`
     : undefined;
 
   const dealBadge = activityPercentile != null

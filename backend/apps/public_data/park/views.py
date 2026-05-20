@@ -2,10 +2,10 @@
 Park 관련 뷰.
 
 엔드포인트:
-- GET /api/dongs/<slug>/parks
+- GET /api/adongs/<slug>/parks
   → 행정동에 매핑된 공원 목록 (대시보드 SPEC §4.4 섹션 B "대형 공원" 위젯용)
 
-URL 등록은 apps.service.neighborhoods.urls 에서 한다 (dong-scoped URL 패턴 유지).
+URL 등록은 apps.service.neighborhoods.urls 에서 한다 (adong-scoped URL 패턴 유지).
 DB 스키마 변경 없음 — SELECT 전용.
 """
 
@@ -21,22 +21,22 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-# sub-plan 7G-B2: Dong → Adong + Gu join 치환.
+# sub-plan 7G-B2: regions.Adong + Gu join ??.
 from apps.public_data.regions.models import Adong
 
-from .models import ParkDong
+from .models import ParkAdong
 
 
-def _dong_header(dong: Adong) -> dict:
-    """공통 dong 식별 dict — apps.service.neighborhoods.views._dong_header 와 동일 포맷.
+def _dong_header(adong: Adong) -> dict:
+    """공통 adong 식별 dict — apps.service.neighborhoods.views._dong_header 와 동일 포맷.
 
     응답 dict key set 보존 lock (slug/name/gu). adong.gu는 FK이므로 `.name` 접근.
     """
-    return {"slug": dong.slug, "name": dong.name, "gu": dong.gu.name}
+    return {"slug": adong.slug, "name": adong.name, "gu": adong.gu.name}
 
 
 @extend_schema(
-    tags=["dongs"],
+    tags=["adongs"],
     summary="행정동에 매핑된 공원 목록 (대시보드 §4.4 섹션 B)",
     description=(
         "park_adong 다대다 매핑을 통해 한 행정동에 묶인 공원 전체를 반환한다. "
@@ -45,13 +45,13 @@ def _dong_header(dong: Adong) -> dict:
         "ST_DistanceSphere(m). 둘 중 하나라도 좌표가 없으면 null."
     ),
 )
-class DongParksView(APIView):
+class AdongParksView(APIView):
     """
-    GET /api/dongs/<slug>/parks
+    GET /api/adongs/<slug>/parks
 
     응답:
       {
-        "dong": { "slug": "...", "name": "...", "gu": "..." },
+        "adong": { "slug": "...", "name": "...", "gu": "..." },
         "count": 12,
         "parks": [
           {
@@ -75,9 +75,9 @@ class DongParksView(APIView):
     """
 
     def get(self, request: Request, slug: str) -> Response:
-        # sub-plan 7G-B2: Dong → Adong 치환. adong.location ← (구) dong.centroid.
+        # adong.location? ??? ?? ??? ????.
         try:
-            dong = Adong.objects.select_related("gu").get(slug=slug)
+            adong = Adong.objects.select_related("gu").get(slug=slug)
         except Adong.DoesNotExist as exc:
             raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
 
@@ -90,10 +90,10 @@ class DongParksView(APIView):
         # 거리 계산: ST_DistanceSphere 는 4326 그대로 받아서 m 단위 좌표 거리 산출
         # (프로젝트 표준 패턴, score_point.py 참조). geography cast 없이 빠름.
         # park.location 또는 adong.location 중 하나라도 NULL 이면 결과도 NULL.
-        # 'park.location' 은 ParkDong.select_related("park") 시 SQL 별칭이 그대로
+        # 'park.location' 은 ParkAdong.select_related("park") 시 SQL 별칭이 그대로
         # 테이블명("park")이 된다 (Park.Meta.db_table = "park"). RawSQL은 join 컨텍스트
         # 안에서 평가되므로 join 별칭을 직접 참조한다.
-        # sub-plan 7G-B2: dong.id(int) → adong.adong_code(string). adong 테이블 location 사용.
+        # adong.location? ??? ?? ??? ????.
         distance_sql = (
             'ST_DistanceSphere('
             '  "park"."location", '
@@ -101,11 +101,11 @@ class DongParksView(APIView):
             ')'
         )
         qs = (
-            ParkDong.objects
-            .filter(adong=dong.adong_code)
+            ParkAdong.objects
+            .filter(adong=adong.adong_code)
             .select_related("park")
             .annotate(
-                distance_m=RawSQL(distance_sql, (dong.adong_code,)),
+                distance_m=RawSQL(distance_sql, (adong.adong_code,)),
             )
             .order_by(F("park__area_m2").desc(nulls_last=True))
             .values(
@@ -139,7 +139,7 @@ class DongParksView(APIView):
             })
 
         data = {
-            "dong": _dong_header(dong),
+            "adong": _dong_header(adong),
             "count": len(parks),
             "parks": parks,
         }

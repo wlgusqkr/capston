@@ -8,7 +8,7 @@
 // TopNav reads it via `usePageTitleValue()`.
 //
 // Loading/error fallback: pages can pass `undefined` (or omit the call)
-// and TopNav will render a fallback (e.g., the URL slug for /dong/:slug).
+// and TopNav will render a fallback (e.g., the URL slug for /adong/:slug).
 //
 // Lifetime: the title resets when the page unmounts. No persistence across
 // route changes — each page is responsible for its own title publication.

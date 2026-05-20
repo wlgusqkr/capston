@@ -22,7 +22,7 @@ import random
 from datetime import date, timedelta
 from typing import Iterable
 
-from .adong_compat import build_adong_qs, composite_score as _composite_score, wrap
+from .adong_surface import build_adong_qs, composite_score as _composite_score, wrap
 from .summary import generate_summary
 
 
@@ -58,7 +58,7 @@ DEPOSIT_BANDS: list[tuple[str, float]] = [
 DEAL_TYPES = ["연립다세대", "단독다가구", "오피스텔"]
 
 # SPEC 6.3 섹션 4 — 가까운 역 매핑 (slug별 1~3위).
-# 1위는 DongSummarySerializer의 NEAREST_STATION_FALLBACK과 일관.
+# 1위는 AdongSummarySerializer의 NEAREST_STATION_FALLBACK과 일관.
 NEAREST_STATIONS_FALLBACK: dict[str, list[dict]] = {
     "pildong": [
         {"name": "충무로", "line": "4호선", "walking_min": 8, "walking_distance_m": 560},
@@ -178,12 +178,12 @@ def _round1(x: float) -> float:
 # ---------------------------------------------------------------------------
 
 
-def _build_real_estate(dong, today: date) -> dict:
+def _build_real_estate(adong, today: date) -> dict:
     """SPEC 6.3 섹션 2 — 부동산 시세."""
-    rng = _seeded_rng(dong.slug, salt="real_estate")
+    rng = _seeded_rng(adong.slug, salt="real_estate")
 
-    # 마지막 달 평균 ~= 120 - score_rent (DongSummarySerializer.get_rent_avg와 일관)
-    base = max(20, 120 - dong.score_rent)
+    # 마지막 달 평균 ~= 120 - score_rent (AdongSummarySerializer.get_rent_avg와 일관)
+    base = max(20, 120 - adong.score_rent)
 
     # ---- 월별 추이 (최근 6개월) ----
     monthly_trend = []
@@ -260,16 +260,16 @@ def _build_real_estate(dong, today: date) -> dict:
     }
 
 
-def _build_amenities(dong) -> list[dict]:
+def _build_amenities(adong) -> list[dict]:
     """SPEC 6.3 섹션 3 — 편의시설 8개 카테고리."""
-    rng = _seeded_rng(dong.slug, salt="amenities")
-    level = _amenity_level(dong.score_amenity)
-    area = max(0.1, dong.area_km2 or 0.25)
+    rng = _seeded_rng(adong.slug, salt="amenities")
+    level = _amenity_level(adong.score_amenity)
+    area = max(0.1, adong.area_km2 or 0.25)
 
     out = []
     for category, weight in AMENITY_CATEGORIES:
         # 점수 0 → 카운트 ~ 1, 점수 100 → 카운트 ~ weight*100
-        base_count = int(round(dong.score_amenity * weight + rng.uniform(-3, 3)))
+        base_count = int(round(adong.score_amenity * weight + rng.uniform(-3, 3)))
         count = max(0, base_count)
         density = round(count / area, 1)
         out.append({
@@ -281,11 +281,11 @@ def _build_amenities(dong) -> list[dict]:
     return out
 
 
-def _build_transit(dong) -> dict:
+def _build_transit(adong) -> dict:
     """SPEC 6.3 섹션 4 — 교통."""
-    rng = _seeded_rng(dong.slug, salt="transit")
+    rng = _seeded_rng(adong.slug, salt="transit")
 
-    stations_raw = NEAREST_STATIONS_FALLBACK.get(dong.slug, NEAREST_STATIONS_DEFAULT)
+    stations_raw = NEAREST_STATIONS_FALLBACK.get(adong.slug, NEAREST_STATIONS_DEFAULT)
     nearest_stations = [
         {
             "rank": i + 1,
@@ -298,7 +298,7 @@ def _build_transit(dong) -> dict:
     ]
 
     # 버스: stop_count = transit / 2 정도, route는 그 ~3배
-    stop_count = max(1, int(round(dong.score_transit / 2 + rng.uniform(-3, 3))))
+    stop_count = max(1, int(round(adong.score_transit / 2 + rng.uniform(-3, 3))))
     route_count = max(stop_count, int(round(stop_count * 3 + rng.uniform(-5, 5))))
 
     return {
@@ -310,11 +310,11 @@ def _build_transit(dong) -> dict:
     }
 
 
-def _build_reviews(dong, today: date) -> dict:
+def _build_reviews(adong, today: date) -> dict:
     """SPEC 6.3 섹션 5 — 자취생 리뷰."""
-    rng = _seeded_rng(dong.slug, salt="reviews")
+    rng = _seeded_rng(adong.slug, salt="reviews")
 
-    overall = (dong.score_rent + dong.score_amenity + dong.score_transit) / 3
+    overall = (adong.score_rent + adong.score_amenity + adong.score_transit) / 3
     # 평균 별점: 3.5 + (score/100) * 1.4 → 3.5~4.9
     avg_rating = round(3.5 + (overall / 100) * 1.4, 1)
     avg_rating = min(5.0, max(1.0, avg_rating))
@@ -343,20 +343,20 @@ def _build_reviews(dong, today: date) -> dict:
     }
 
 
-def _build_similar_dongs(dong, all_dongs: Iterable) -> list[dict]:
+def _build_similar_dongs(adong, all_dongs: Iterable) -> list[dict]:
     """
     SPEC 6.3 섹션 6 — 비슷한 동네 (시간 되면).
     POI 기반 임베딩은 9/10단계 작업. 현재는 raw 점수 3종 유클리드 거리 기반
     상위 3개로 더미 답.
     """
-    others = [d for d in all_dongs if d.slug != dong.slug]
+    others = [d for d in all_dongs if d.slug != adong.slug]
     if not others:
         return []
 
     def feat(x) -> tuple[float, float, float]:
         return (x.score_rent, x.score_amenity, x.score_transit)
 
-    base_feat = feat(dong)
+    base_feat = feat(adong)
     scored = []
     for other in others:
         of = feat(other)
@@ -385,12 +385,12 @@ def _build_similar_dongs(dong, all_dongs: Iterable) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
-def build_dummy_detail(dong, weights: dict, today: date | None = None) -> dict:
+def build_dummy_detail(adong, weights: dict, today: date | None = None) -> dict:
     """
     SPEC 6.3 동네 상세 응답 dict를 빌드.
 
     파라미터:
-        dong: Dong 인스턴스 (centroid, score_*, area_km2 모두 채워져 있어야 함)
+        adong: Adong 인스턴스 (centroid, score_*, area_km2 모두 채워져 있어야 함)
         weights: {"rent": 0~1, "amenity": 0~1, "transit": 0~1} 합 1
         today: 기준일 (테스트 주입용. 기본 date.today())
 
@@ -400,10 +400,10 @@ def build_dummy_detail(dong, weights: dict, today: date | None = None) -> dict:
         today = date.today()
 
     # ---- 종합 점수 ----
-    # 7G-B1: Dong.composite_score 메서드 제거 → adong_compat.composite_score 함수 호출.
+    # 7G-B1: Adong.composite_score 메서드 제거 → adong_surface.composite_score 함수 호출.
     score = round(
         _composite_score(
-            dong,
+            adong,
             w_rent=weights["rent"],
             w_amenity=weights["amenity"],
             w_transit=weights["transit"],
@@ -411,11 +411,11 @@ def build_dummy_detail(dong, weights: dict, today: date | None = None) -> dict:
         2,
     )
 
-    # ---- 한 줄 요약 (raw 점수 기반, 가중치와 무관 — DongSummary와 일관) ----
+    # ---- 한 줄 요약 (raw 점수 기반, 가중치와 무관 — AdongSummary와 일관) ----
     summary = generate_summary(
-        score_rent=dong.score_rent,
-        score_amenity=dong.score_amenity,
-        score_transit=dong.score_transit,
+        score_rent=adong.score_rent,
+        score_amenity=adong.score_amenity,
+        score_transit=adong.score_transit,
     )
 
     # ---- vs 서울 평균 ----
@@ -423,36 +423,36 @@ def build_dummy_detail(dong, weights: dict, today: date | None = None) -> dict:
 
     # ---- 중심점 ----
     centroid = {
-        "lat": round(dong.centroid.y, 6) if dong.centroid else 0.0,
-        "lng": round(dong.centroid.x, 6) if dong.centroid else 0.0,
+        "lat": round(adong.centroid.y, 6) if adong.centroid else 0.0,
+        "lng": round(adong.centroid.x, 6) if adong.centroid else 0.0,
     }
 
     # ---- 비슷한 동네 (전체 동 셋에서 top 3) ----
     # 7G-B1: Adong + current_score wrap. _build_similar_dongs는 slug/name/gu/score_*만 사용.
     all_dongs = [wrap(a) for a in build_adong_qs()]
-    similar_dongs = _build_similar_dongs(dong, all_dongs)
+    similar_dongs = _build_similar_dongs(adong, all_dongs)
 
     return {
         # 1. Hero
-        "slug": dong.slug,
-        "name": dong.name,
-        "gu": dong.gu,
+        "slug": adong.slug,
+        "name": adong.name,
+        "gu": adong.gu,
         "score": score,
         "summary": summary,
         "vs_seoul_avg_pct": vs_seoul_avg_pct,
         "centroid": centroid,
 
         # 2. 부동산
-        "real_estate": _build_real_estate(dong, today),
+        "real_estate": _build_real_estate(adong, today),
 
         # 3. 편의시설
-        "amenities": _build_amenities(dong),
+        "amenities": _build_amenities(adong),
 
         # 4. 교통
-        "transit": _build_transit(dong),
+        "transit": _build_transit(adong),
 
         # 5. 리뷰
-        "reviews": _build_reviews(dong, today),
+        "reviews": _build_reviews(adong, today),
 
         # 6. 비슷한 동네
         "similar_dongs": similar_dongs,

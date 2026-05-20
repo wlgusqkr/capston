@@ -1,13 +1,13 @@
-// Compare — side-by-side comparison of up to 3 dongs (SPEC 6.4).
+// Compare — side-by-side comparison of up to 3 adongs (SPEC 6.4).
 //
-// URL contract (SPEC 8): /compare?dongs=A,B,C
+// URL contract (SPEC 8): /compare?adongs=A,B,C
 //
 // Honest Compare (FINDING-101 + FINDING-106, 2026-05-03):
 //   Final 4 rows:
 //     1) 종합점수      — composite score (CompareItem.score, weighted)
 //     2) 평균 월세      — CompareItem.rent_avg
-//     3) 생활시설 점수  — DongScore.score_amenity (0~100)
-//     4) 교통 점수      — DongScore.score_transit (0~100)
+//     3) 생활시설 점수  — AdongScore.score_amenity (0~100)
+//     4) 교통 점수      — AdongScore.score_transit (0~100)
 //
 // Highlight rule (FINDING-106):
 //   In each row, the best value(s) get a Pale Green background.
@@ -17,9 +17,9 @@ import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { Badge, Button } from '@/components/ui';
-import { useCompare, useDongScores } from '@/hooks/useDongs';
+import { useCompare, useAdongScores } from '@/hooks/useAdongs';
 import { DEFAULT_WEIGHTS } from '@/types/api';
-import type { CompareItem, DongScore } from '@/types/api';
+import type { CompareItem, AdongScore } from '@/types/api';
 
 const MAX_SLUGS = 3;
 const SCORE_TIE_EPSILON = 0.5;
@@ -43,20 +43,20 @@ export default function Compare() {
   const navigate = useNavigate();
 
   const slugs = useMemo(
-    () => parseSlugs(searchParams.get('dongs')),
+    () => parseSlugs(searchParams.get('adongs')),
     [searchParams]
   );
 
   const weights = DEFAULT_WEIGHTS;
   const compareQ = useCompare(slugs, weights, slugs.length > 0);
-  const scoresQ = useDongScores(weights);
+  const scoresQ = useAdongScores(weights);
 
   const isLoading = compareQ.isLoading || (slugs.length > 0 && scoresQ.isLoading);
   const isError = compareQ.isError || scoresQ.isError;
   const error = compareQ.error ?? scoresQ.error;
 
   const scoresBySlug = useMemo(() => {
-    const map = new Map<string, DongScore>();
+    const map = new Map<string, AdongScore>();
     if (scoresQ.data) {
       for (const row of scoresQ.data) map.set(row.slug, row);
     }
@@ -67,11 +67,11 @@ export default function Compare() {
     const next = slugs.filter((s) => s !== slug);
     if (next.length === 0) {
       const params = new URLSearchParams(searchParams);
-      params.delete('dongs');
+      params.delete('adongs');
       setSearchParams(params, { replace: true });
     } else {
       const params = new URLSearchParams(searchParams);
-      params.set('dongs', next.join(','));
+      params.set('adongs', next.join(','));
       setSearchParams(params, { replace: true });
     }
   };
@@ -109,9 +109,9 @@ export default function Compare() {
           </div>
         )}
 
-        {slugs.length > 0 && compareQ.data && compareQ.data.dongs.length > 0 && (
+        {slugs.length > 0 && compareQ.data && compareQ.data.adongs.length > 0 && (
           <CompareTable
-            dongs={compareQ.data.dongs}
+            adongs={compareQ.data.adongs}
             scoresBySlug={scoresBySlug}
             onRemove={handleRemove}
             onAddMore={handleAddMore}
@@ -138,8 +138,8 @@ function EmptyState({ onBack }: { onBack: () => void }) {
 }
 
 interface CompareTableProps {
-  dongs: CompareItem[];
-  scoresBySlug: Map<string, DongScore>;
+  adongs: CompareItem[];
+  scoresBySlug: Map<string, AdongScore>;
   onRemove: (slug: string) => void;
   onAddMore: () => void;
 }
@@ -150,7 +150,7 @@ interface RowDecision {
 }
 
 function CompareTable({
-  dongs,
+  adongs,
   scoresBySlug,
   onRemove,
   onAddMore,
@@ -158,19 +158,19 @@ function CompareTable({
   const [shareNotice, setShareNotice] = useState<string | null>(null);
 
   const breakdown = useMemo(() => {
-    return dongs.map((d) => {
+    return adongs.map((d) => {
       const row = scoresBySlug.get(d.slug);
       return {
         score_amenity: row?.score_amenity ?? NaN,
         score_transit: row?.score_transit ?? NaN,
       };
     });
-  }, [dongs, scoresBySlug]);
+  }, [adongs, scoresBySlug]);
 
-  const scoreVals = useMemo(() => dongs.map((d) => d.score), [dongs]);
+  const scoreVals = useMemo(() => adongs.map((d) => d.score), [adongs]);
   const rentVals = useMemo(
-    () => dongs.map((d) => (d.rent_converted_avg ?? NaN)),
-    [dongs]
+    () => adongs.map((d) => (d.rent_converted_avg ?? NaN)),
+    [adongs]
   );
   const amenityVals = useMemo(
     () => breakdown.map((b) => b.score_amenity),
@@ -199,11 +199,11 @@ function CompareTable({
   );
 
   const topScoreIdx = useMemo(() => {
-    if (dongs.length <= 1) return -1;
+    if (adongs.length <= 1) return -1;
     if (scoreDecision.isTie) return -1;
     if (scoreDecision.bestIdx.size !== 1) return -1;
     return [...scoreDecision.bestIdx][0];
-  }, [dongs.length, scoreDecision]);
+  }, [adongs.length, scoreDecision]);
 
   const handleShare = async () => {
     const url = window.location.href;
@@ -225,7 +225,7 @@ function CompareTable({
       <table className="w-full border-collapse font-[family-name:var(--font-family-base)] tracking-normal" role="table">
         <colgroup>
           <col className="w-[180px]" />
-          {dongs.map((d) => (
+          {adongs.map((d) => (
             <col key={d.slug} />
           ))}
         </colgroup>
@@ -234,20 +234,20 @@ function CompareTable({
             <th scope="col" className="py-4 px-5 text-left font-normal text-caption text-text-muted align-top">
               <span className="inline-block font-mono text-mono-label font-normal tracking-[0.26px] text-text-subtle uppercase">지표</span>
             </th>
-            {dongs.map((dong, idx) => (
-              <th key={dong.slug} scope="col" className="py-4 px-5 text-left font-normal text-caption text-text-muted align-top">
+            {adongs.map((adong, idx) => (
+              <th key={adong.slug} scope="col" className="py-4 px-5 text-left font-normal text-caption text-text-muted align-top">
                 <ColumnHeader
-                  dong={dong}
-                  isTopScore={idx === topScoreIdx && dongs.length > 1}
-                  onRemove={() => onRemove(dong.slug)}
+                  adong={adong}
+                  isTopScore={idx === topScoreIdx && adongs.length > 1}
+                  onRemove={() => onRemove(adong.slug)}
                 />
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          <Row label="종합점수" decision={scoreDecision} showTie={dongs.length > 1}>
-            {dongs.map((d, i) => (
+          <Row label="종합점수" decision={scoreDecision} showTie={adongs.length > 1}>
+            {adongs.map((d, i) => (
               <CellTd key={d.slug} highlight={scoreDecision.bestIdx.has(i)}>
                 <span className="tabular">{d.score.toFixed(1)}</span>
                 <span className="text-caption text-text-muted font-normal"> / 100</span>
@@ -258,9 +258,9 @@ function CompareTable({
             label="평균 환산 월세"
             hint="낮을수록 좋음"
             decision={rentDecision}
-            showTie={dongs.length > 1}
+            showTie={adongs.length > 1}
           >
-            {dongs.map((d, i) => {
+            {adongs.map((d, i) => {
               const v = d.rent_converted_avg;
               if (v == null) {
                 return (
@@ -280,11 +280,11 @@ function CompareTable({
           <Row
             label="생활시설 점수"
             decision={amenityDecision}
-            showTie={dongs.length > 1}
+            showTie={adongs.length > 1}
           >
             {breakdown.map((b, i) => (
               <CellTd
-                key={dongs[i].slug}
+                key={adongs[i].slug}
                 highlight={amenityDecision.bestIdx.has(i)}
               >
                 <ScoreValue value={b.score_amenity} />
@@ -294,11 +294,11 @@ function CompareTable({
           <Row
             label="교통 점수"
             decision={transitDecision}
-            showTie={dongs.length > 1}
+            showTie={adongs.length > 1}
           >
             {breakdown.map((b, i) => (
               <CellTd
-                key={dongs[i].slug}
+                key={adongs[i].slug}
                 highlight={transitDecision.bestIdx.has(i)}
               >
                 <ScoreValue value={b.score_transit} />
@@ -329,7 +329,7 @@ function CompareTable({
       </div>
 
       <footer className="flex items-center gap-3 p-5 border-t border-border bg-surface" aria-label="비교 액션">
-        {dongs.length < MAX_SLUGS && (
+        {adongs.length < MAX_SLUGS && (
           <Button variant="secondary" size="md" onClick={onAddMore}>
             + 동네 추가하기
           </Button>
@@ -348,17 +348,17 @@ function CompareTable({
 }
 
 interface ColumnHeaderProps {
-  dong: CompareItem;
+  adong: CompareItem;
   isTopScore: boolean;
   onRemove: () => void;
 }
 
-function ColumnHeader({ dong, isTopScore, onRemove }: ColumnHeaderProps) {
+function ColumnHeader({ adong, isTopScore, onRemove }: ColumnHeaderProps) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-col gap-1">
-        <span className="text-caption text-text-muted font-normal">{dong.gu}</span>
-        <span className="text-card-heading font-semibold leading-[1.2] tracking-[-0.28px] text-text">{dong.name}</span>
+        <span className="text-caption text-text-muted font-normal">{adong.gu}</span>
+        <span className="text-card-heading font-semibold leading-[1.2] tracking-[-0.28px] text-text">{adong.name}</span>
       </div>
       <div className="flex items-center gap-2">
         {isTopScore && (
@@ -370,7 +370,7 @@ function ColumnHeader({ dong, isTopScore, onRemove }: ColumnHeaderProps) {
           type="button"
           className="w-[var(--control-height-sm)] h-[var(--control-height-sm)] inline-flex items-center justify-center border border-border rounded-sm bg-surface text-text-muted cursor-pointer text-[18px] leading-none ml-auto transition-all duration-[120ms] ease-out hover:bg-danger-soft hover:border-danger hover:text-danger focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2"
           onClick={onRemove}
-          aria-label={`${dong.name} 비교에서 제거`}
+          aria-label={`${adong.name} 비교에서 제거`}
         >
           <span aria-hidden="true">×</span>
         </button>

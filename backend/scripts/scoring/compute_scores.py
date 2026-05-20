@@ -1,5 +1,9 @@
 """행정동 점수 계산 (SPEC 11.2) — 실 데이터/더미 데이터 양쪽 지원.
 
+LEGACY STATUS:
+- This script still targets the removed Dong score columns and gu-level rent fallback.
+- Do not run it for the current Adong/CurrentAdong scoring flow until rewritten.
+
 알고리즘 (SPEC 11.2)
 --------------------
 - score_rent: 환산월세(만원/월) = monthly_rent + deposit * 0.005 (apps.public_data.rent_deal.utils

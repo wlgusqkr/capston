@@ -1,8 +1,8 @@
-// MatchKpiCard -- DongPanel 안에 들어가는 매칭 KPI 카드 (Phase 5).
+// MatchKpiCard -- AdongPanel 안에 들어가는 매칭 KPI 카드 (Phase 5).
 
 import { Link } from 'react-router-dom';
 
-import { useDongMatchDetail } from '@/hooks/useDongMatchDetail';
+import { useAdongMatchDetail } from '@/hooks/useAdongMatchDetail';
 import { writeMatchFiltersToSearch } from '@/hooks/useStudioMatchFilters';
 import type { MatchFilters } from '@/types/api';
 
@@ -12,14 +12,14 @@ export interface MatchKpiCardProps {
 }
 
 export default function MatchKpiCard({ slug, filters }: MatchKpiCardProps) {
-  const { data, isLoading, isError } = useDongMatchDetail(slug, filters);
+  const { data, isLoading, isError } = useAdongMatchDetail(slug, filters);
 
   if (!slug) return null;
 
   const exploreQuery = writeMatchFiltersToSearch(filters).toString();
   const exploreHref = exploreQuery
-    ? `/dong/${slug}/explore?${exploreQuery}`
-    : `/dong/${slug}/explore`;
+    ? `/adong/${slug}/explore?${exploreQuery}`
+    : `/adong/${slug}/explore`;
 
   return (
     <section

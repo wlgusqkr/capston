@@ -1,6 +1,6 @@
-"""SPEC 6.3 후속 — 자취 시세 BI 대시보드 (`/dong/<slug>/explore`).
+"""SPEC 6.3 후속 — 자취 시세 BI 대시보드 (`/adong/<slug>/explore`).
 
-GET /api/dongs/<slug>/explore?<filters>
+GET /api/adongs/<slug>/explore?<filters>
 
 필터 (모두 선택)
 ----------------
@@ -18,7 +18,7 @@ GET /api/dongs/<slug>/explore?<filters>
 
 응답
 ----
-- dong:            { slug, name, gu }
+- adong:            { slug, name, gu }
 - filters_applied: 적용된 필터 정규화 dict (UI 동기화 용)
 - kpi:             { count, avg_converted_rent, min_deposit, avg_area_m2 }
 - type_avg:        [{deal_type, label, avg_converted_rent, count}, ...]  (4 자취 + apt)
@@ -33,13 +33,10 @@ GET /api/dongs/<slug>/explore?<filters>
 - KPI/type_avg/deposit_band/monthly_trend 는 SQL aggregation 한 방.
 - scatter 500건은 sample, deals 는 페이지네이션.
 
-sub-plan 4.5D 정합
-------------------
-- RentDeal.dong FK 제거 → ldong 기반.
-- explore는 단일 동(slug) scope. Dong.code(adong_code) → 같은 자치구의 ldong 거래로 매핑.
-- 컬럼명: deal_type → housing_type 한글 raw + serializer 영문 enum 매핑.
-  deal_date → contract_date.
-- 응답 dict key 보존 ('deal_type'/'date'/'build_year' 등 → frontend lock 1).
+RentDeal scope
+--------------
+- Uses only rent_deal rows with confirmed adong_code for the selected adong.
+- Response keys are preserved for the frontend contract.
 """
 
 from __future__ import annotations
@@ -233,7 +230,7 @@ CONVERTED_EXPR: Expression = F("monthly_rent") + F("deposit") * Value(0.005)
 def apply_base_filters(
     qs: QuerySet[RentDeal], filters: dict[str, Any], today: date
 ) -> QuerySet[RentDeal]:
-    """dong 무관 base 필터만 적용 (match-counts 가 모든 동 GROUP BY 위해 사용).
+    """adong 무관 base 필터만 적용 (match-counts 가 모든 동 GROUP BY 위해 사용).
 
     sub-plan 4.5D: deal_type 영문 enum → housing_type 한글 raw 변환. deal_date → contract_date.
     """
@@ -261,14 +258,10 @@ def apply_base_filters(
 
 
 def apply_filters(
-    qs: QuerySet[RentDeal], gu_name: str, filters: dict[str, Any], today: date
+    qs: QuerySet[RentDeal], adong_code: str, filters: dict[str, Any], today: date
 ) -> QuerySet[RentDeal]:
-    """단일 동 + base 필터. Explore 는 항상 dong scope.
-
-    sub-plan 4.5D: RentDeal.dong FK 제거 → 같은 자치구(ldong__gu__name=dong.gu)
-    의 법정동 거래로 dong-단위 추적. dong_id 매개변수 → gu_name으로 변경.
-    """
-    return apply_base_filters(qs.filter(ldong__gu__name=gu_name), filters, today)
+    """Filter deals for one adong using confirmed rent_deal.adong_code only."""
+    return apply_base_filters(qs.filter(adong_id=adong_code), filters, today)
 
 
 def compute_kpi(qs: QuerySet[RentDeal]) -> dict[str, Any]:
@@ -481,14 +474,14 @@ def paginate_deals(
 # 메인 빌더
 # ---------------------------------------------------------------------------
 
-def build_explore_response(dong, request: Request, today: date) -> dict[str, Any]:
-    """sub-plan 4.5D: dong_id 매칭 불가 → 같은 자치구의 ldong 거래로 추적 (dong.gu)."""
+def build_explore_response(adong, request: Request, today: date) -> dict[str, Any]:
+    """Build the explore payload from confirmed adong-scoped rent deals."""
     filters = parse_explore_filters(request)
 
-    qs = apply_filters(RentDeal.objects.all(), dong.gu, filters, today)
+    qs = apply_filters(RentDeal.objects.all(), adong.code, filters, today)
 
     return {
-        "dong": {"slug": dong.slug, "code": dong.code, "name": dong.name, "gu": dong.gu},
+        "adong": {"slug": adong.slug, "code": adong.code, "name": adong.name, "gu": adong.gu},
         "filters_applied": filters,
         "kpi": compute_kpi(qs),
         "type_avg": compute_type_avg(qs, filters["deal_types"]),

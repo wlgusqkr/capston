@@ -1,8 +1,8 @@
 // Temporary geometry helpers for the main map.
 //
-// The backend currently has only 5 dummy dongs and no MultiPolygon GeoJSON.
-// Until step 10 (data-pipeline loads the real 426-dong GeoJSON), we render
-// each dong as a small square around its centroid so the heatmap is visible.
+// The backend currently has only 5 dummy adongs and no MultiPolygon GeoJSON.
+// Until step 10 (data-pipeline loads the real 426-adong GeoJSON), we render
+// each adong as a small square around its centroid so the heatmap is visible.
 //
 // REMOVE this helper once `/public/seoul_dongs.geojson` is available and the
 // HeatMap component switches to a real GeoJSON layer.

@@ -1,12 +1,12 @@
 // API response types — mirror Django DRF serializers.
 // Source of truth:
 //   - docs/handoff/20260502-step3-backend-foundation.md
-//   - docs/handoff/20260502-step5a-backend-summary.md (DongSummary, raw scores)
+//   - docs/handoff/20260502-step5a-backend-summary.md (AdongSummary, raw scores)
 // SPEC sections 9, 10.
 
-/** Single dong score row from GET /api/dongs/scores. */
-export interface DongScore {
-  /** URL-safe slug, used in /dong/:slug routes. */
+/** Single adong score row from GET /api/adongs/scores. */
+export interface AdongScore {
+  /** URL-safe slug, used in /adong/:slug routes. */
   slug: string;
   /** 행정동 코드 10자리 (행안부). seoul_dongs.geojson properties.adm_cd2 와 매칭. */
   code: string;
@@ -28,7 +28,7 @@ export interface DongScore {
   score_transit: number;
 }
 
-/** Nearest subway station shown in the dong panel (SPEC 6.2). */
+/** Nearest subway station shown in the adong panel (SPEC 6.2). */
 export interface NearestStation {
   name: string;
   line: string;
@@ -41,10 +41,10 @@ export type AmenityLevel = 'sufficient' | 'normal' | 'lacking';
 /** Three-level rating for safety (SPEC 6.2 핵심 지표). */
 export type SafetyLevel = 'high' | 'mid' | 'low';
 
-/** Response of GET /api/dongs/:slug/summary — drives the slide-in dong panel.
+/** Response of GET /api/adongs/:slug/summary — drives the slide-in adong panel.
  *  Source: docs/handoff/20260502-step5a-backend-summary.md
  */
-export interface DongSummary {
+export interface AdongSummary {
   slug: string;
   name: string;
   gu: string;
@@ -78,10 +78,10 @@ export const DEFAULT_WEIGHTS: Weights = {
   transit: 34,
 };
 
-/** Response of GET /api/dongs/:slug/detail — full detail page (SPEC 6.3).
+/** Response of GET /api/adongs/:slug/detail — full detail page (SPEC 6.3).
  *  Source: docs/handoff/20260502-step6a-backend-detail.md
  */
-export interface DongDetail {
+export interface AdongDetail {
   // 1. Hero
   slug: string;
   name: string;
@@ -207,7 +207,7 @@ export interface DongDetail {
 
 // -------- Dashboard Phase 2 — Population + Gu Metrics --------------------
 
-/** Single time-series row from GET /api/dongs/:slug/population. */
+/** Single time-series row from GET /api/adongs/:slug/population. */
 export interface PopulationTrendRow {
   date: string;
   total_population: number;
@@ -216,9 +216,9 @@ export interface PopulationTrendRow {
   female_population: number;
 }
 
-/** Response of GET /api/dongs/:slug/population. */
-export interface DongPopulationResponse {
-  dong: { slug: string; name: string; gu: string };
+/** Response of GET /api/adongs/:slug/population. */
+export interface AdongPopulationResponse {
+  adong: { slug: string; name: string; gu: string };
   latest: PopulationTrendRow | null;
   trend: PopulationTrendRow[];
 }
@@ -245,9 +245,9 @@ export interface SeoulAvgValue {
   date?: string | null;
 }
 
-/** Response of GET /api/dongs/:slug/gu-metrics. */
-export interface DongGuMetricsResponse {
-  dong: { slug: string; name: string; gu: string };
+/** Response of GET /api/adongs/:slug/gu-metrics. */
+export interface AdongGuMetricsResponse {
+  adong: { slug: string; name: string; gu: string };
   gu_code: string;
   gu_name: string;
   /** Deprecated — top-level date removed in 2026-05-13 backend update.
@@ -280,12 +280,12 @@ export interface GuMetricSeries {
   } | null;
 }
 
-/** Response of GET /api/dongs/:slug/gu-metrics/series?codes=...&years=N.
+/** Response of GET /api/adongs/:slug/gu-metrics/series?codes=...&years=N.
  *  `series` keyed by metric_code; same keys mirrored under `seoul_series`
  *  (Seoul-wide averages). All requested codes are always present (empty
  *  points array when no data) — simplifies the frontend branching. */
 export interface GuMetricSeriesResponse {
-  dong: { slug: string; name: string; gu: string };
+  adong: { slug: string; name: string; gu: string };
   gu_code: string;
   gu_name: string;
   series: Record<string, GuMetricSeries>;
@@ -295,9 +295,9 @@ export interface GuMetricSeriesResponse {
 }
 
 // -------- Dashboard Section C — Transit Congestion (SPEC 4.4 Section C) ----
-// GET /api/dongs/:slug/transit-congestion
+// GET /api/adongs/:slug/transit-congestion
 // Backend computes congestion patterns from SubwayCongestion (TOP3 nearby
-// stations, averaged) + BusCongestion (all BusStops mapped to the dong).
+// stations, averaged) + BusCongestion (all BusStops mapped to the adong).
 // Personality estimate derived from morning_peak / midday / evening_peak /
 // weekend averages. See STATE.md Backend section for full schema notes.
 
@@ -310,9 +310,9 @@ export interface CongestionPoint {
   congestion: number | null;
 }
 
-/** Response of GET /api/dongs/:slug/transit-congestion. */
+/** Response of GET /api/adongs/:slug/transit-congestion. */
 export interface TransitCongestionResponse {
-  dong: { slug: string; name: string; gu: string };
+  adong: { slug: string; name: string; gu: string };
   subway: {
     /** TOP 3 nearest stations whose congestion is averaged for the curves. */
     stations: { name: string; line: string }[];
@@ -323,7 +323,7 @@ export interface TransitCongestionResponse {
     };
   };
   bus: {
-    /** Number of BusStops mapped to the dong (sample size). 0 → no bus data. */
+    /** Number of BusStops mapped to the adong (sample size). 0 → no bus data. */
     stop_count: number;
     by_pattern: {
       평일: CongestionPoint[];
@@ -345,8 +345,8 @@ export interface TransitCongestionResponse {
 }
 
 // -------- Dashboard §4.5 — Derived indices (자취촌 지수 + 계약 활발도) ---
-// GET /api/dongs/:slug/derived-indices
-// Backend computes 426 dongs in one pass and caches the dict 5h (daily refresh).
+// GET /api/adongs/:slug/derived-indices
+// Backend computes 426 adongs in one pass and caches the dict 5h (daily refresh).
 
 /** Breakdown of the 자취촌 지수 sub-scores (each 0~1). */
 export interface StudioIndexBreakdown {
@@ -357,7 +357,7 @@ export interface StudioIndexBreakdown {
 
 /** 자취촌 지수 — SPEC §4.5 formula:
  *  0.5 × 비아파트 비율 + 0.3 × ≤25㎡ 비율 + 0.2 × 월세 계약 건수 정규화. 0~100.
- *  Null fields when the dong has 0 deals in the last 365 days. */
+ *  Null fields when the adong has 0 deals in the last 365 days. */
 export interface StudioIndex {
   score: number | null;
   /** 1~100, higher = better (round(100 - (rank-1)/N × 100)). */
@@ -380,17 +380,17 @@ export interface ActivityIndex {
   rank: number | null;
 }
 
-/** Response of GET /api/dongs/:slug/derived-indices. */
-export interface DongDerivedIndicesResponse {
-  dong: { slug: string; name: string; gu: string };
+/** Response of GET /api/adongs/:slug/derived-indices. */
+export interface AdongDerivedIndicesResponse {
+  adong: { slug: string; name: string; gu: string };
   studio_index: StudioIndex;
   activity: ActivityIndex;
 }
 
 // -------- Dashboard Section B — Parks (SPEC 4.4 Section B) --------------
 
-/** Single park row in GET /api/dongs/:slug/parks. */
-export interface DongPark {
+/** Single park row in GET /api/adongs/:slug/parks. */
+export interface AdongPark {
   id: string;
   name: string;
   /** 공원 분류 (예: 근린공원, 어린이공원, 도시자연공원). */
@@ -403,16 +403,16 @@ export interface DongPark {
   distance_m: number | null;
 }
 
-/** Response of GET /api/dongs/:slug/parks.
+/** Response of GET /api/adongs/:slug/parks.
  *  RDS 원본에 동일 공원 중복 행이 있어 클라이언트에서 id 기준 dedupe 필요. */
-export interface DongParksResponse {
-  dong: { slug: string; name: string; gu: string };
+export interface AdongParksResponse {
+  adong: { slug: string; name: string; gu: string };
   count: number;
-  parks: DongPark[];
+  parks: AdongPark[];
 }
 
 // -------- Explore (Phase 4.8 — 자취 시세 BI 대시보드) --------------------
-// GET /api/dongs/:slug/explore?<filters>
+// GET /api/adongs/:slug/explore?<filters>
 
 export type ExploreDealType = 'villa' | 'dagagu' | 'danok' | 'officetel' | 'apt';
 
@@ -505,7 +505,7 @@ export interface ExploreDealsPage {
 }
 
 export interface ExploreResponse {
-  dong: { slug: string; code: string; name: string; gu: string };
+  adong: { slug: string; code: string; name: string; gu: string };
   filters_applied: ExploreFilters;
   kpi: ExploreKpi;
   type_avg: ExploreTypeAvgRow[];
@@ -516,8 +516,8 @@ export interface ExploreResponse {
 }
 
 // -------- Studio Match (Phase 5 — 메인 지도 자취 거래량 분포) ------------
-// GET /api/dongs/match-counts?<filters>
-// GET /api/dongs/:slug/match-detail?<filters>
+// GET /api/adongs/match-counts?<filters>
+// GET /api/adongs/:slug/match-detail?<filters>
 //
 // 데이터 = 국토부 실거래 최근 N개월 (현재 매물 재고 X, 자취·원룸 거래량 분포).
 
@@ -540,12 +540,12 @@ export interface MatchCountsResponse {
   total_matched: number;
   /** 표본이 이 미만인 동은 ratio=0 (eng-review #3). */
   min_sample: number;
-  dongs: MatchCountItem[];
+  adongs: MatchCountItem[];
 }
 
 export interface MatchDetailResponse {
   /** 동 메타. */
-  dong: { slug: string; code: string; name: string; gu: string };
+  adong: { slug: string; code: string; name: string; gu: string };
   filters_applied: MatchFilters;
   /** 이 동의 필터 통과 거래 수. */
   count: number;
@@ -583,7 +583,7 @@ export interface PairCard {
   score: number;
 }
 
-/** A pair of dongs the user is asked to choose between. */
+/** A pair of adongs the user is asked to choose between. */
 export interface PreferencePair {
   left: PairCard;
   right: PairCard;
@@ -596,9 +596,9 @@ export interface PreferencePairsResponse {
 
 /** Body element for POST /api/preference/submit. */
 export interface SubmitComparison {
-  /** slug of the chosen (won) dong. */
+  /** slug of the chosen (won) adong. */
   won: string;
-  /** slug of the rejected (lost) dong. */
+  /** slug of the rejected (lost) adong. */
   lost: string;
 }
 
@@ -620,7 +620,7 @@ export type CompareAmenityLabel = '충분' | '보통' | '부족';
 /** Korean-readable safety label used in the compare table. */
 export type CompareSafetyLabel = '높음' | '보통' | '낮음';
 
-/** A single compare-table column (one dong) — GET /api/compare row.
+/** A single compare-table column (one adong) — GET /api/compare row.
  *  Backend returns rows in the input slug order (preserved for column order).
  */
 export interface CompareItem {
@@ -656,7 +656,7 @@ export interface CompareWeights {
 export interface CompareResponse {
   weights: CompareWeights;
   /** Same order as the input slugs (max 3). */
-  dongs: CompareItem[];
+  adongs: CompareItem[];
 }
 
 // -------- Auth + Users (SPEC 6.6, 9 — step 9) -----------------------------

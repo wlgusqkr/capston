@@ -23,8 +23,13 @@ SELECT id, housing_type, ldong_code, jibun, house_name,
        contract_date, contract_end_date, contract_type,
        renewal_request_right_used,
        previous_deposit, previous_monthly_rent,
-       ST_AsEWKT(location)
-FROM rent_deal
+       CASE
+         WHEN housing_type IN ('단독', '다가구') THEN NULL
+         WHEN r.location IS NOT NULL AND l.location IS NOT NULL AND ST_Equals(r.location, l.location) THEN NULL
+         ELSE ST_AsEWKT(r.location)
+       END AS location_ewkt
+FROM rent_deal r
+JOIN ldong l ON l.ldong_code = r.ldong_code
 """
 
 INSERT_SQL = """

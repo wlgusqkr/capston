@@ -1,9 +1,9 @@
 // TransitSection — SPEC 6.3 Section 4 (교통).
 import { Badge } from '@/components/ui';
-import type { DongDetail } from '@/types/api';
+import type { AdongDetail } from '@/types/api';
 
 interface TransitSectionProps {
-  transit: DongDetail['transit'];
+  transit: AdongDetail['transit'];
 }
 
 export default function TransitSection({ transit }: TransitSectionProps) {

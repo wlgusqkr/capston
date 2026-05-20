@@ -328,7 +328,7 @@ class FavoritesView(_AuthRequiredMixin, APIView):
         return preference_to_floats(pref)
 
     def get(self, request: Request) -> Response:
-        # sub-plan 7G-B2 (F1-A): dong → adong 치환.
+        # sub-plan 7G-B2 (F1-A): adong → adong 치환.
         # score는 CurrentAdong join(`adong__current_score`)으로 합성.
         # 결정 1A: current_adong 미존재 또는 score_rent NULL → 0 fallback (serializer 측에서 처리).
         favs = (
@@ -351,7 +351,7 @@ class FavoritesView(_AuthRequiredMixin, APIView):
             )
         slug = slug.strip()
 
-        # sub-plan 7G-B2 (F1-A): Dong → Adong + CurrentAdong join.
+        # sub-plan 7G-B2 (F1-A): Adong → Adong + CurrentAdong join.
         try:
             adong = Adong.objects.select_related("gu", "current_score").get(slug=slug)
         except Adong.DoesNotExist:

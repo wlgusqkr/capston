@@ -1,6 +1,6 @@
 // Intersection Observer hook.
 //
-// Used by R-3 DongDetail to detect when the hero leaves the viewport so the
+// Used by R-3 AdongDetail to detect when the hero leaves the viewport so the
 // scroll-sticky pill rail (page-local action group, D-3) can fade in from
 // bottom-right. Single observer per consumer; reused if more "is X in
 // viewport?" needs appear.
@@ -10,7 +10,7 @@
 //     callback). Prevents the pill rail from flashing on mount before the
 //     observer reports.
 //   - Observer is created in useEffect, disconnected on unmount AND on any
-//     dependency change (so navigating /dong/A → /dong/B rebuilds the
+//     dependency change (so navigating /adong/A → /adong/B rebuilds the
 //     observer for the new hero).
 //   - Caller passes a stable ref. Inline option objects are fine because we
 //     destructure threshold/root/rootMargin — only those primitives are

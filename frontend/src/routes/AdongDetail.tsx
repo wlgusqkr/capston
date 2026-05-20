@@ -1,5 +1,5 @@
-// DongDetail — full detail page (SPEC 6.3).
-// Six sections: Hero, RealEstate, Amenity, Transit, Review, SimilarDongs.
+// AdongDetail — full detail page (SPEC 6.3).
+// Six sections: Hero, RealEstate, Amenity, Transit, Review, SimilarAdongs.
 //
 // D-3 (design-polish-v2.md): the page-local action group lives in the hero
 // right column (visible on first fold). After the hero leaves the viewport,
@@ -13,22 +13,22 @@ import AmenitySection from '@/components/Detail/AmenitySection';
 import HeroSection from '@/components/Detail/HeroSection';
 import RealEstateSection from '@/components/Detail/RealEstateSection';
 import ReviewSection from '@/components/Detail/ReviewSection';
-import SimilarDongsSection from '@/components/Detail/SimilarDongsSection';
+import SimilarAdongsSection from '@/components/Detail/SimilarAdongsSection';
 import TransitSection from '@/components/Detail/TransitSection';
 import { Button } from '@/components/ui';
 import { usePageTitle } from '@/contexts/PageTitleContext';
-import { useDongDetail, useDongScores } from '@/hooks/useDongs';
+import { useAdongDetail, useAdongScores } from '@/hooks/useAdongs';
 import { useIntersection } from '@/hooks/useIntersection';
 import { DEFAULT_WEIGHTS } from '@/types/api';
 
-export default function DongDetail() {
+export default function AdongDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
 
   const weights = DEFAULT_WEIGHTS;
-  const { data, isLoading, isError, error } = useDongDetail(slug, weights);
+  const { data, isLoading, isError, error } = useAdongDetail(slug, weights);
 
-  const scoresQ = useDongScores(weights);
+  const scoresQ = useAdongScores(weights);
   const breakdown = useMemo(() => {
     if (!data?.slug || !scoresQ.data) return undefined;
     const row = scoresQ.data.find((d) => d.slug === data.slug);
@@ -106,7 +106,7 @@ export default function DongDetail() {
             <RealEstateSection realEstate={data.real_estate} />
             <div className="flex flex-col gap-1 py-5 border-t border-divider border-b border-b-divider my-4">
               <Link
-                to={`/dong/${data.slug}/explore`}
+                to={`/adong/${data.slug}/explore`}
                 className="text-body-large font-semibold text-text no-underline self-start py-2 hover:text-link"
               >
                 자취 시세 더 깊게 탐색하기 →
@@ -117,12 +117,12 @@ export default function DongDetail() {
             </div>
             <AmenitySection
               amenities={data.amenities}
-              allDongs={scoresQ.data}
+              allAdongs={scoresQ.data}
               currentSlug={data.slug}
             />
             <TransitSection transit={data.transit} />
             <ReviewSection reviews={data.reviews} />
-            <SimilarDongsSection similar={data.similar_dongs} />
+            <SimilarAdongsSection similar={data.similar_dongs} />
           </>
         )}
 

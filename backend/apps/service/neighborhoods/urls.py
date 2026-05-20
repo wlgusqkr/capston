@@ -2,70 +2,70 @@
 neighborhoods 앱 URL.
 
 마운트 위치: config/urls.py 의 path("api/", include("apps.service.neighborhoods.urls"))
-즉, 여기서는 'dongs/...' 형태로 작성.
+즉, 여기서는 'adongs/...' 형태로 작성.
 """
 
 from django.urls import path
 
-from apps.public_data.park.views import DongParksView
-from apps.public_data.rent_deal.views import DongDerivedIndicesView
-from apps.public_data.subway.views import DongTransitCongestionView
+from apps.public_data.park.views import AdongParksView
+from apps.public_data.rent_deal.views import AdongDerivedIndicesView
+from apps.public_data.subway.views import AdongTransitCongestionView
 
-from .match import DongMatchCountsView, DongMatchDetailView
+from .match import AdongMatchCountsView, AdongMatchDetailView
 from .views import (
     CompareView,
-    DongDetailView,
-    DongExploreView,
-    DongGuMetricsSeriesView,
-    DongGuMetricsView,
-    DongPopulationView,
-    DongScoresView,
-    DongSummaryView,
+    AdongDetailView,
+    AdongExploreView,
+    AdongGuMetricsSeriesView,
+    AdongGuMetricsView,
+    AdongPopulationView,
+    AdongScoresView,
+    AdongSummaryView,
     KernelScoreView,
 )
 
 app_name = "neighborhoods"
 
 urlpatterns = [
-    # GET /api/dongs/scores
-    path("dongs/scores", DongScoresView.as_view(), name="dong-scores"),
-    # GET /api/dongs/match-counts — 메인 지도 자취 거래량 분포 (Phase 5)
-    path("dongs/match-counts", DongMatchCountsView.as_view(), name="dong-match-counts"),
-    # GET /api/dongs/<slug>/match-detail — 동 패널 매칭 KPI (Phase 5)
+    # GET /api/adongs/scores
+    path("adongs/scores", AdongScoresView.as_view(), name="adong-scores"),
+    # GET /api/adongs/match-counts — 메인 지도 자취 거래량 분포 (Phase 5)
+    path("adongs/match-counts", AdongMatchCountsView.as_view(), name="adong-match-counts"),
+    # GET /api/adongs/<slug>/match-detail — 동 패널 매칭 KPI (Phase 5)
     path(
-        "dongs/<str:slug>/match-detail",
-        DongMatchDetailView.as_view(),
-        name="dong-match-detail",
+        "adongs/<str:slug>/match-detail",
+        AdongMatchDetailView.as_view(),
+        name="adong-match-detail",
     ),
-    # GET /api/dongs/<slug>/summary
-    path("dongs/<str:slug>/summary", DongSummaryView.as_view(), name="dong-summary"),
-    # GET /api/dongs/<slug>/detail
-    path("dongs/<str:slug>/detail", DongDetailView.as_view(), name="dong-detail"),
-    # GET /api/dongs/<slug>/explore — 자취 시세 BI 대시보드 (Phase 4.8)
-    path("dongs/<str:slug>/explore", DongExploreView.as_view(), name="dong-explore"),
-    # GET /api/dongs/<slug>/population — 행정동 인구 시계열 (대시보드 Phase 2)
-    path("dongs/<str:slug>/population", DongPopulationView.as_view(), name="dong-population"),
-    # GET /api/dongs/<slug>/gu-metrics — 소속 구 지표 + 서울 평균 (대시보드 Phase 2)
-    path("dongs/<str:slug>/gu-metrics", DongGuMetricsView.as_view(), name="dong-gu-metrics"),
-    # GET /api/dongs/<slug>/gu-metrics/series — 구별 지표 시계열 (대시보드 Phase 4 추이)
+    # GET /api/adongs/<slug>/summary
+    path("adongs/<str:slug>/summary", AdongSummaryView.as_view(), name="adong-summary"),
+    # GET /api/adongs/<slug>/detail
+    path("adongs/<str:slug>/detail", AdongDetailView.as_view(), name="adong-detail"),
+    # GET /api/adongs/<slug>/explore — 자취 시세 BI 대시보드 (Phase 4.8)
+    path("adongs/<str:slug>/explore", AdongExploreView.as_view(), name="adong-explore"),
+    # GET /api/adongs/<slug>/population — 행정동 인구 시계열 (대시보드 Phase 2)
+    path("adongs/<str:slug>/population", AdongPopulationView.as_view(), name="adong-population"),
+    # GET /api/adongs/<slug>/gu-metrics — 소속 구 지표 + 서울 평균 (대시보드 Phase 2)
+    path("adongs/<str:slug>/gu-metrics", AdongGuMetricsView.as_view(), name="adong-gu-metrics"),
+    # GET /api/adongs/<slug>/gu-metrics/series — 구별 지표 시계열 (대시보드 Phase 4 추이)
     path(
-        "dongs/<str:slug>/gu-metrics/series",
-        DongGuMetricsSeriesView.as_view(),
-        name="dong-gu-metrics-series",
+        "adongs/<str:slug>/gu-metrics/series",
+        AdongGuMetricsSeriesView.as_view(),
+        name="adong-gu-metrics-series",
     ),
-    # GET /api/dongs/<slug>/parks — 행정동에 매핑된 공원 목록 (대시보드 §4.4 섹션 B)
-    path("dongs/<str:slug>/parks", DongParksView.as_view(), name="dong-parks"),
-    # GET /api/dongs/<slug>/transit-congestion — 시간대 혼잡도 + 동 성격 (대시보드 §4.4 C, §4.5)
+    # GET /api/adongs/<slug>/parks — 행정동에 매핑된 공원 목록 (대시보드 §4.4 섹션 B)
+    path("adongs/<str:slug>/parks", AdongParksView.as_view(), name="adong-parks"),
+    # GET /api/adongs/<slug>/transit-congestion — 시간대 혼잡도 + 동 성격 (대시보드 §4.4 C, §4.5)
     path(
-        "dongs/<str:slug>/transit-congestion",
-        DongTransitCongestionView.as_view(),
-        name="dong-transit-congestion",
+        "adongs/<str:slug>/transit-congestion",
+        AdongTransitCongestionView.as_view(),
+        name="adong-transit-congestion",
     ),
-    # GET /api/dongs/<slug>/derived-indices — 자취촌 지수 + 계약 활발도 (대시보드 §4.5)
+    # GET /api/adongs/<slug>/derived-indices — 자취촌 지수 + 계약 활발도 (대시보드 §4.5)
     path(
-        "dongs/<str:slug>/derived-indices",
-        DongDerivedIndicesView.as_view(),
-        name="dong-derived-indices",
+        "adongs/<str:slug>/derived-indices",
+        AdongDerivedIndicesView.as_view(),
+        name="adong-derived-indices",
     ),
     # GET /api/compare?slugs=A,B,C
     path("compare", CompareView.as_view(), name="compare"),

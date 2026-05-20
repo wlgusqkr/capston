@@ -1,7 +1,7 @@
 """RentDeal admin.
 
 sub-plan 4.5B 정합:
-- dong FK 제거 → ldong FK 단일.
+- adong FK 제거 → ldong FK 단일.
 - 컬럼명: deal_date → contract_date, build_year → construction_year.
 - deal_type 영문 enum 컬럼 제거 → housing_type 한글 raw.
 - external_hash / external_id / created_at 제거.

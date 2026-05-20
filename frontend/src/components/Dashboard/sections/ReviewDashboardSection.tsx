@@ -5,17 +5,17 @@
 //   2. 리뷰 카드 가로 스크롤 — reviews.representatives
 //   3. 리뷰 작성 CTA — Detail 페이지로 이동
 //
-// Data: DongDetail.reviews (no new API)
+// Data: AdongDetail.reviews (no new API)
 
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
-import type { DongDetail } from '@/types/api';
+import type { AdongDetail } from '@/types/api';
 
 interface ReviewDashboardSectionProps {
-  reviews: DongDetail['reviews'] | undefined;
+  reviews: AdongDetail['reviews'] | undefined;
   dongSlug: string;
   dongName: string | undefined;
 }
@@ -132,7 +132,7 @@ export default function ReviewDashboardSection({
             <Button
               variant="filled"
               size="md"
-              onClick={() => navigate(`/dong/${encodeURIComponent(dongSlug)}`)}
+              onClick={() => navigate(`/adong/${encodeURIComponent(dongSlug)}`)}
             >
               이 동네 리뷰 작성하기 →
             </Button>

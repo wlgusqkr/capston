@@ -10,8 +10,8 @@ import type { Layer, LeafletMouseEvent } from 'leaflet';
 import { GeoJSON, MapContainer, TileLayer } from 'react-leaflet';
 import { useNavigate } from 'react-router-dom';
 
-import { useDongGeoJson } from '@/hooks/useDongGeoJson';
-import type { DongFeatureProps } from '@/hooks/useDongGeoJson';
+import { useAdongGeoJson } from '@/hooks/useAdongGeoJson';
+import type { AdongFeatureProps } from '@/hooks/useAdongGeoJson';
 import {
   HEATMAP_LAYER_COLORS,
   HEATMAP_NO_DATA,
@@ -19,7 +19,7 @@ import {
   scoreToLayerColor,
 } from '@/lib/colors';
 import type { HeatmapLayerKey } from '@/lib/colors';
-import type { DongScore } from '@/types/api';
+import type { AdongScore } from '@/types/api';
 
 import 'leaflet/dist/leaflet.css';
 
@@ -30,11 +30,11 @@ const VWORLD_KEY = import.meta.env.VITE_VWORLD_API_KEY as string | undefined;
 const TILE_URL =
   VWORLD_KEY && VWORLD_KEY.length > 0
     ? `https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_KEY}/Base/{z}/{y}/{x}.png`
-    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 const TILE_ATTR =
   VWORLD_KEY && VWORLD_KEY.length > 0
     ? '&copy; <a href="https://www.vworld.kr/">VWorld</a>'
-    : '&copy; OpenStreetMap';
+    : '&copy; OpenStreetMap &copy; CARTO';
 
 interface LayerOption {
   key: HeatmapLayerKey;
@@ -60,49 +60,49 @@ const LEGEND_LABELS: Record<HeatmapLayerKey, readonly [string, string]> = {
 };
 
 interface DashboardMiniMapProps {
-  dongs: DongScore[];
+  adongs: AdongScore[];
   selectedSlug: string | null;
-  onDongSelect: (slug: string) => void;
+  onAdongSelect: (slug: string) => void;
 }
 
 export default function DashboardMiniMap({
-  dongs,
+  adongs,
   selectedSlug,
-  onDongSelect,
+  onAdongSelect,
 }: DashboardMiniMapProps) {
   const navigate = useNavigate();
-  const { data: geojson, isLoading: geoLoading } = useDongGeoJson();
+  const { data: geojson, isLoading: geoLoading } = useAdongGeoJson();
   const [activeLayer, setActiveLayer] = useState<HeatmapLayerKey>('composite');
 
   const dongByCode = useMemo(() => {
-    const m: Record<string, DongScore> = {};
-    for (const d of dongs) m[d.code] = d;
+    const m: Record<string, AdongScore> = {};
+    for (const d of adongs) m[d.code] = d;
     return m;
-  }, [dongs]);
+  }, [adongs]);
 
-  const selectedDong = useMemo(
-    () => dongs.find((d) => d.slug === selectedSlug) ?? null,
-    [dongs, selectedSlug],
+  const selectedAdong = useMemo(
+    () => adongs.find((d) => d.slug === selectedSlug) ?? null,
+    [adongs, selectedSlug],
   );
 
-  const center: [number, number] = selectedDong
-    ? [selectedDong.lat, selectedDong.lng]
+  const center: [number, number] = selectedAdong
+    ? [selectedAdong.lat, selectedAdong.lng]
     : SEOUL_CENTER;
 
   // Force GeoJSON re-render on layer/data change
   const layerKey = useMemo(() => {
     let acc = 0;
-    for (const d of dongs) acc = (acc + Math.round(d.score * 100)) | 0;
-    return `mini-${activeLayer}-${dongs.length}-${acc}-${selectedSlug ?? ''}`;
-  }, [dongs, activeLayer, selectedSlug]);
+    for (const d of adongs) acc = (acc + Math.round(d.score * 100)) | 0;
+    return `mini-${activeLayer}-${adongs.length}-${acc}-${selectedSlug ?? ''}`;
+  }, [adongs, activeLayer, selectedSlug]);
 
   const styleFn = useCallback(
-    (feature?: Feature<Geometry, DongFeatureProps>) => {
+    (feature?: Feature<Geometry, AdongFeatureProps>) => {
       const code = feature?.properties?.adm_cd2 ?? '';
-      const dong = dongByCode[code];
-      const isSelected = dong?.slug === selectedSlug;
+      const adong = dongByCode[code];
+      const isSelected = adong?.slug === selectedSlug;
 
-      if (!dong) {
+      if (!adong) {
         return {
           color: MAP_POLYGON_STROKE.default.color,
           weight: MAP_POLYGON_STROKE.default.weight,
@@ -112,9 +112,9 @@ export default function DashboardMiniMap({
         };
       }
 
-      // For composite, use dong.score. Other layers fall back to composite
+      // For composite, use adong.score. Other layers fall back to composite
       // until per-layer scores are available from the API.
-      const score = dong.score;
+      const score = adong.score;
       const fillColor = scoreToLayerColor(score, activeLayer);
 
       return {
@@ -135,21 +135,21 @@ export default function DashboardMiniMap({
   );
 
   const onEachFeature = useCallback(
-    (feature: Feature<Geometry, DongFeatureProps>, layer: Layer) => {
+    (feature: Feature<Geometry, AdongFeatureProps>, layer: Layer) => {
       const code = feature.properties.adm_cd2 ?? '';
-      const dong = dongByCode[code];
-      if (!dong) return;
+      const adong = dongByCode[code];
+      if (!adong) return;
 
       layer.bindTooltip(
-        `<div class="map-tooltip__name">${dong.gu} ${dong.name}</div>` +
-          `<div class="map-tooltip__score tabular">종합 ${dong.score.toFixed(1)}</div>`,
+        `<div class="map-tooltip__name">${adong.gu} ${adong.name}</div>` +
+          `<div class="map-tooltip__score tabular">종합 ${adong.score.toFixed(1)}</div>`,
         { sticky: true, direction: 'top', offset: [0, -4], opacity: 1 },
       );
 
       layer.on({
         click: (e: LeafletMouseEvent) => {
           L.DomEvent.stopPropagation(e);
-          onDongSelect(dong.slug);
+          onAdongSelect(adong.slug);
         },
         mouseover: (e) =>
           (e.target as { setStyle: (s: object) => void }).setStyle({
@@ -157,7 +157,7 @@ export default function DashboardMiniMap({
             weight: MAP_POLYGON_STROKE.hover.weight,
           }),
         mouseout: (e) => {
-          const isSelected = dong.slug === selectedSlug;
+          const isSelected = adong.slug === selectedSlug;
           (e.target as { setStyle: (s: object) => void }).setStyle({
             fillOpacity: 0.7,
             weight: isSelected
@@ -167,11 +167,11 @@ export default function DashboardMiniMap({
         },
       });
     },
-    [dongByCode, onDongSelect, selectedSlug],
+    [dongByCode, onAdongSelect, selectedSlug],
   );
 
   const handleExpand = useCallback(() => {
-    navigate(selectedSlug ? `/?dong=${selectedSlug}` : '/');
+    navigate(selectedSlug ? `/?adong=${selectedSlug}` : '/');
   }, [navigate, selectedSlug]);
 
   if (geoLoading || !geojson) {

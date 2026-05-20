@@ -1,8 +1,8 @@
 // Top-level router. Screens registered here per SPEC section 8.
 //   /                       → MainMap (4단계)
 //   /dashboard              → Dashboard (Phase 0 shell)
-//   /dong/:slug             → DongDetail (6단계)
-//   /compare?dongs=A,B,C    → Compare (8단계)
+//   /adong/:slug             → AdongDetail (6단계)
+//   /compare?adongs=A,B,C    → Compare (8단계)
 //   /login                  → Login (9단계, username/password)
 //   /register               → Register (9단계)
 //   /mypage                 → MyPage (9단계, SPEC 6.6)
@@ -23,8 +23,8 @@ import { AiPanelProvider, useAiPanel } from './contexts/AiPanelContext';
 import { PageTitleProvider } from './contexts/PageTitleContext';
 import Compare from './routes/Compare';
 import DesignSystem from './routes/DesignSystem';
-import DongDetail from './routes/DongDetail';
-import DongExplore from './routes/DongExplore';
+import AdongDetail from './routes/AdongDetail';
+import AdongExplore from './routes/AdongExplore';
 import Login from './routes/Login';
 import MainMap from './routes/MainMap';
 import MyPage from './routes/MyPage';
@@ -58,8 +58,8 @@ function AppContent() {
             </Suspense>
           }
         />
-        <Route path="/dong/:slug" element={<DongDetail />} />
-        <Route path="/dong/:slug/explore" element={<DongExplore />} />
+        <Route path="/adong/:slug" element={<AdongDetail />} />
+        <Route path="/adong/:slug/explore" element={<AdongExplore />} />
         <Route path="/compare" element={<Compare />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />

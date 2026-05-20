@@ -52,7 +52,7 @@ export const HEATMAP_COLORS_ORDERED = [
   HEATMAP_COLORS.q5,
 ] as const;
 
-/** Polygon fill for dongs that have no score (data not yet available).
+/** Polygon fill for adongs that have no score (data not yet available).
  *  Surface-Alt keeps it on-palette and clearly distinct from the green ramp. */
 export const HEATMAP_NO_DATA = '#F4F4F5'; // --color-surface-alt
 
@@ -97,7 +97,7 @@ export function scoreToHeatmapColor(
  * Polygon stroke colors for Leaflet.
  *
  * Spec:
- *   - Default dong polygon stroke: 1px #ffffff @ 60% opacity
+ *   - Default adong polygon stroke: 1px #ffffff @ 60% opacity
  *   - Selected polygon stroke:     2px #4C4C4C (Secondary)
  *
  * Leaflet's `style` callback expects `color` (hex) + `opacity` (0..1)
@@ -133,7 +133,7 @@ export const MAP_PIN = {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Recharts color palette — for the dong detail page (SPEC 6.3) and any
+ * Recharts color palette — for the adong detail page (SPEC 6.3) and any
  * other charts. Chart shell stays mono (--color-text + axis --color-divider
  * + grid --color-divider); colored series are reserved for "data is the
  * hero" moments.

@@ -2,16 +2,16 @@
 Subway 관련 뷰.
 
 엔드포인트:
-- GET /api/dongs/<slug>/transit-congestion
+- GET /api/adongs/<slug>/transit-congestion
   → 대시보드 SPEC §4.4 섹션 C "시간대 혼잡도" 위젯 + §4.5 "동 성격 추정" 입력.
   → 지하철·버스 시간대별 평균 혼잡도 + 패턴 기반 personality 분류.
 
-URL 등록은 apps.service.neighborhoods.urls 에서 한다 (dong-scoped URL 패턴 유지).
+URL 등록은 apps.service.neighborhoods.urls 에서 한다 (adong-scoped URL 패턴 유지).
 DB 스키마 변경 없음 — SELECT 전용. 신규 마이그레이션 없음.
 
 성능:
 - subway: SubwayCongestion 65k 행, NearestSubway 사전계산된 3개 역만 조회.
-- bus: BusCongestion ~8M 행. BusStop.dong FK + 최근 N일 제한 (현재 데이터 31일).
+- bus: BusCongestion ~8M 행. BusStop.adong FK + 최근 N일 제한 (현재 데이터 31일).
   ANY(%s) station_ids/bus_stop_ids 기반 인덱스 활용.
 - 캐시 5분 TTL.
 
@@ -36,7 +36,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 # sub-plan 7G-B2 (결정 4A): NearestSubway(legacy) → NearestSubwayAdong 표면 치환.
-# Dong → Adong + Gu join. dong.code(=adong_code) 호환 lock 유지.
+# regions.Adong + Gu join. adong.code(=adong_code) ?? lock ??.
 from apps.public_data.regions.models import Adong
 from apps.public_data.subway.models import NearestSubwayAdong
 from apps.public_data.bus.models import BusCongestion, BusStop  # noqa: F401  (BusCongestion is queried via raw SQL only)
@@ -67,12 +67,12 @@ RATIO_MIDDAY_TO_MORNING_HIGH = 0.8  # 낮 고른 분포
 RATIO_WEEKEND_TO_WEEKDAY = 1.2   # 주말 피크 강
 
 
-def _dong_header(dong: Adong) -> dict:
-    """공통 dong 식별 dict — apps.service.neighborhoods.views._dong_header 와 동일 포맷.
+def _dong_header(adong: Adong) -> dict:
+    """공통 adong 식별 dict — apps.service.neighborhoods.views._dong_header 와 동일 포맷.
 
     sub-plan 7G-B2: adong.gu(FK) → adong.gu.name. 응답 dict key 보존.
     """
-    return {"slug": dong.slug, "name": dong.name, "gu": dong.gu.name}
+    return {"slug": adong.slug, "name": adong.name, "gu": adong.gu.name}
 
 
 def _empty_hours() -> list[dict]:
@@ -113,14 +113,14 @@ def _avg_all(points: list[dict]) -> Optional[float]:
 # ---------------------------------------------------------------------------
 
 
-def _collect_subway(dong: Adong) -> dict:
+def _collect_subway(adong: Adong) -> dict:
     """가까운 지하철역 N개의 day_type x hour 평균 혼잡도.
 
     direction(상선/하선/내선/외선)·express_yn(일반/급행)은 전부 평균에 포함.
     "휴일" day_type 은 "일요일" 버킷으로 합쳐 일요일 평균 계산.
 
     sub-plan 7G-B2 (결정 4A):
-    - legacy NearestSubway(neighborhoods.Dong FK) → NearestSubwayAdong(regions.Adong FK).
+    - legacy NearestSubway(neighborhoods.Adong FK) → NearestSubwayAdong(regions.Adong FK).
     - NearestSubwayAdong은 station FK 없이 station_name(비정규화)만 보유 →
       SubwayStation을 station_name으로 join하여 line/station_id 회수.
     - 응답 dict key (`stations` 안 `name`/`line`) 보존.
@@ -128,7 +128,7 @@ def _collect_subway(dong: Adong) -> dict:
     from apps.public_data.subway.models import SubwayStation
 
     ns_rows = list(
-        NearestSubwayAdong.objects.filter(adong=dong)
+        NearestSubwayAdong.objects.filter(adong=adong)
         .order_by("rank")[:NEAREST_SUBWAY_N]
     )
     station_names = [ns.station_name for ns in ns_rows]
@@ -194,16 +194,16 @@ def _collect_subway(dong: Adong) -> dict:
     return {"stations": stations_meta, "by_day": by_day}
 
 
-def _collect_bus(dong: Adong) -> dict:
+def _collect_bus(adong: Adong) -> dict:
     """동에 매핑된 BusStop 들의 평일/주말 x hour 평균 혼잡도.
 
     최근 BUS_RECENT_DAYS 일로 윈도우 제한 (BRIN(date) 활용).
     DOW: PostgreSQL EXTRACT(DOW FROM date) — 0=일, 6=토. 0/6 → 주말.
 
-    sub-plan 7G-B2: dong.code → adong.adong_code 직접 매칭 (값 동일).
+    sub-plan 7G-B2: adong.code → adong.adong_code 직접 매칭 (값 동일).
     """
     bus_stop_ids = list(
-        BusStop.objects.filter(adong=dong).values_list("id", flat=True)
+        BusStop.objects.filter(adong=adong).values_list("id", flat=True)
     )
     stop_count = len(bus_stop_ids)
     by_pattern: dict[str, list[dict]] = {k: _empty_hours() for k in BUS_PATTERN_KEYS}
@@ -379,25 +379,25 @@ def _personality(subway: dict, bus: dict) -> dict:
 
 
 @extend_schema(
-    tags=["dongs"],
+    tags=["adongs"],
     summary="시간대 혼잡도 + 동 성격 추정 (대시보드 §4.4 섹션 C / §4.5)",
     description=(
         "행정동의 시간대별 평균 혼잡도를 지하철·버스 두 트랙으로 반환하고, "
         "평일·주말/낮·피크 비율을 기반으로 동 성격을 추정한다.\n\n"
         "- subway: NearestSubway 사전계산된 가까운 역 TOP 3 기준. "
         "day_type=평일/토요일/일요일 각 24시간 배열. 혼잡도 raw 값.\n"
-        "- bus: BusStop.dong FK 매핑된 정류장 전체. 최근 60일 윈도우. "
+        "- bus: BusStop.adong FK 매핑된 정류장 전체. 최근 60일 윈도우. "
         "by_pattern=평일/주말 각 24시간 배열. congestion null 행 제외.\n"
         "- personality: subway 우선, 없으면 bus. SPEC §4.5 분류 규칙."
     ),
 )
-class DongTransitCongestionView(APIView):
+class AdongTransitCongestionView(APIView):
     """
-    GET /api/dongs/<slug>/transit-congestion
+    GET /api/adongs/<slug>/transit-congestion
 
     응답:
       {
-        "dong": {"slug": "...", "name": "...", "gu": "..."},
+        "adong": {"slug": "...", "name": "...", "gu": "..."},
         "subway": {
           "stations": [{"name": "충무로", "line": "3호선"}, ...],
           "by_day": {
@@ -428,9 +428,9 @@ class DongTransitCongestionView(APIView):
     """
 
     def get(self, request: Request, slug: str) -> Response:
-        # sub-plan 7G-B2: Dong → Adong + Gu join.
+        # regions.Adong + Gu join.
         try:
-            dong = Adong.objects.select_related("gu").get(slug=slug)
+            adong = Adong.objects.select_related("gu").get(slug=slug)
         except Adong.DoesNotExist as exc:
             raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
 
@@ -439,12 +439,12 @@ class DongTransitCongestionView(APIView):
         if cached is not None:
             return Response(cached, status=status.HTTP_200_OK)
 
-        subway = _collect_subway(dong)
-        bus = _collect_bus(dong)
+        subway = _collect_subway(adong)
+        bus = _collect_bus(adong)
         personality = _personality(subway, bus)
 
         data = {
-            "dong": _dong_header(dong),
+            "adong": _dong_header(adong),
             "subway": subway,
             "bus": bus,
             "personality": personality,
