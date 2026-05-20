@@ -1,4 +1,4 @@
-// HeroSection — top of dong detail page (SPEC 6.3 Section 1).
+// HeroSection — top of adong detail page (SPEC 6.3 Section 1).
 // Rebuilt for R-3 (design-polish-v2.md):
 //
 //   No <Card> wrapper anywhere — hero is its own composition. Height:
@@ -8,7 +8,7 @@ import { CircleMarker, MapContainer, TileLayer } from 'react-leaflet';
 
 import { Button, MetricBar, Score } from '@/components/ui';
 import { MAP_POLYGON_STROKE, scoreToHeatmapColor } from '@/lib/colors';
-import type { DongDetail, DongScore } from '@/types/api';
+import type { AdongDetail, AdongScore } from '@/types/api';
 
 import 'leaflet/dist/leaflet.css';
 
@@ -16,15 +16,15 @@ const VWORLD_KEY = import.meta.env.VITE_VWORLD_API_KEY as string | undefined;
 const TILE_URL =
   VWORLD_KEY && VWORLD_KEY.length > 0
     ? `https://api.vworld.kr/req/wmts/1.0.0/${VWORLD_KEY}/Base/{z}/{y}/{x}.png`
-    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 const TILE_ATTRIBUTION =
   VWORLD_KEY && VWORLD_KEY.length > 0
     ? '&copy; VWorld'
-    : '&copy; OpenStreetMap';
+    : '&copy; OpenStreetMap &copy; CARTO';
 
 interface HeroSectionProps {
-  detail: DongDetail;
-  breakdown?: Pick<DongScore, 'score_rent' | 'score_amenity' | 'score_transit'>;
+  detail: AdongDetail;
+  breakdown?: Pick<AdongScore, 'score_rent' | 'score_amenity' | 'score_transit'>;
   onAddCompare: () => void;
   onFavorite: () => void;
   onShare: () => void;

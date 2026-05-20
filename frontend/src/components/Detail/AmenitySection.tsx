@@ -3,7 +3,7 @@
 // R-3 + A-7a (design-polish-v2.md): each row exposes 4 data cells:
 //   name | score (count) | density per ㎢ | TOP X% rank percentile
 // The 4th cell is computed on the frontend via lib/percentile.ts using the
-// all-dongs /api/dongs/scores response (`useDongScores` already cached by
+// all-adongs /api/adongs/scores response (`useAdongScores` already cached by
 // MainMap → React Query usually dedups on this route).
 //
 // P-11 / D-4: the Badge used to encode the level (충분/보통/부족). Now that
@@ -13,27 +13,27 @@
 import { useMemo } from 'react';
 
 import { computeAmenityPercentile } from '@/lib/percentile';
-import type { DongDetail, DongScore } from '@/types/api';
+import type { AdongDetail, AdongScore } from '@/types/api';
 
 interface AmenitySectionProps {
-  amenities: DongDetail['amenities'];
-  /** All-dongs score table for the percentile compute. Optional — when
+  amenities: AdongDetail['amenities'];
+  /** All-adongs score table for the percentile compute. Optional — when
    *  absent (loading or error), the rank cell renders "—". */
-  allDongs?: DongScore[];
-  /** Slug of the dong currently being shown — needed to look up its
-   *  score_amenity in the all-dongs table. */
+  allAdongs?: AdongScore[];
+  /** Slug of the adong currently being shown — needed to look up its
+   *  score_amenity in the all-adongs table. */
   currentSlug: string;
 }
 
 export default function AmenitySection({
   amenities,
-  allDongs,
+  allAdongs,
   currentSlug,
 }: AmenitySectionProps) {
   const currentScore = useMemo(() => {
-    if (!allDongs) return undefined;
-    return allDongs.find((d) => d.slug === currentSlug)?.score_amenity;
-  }, [allDongs, currentSlug]);
+    if (!allAdongs) return undefined;
+    return allAdongs.find((d) => d.slug === currentSlug)?.score_amenity;
+  }, [allAdongs, currentSlug]);
 
   return (
     <section
@@ -56,7 +56,7 @@ export default function AmenitySection({
         {amenities.map((item) => {
           const top =
             currentScore != null
-              ? computeAmenityPercentile(allDongs, item.category, currentScore)
+              ? computeAmenityPercentile(allAdongs, item.category, currentScore)
               : null;
           return (
             <li

@@ -1,33 +1,33 @@
-// DongSelector — search-enabled combobox for selecting a dong.
+// AdongSelector — search-enabled combobox for selecting a adong.
 //
-// Loads the 426 dong list via useDongScores, groups by gu, filters by
-// dong name or gu name (Korean partial match). Keyboard navigable.
+// Loads the 426 adong list via useAdongScores, groups by gu, filters by
+// adong name or gu name (Korean partial match). Keyboard navigable.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { useDongScores } from '@/hooks/useDongs';
-import type { DongScore } from '@/types/api';
+import { useAdongScores } from '@/hooks/useAdongs';
+import type { AdongScore } from '@/types/api';
 import { DEFAULT_WEIGHTS } from '@/types/api';
 
-export interface DongSelectorProps {
-  /** Selected dong slug, or null if nothing selected. */
+export interface AdongSelectorProps {
+  /** Selected adong slug, or null if nothing selected. */
   value: string | null;
-  /** Called when the user picks a dong. */
+  /** Called when the user picks a adong. */
   onChange: (slug: string) => void;
   className?: string;
 }
 
 interface GuGroup {
   gu: string;
-  dongs: DongScore[];
+  adongs: AdongScore[];
 }
 
-export default function DongSelector({
+export default function AdongSelector({
   value,
   onChange,
   className,
-}: DongSelectorProps) {
-  const { data: dongs } = useDongScores(DEFAULT_WEIGHTS);
+}: AdongSelectorProps) {
+  const { data: adongs } = useAdongScores(DEFAULT_WEIGHTS);
 
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -37,26 +37,26 @@ export default function DongSelector({
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Find the currently selected dong object
-  const selectedDong = useMemo(
-    () => dongs?.find((d) => d.slug === value) ?? null,
-    [dongs, value],
+  // Find the currently selected adong object
+  const selectedAdong = useMemo(
+    () => adongs?.find((d) => d.slug === value) ?? null,
+    [adongs, value],
   );
 
-  // Filter dongs by query (partial match on name or gu)
+  // Filter adongs by query (partial match on name or gu)
   const filtered = useMemo(() => {
-    if (!dongs) return [];
+    if (!adongs) return [];
     const q = query.trim().toLowerCase();
-    if (!q) return dongs;
-    return dongs.filter(
+    if (!q) return adongs;
+    return adongs.filter(
       (d) =>
         d.name.toLowerCase().includes(q) || d.gu.toLowerCase().includes(q),
     );
-  }, [dongs, query]);
+  }, [adongs, query]);
 
-  // Group filtered dongs by gu
+  // Group filtered adongs by gu
   const groups = useMemo<GuGroup[]>(() => {
-    const map = new Map<string, DongScore[]>();
+    const map = new Map<string, AdongScore[]>();
     for (const d of filtered) {
       const list = map.get(d.gu);
       if (list) list.push(d);
@@ -64,12 +64,12 @@ export default function DongSelector({
     }
     return Array.from(map.entries())
       .sort(([a], [b]) => a.localeCompare(b, 'ko'))
-      .map(([gu, dongs]) => ({ gu, dongs }));
+      .map(([gu, adongs]) => ({ gu, adongs }));
   }, [filtered]);
 
-  // Flat list of filtered dongs (for keyboard navigation indexing)
+  // Flat list of filtered adongs (for keyboard navigation indexing)
   const flatList = useMemo(
-    () => groups.flatMap((g) => g.dongs),
+    () => groups.flatMap((g) => g.adongs),
     [groups],
   );
 
@@ -148,13 +148,13 @@ export default function DongSelector({
 
   const displayValue = isOpen
     ? query
-    : selectedDong
-      ? `${selectedDong.gu} ${selectedDong.name}`
+    : selectedAdong
+      ? `${selectedAdong.gu} ${selectedAdong.name}`
       : '';
 
   const activeDescendant =
     activeIndex >= 0 && activeIndex < flatList.length
-      ? `dong-option-${flatList[activeIndex].slug}`
+      ? `adong-option-${flatList[activeIndex].slug}`
       : undefined;
 
   return (
@@ -181,7 +181,7 @@ export default function DongSelector({
           role="combobox"
           aria-expanded={isOpen}
           aria-activedescendant={activeDescendant}
-          aria-controls="dong-selector-listbox"
+          aria-controls="adong-selector-listbox"
           aria-label="동네 검색"
           placeholder="동네를 검색하세요"
           value={displayValue}
@@ -192,7 +192,7 @@ export default function DongSelector({
           }}
           onFocus={() => {
             setIsOpen(true);
-            if (selectedDong && !query) setQuery('');
+            if (selectedAdong && !query) setQuery('');
           }}
           onKeyDown={handleKeyDown}
           className="w-full h-10 bg-surface border border-border rounded-sm pl-9 pr-3 text-caption text-text placeholder:text-text-subtle outline-none transition-colors duration-200 focus:border-focus-ring"
@@ -202,7 +202,7 @@ export default function DongSelector({
       {/* Dropdown */}
       {isOpen && (
         <div
-          id="dong-selector-listbox"
+          id="adong-selector-listbox"
           ref={listRef}
           role="listbox"
           className="absolute top-full left-0 right-0 mt-1 max-h-[300px] overflow-y-auto bg-surface border border-border rounded-card shadow-floating z-50"
@@ -218,24 +218,24 @@ export default function DongSelector({
                 <div className="sticky top-0 bg-surface-alt px-4 py-1.5 text-micro font-medium text-text-muted border-b border-border">
                   {group.gu}
                 </div>
-                {group.dongs.map((dong) => {
-                  const flatIdx = flatList.indexOf(dong);
+                {group.adongs.map((adong) => {
+                  const flatIdx = flatList.indexOf(adong);
                   const isActive = flatIdx === activeIndex;
-                  const isSelected = dong.slug === value;
+                  const isSelected = adong.slug === value;
                   return (
                     <div
-                      key={dong.slug}
-                      id={`dong-option-${dong.slug}`}
+                      key={adong.slug}
+                      id={`adong-option-${adong.slug}`}
                       role="option"
                       data-index={flatIdx}
                       aria-selected={isSelected}
-                      onClick={() => handleSelect(dong.slug)}
+                      onClick={() => handleSelect(adong.slug)}
                       onMouseEnter={() => setActiveIndex(flatIdx)}
                       className={`px-4 py-2 text-caption cursor-pointer transition-colors duration-100 ${
                         isActive ? 'bg-surface-alt' : ''
                       } ${isSelected ? 'bg-primary-soft text-primary font-medium' : 'text-text'}`}
                     >
-                      {dong.name}
+                      {adong.name}
                     </div>
                   );
                 })}

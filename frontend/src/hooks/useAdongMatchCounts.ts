@@ -1,4 +1,4 @@
-// React Query hook for /api/dongs/match-counts (Phase 5).
+// React Query hook for /api/adongs/match-counts (Phase 5).
 //
 // Studio Match 필터 변경 시 거래량 분포를 받아온다. slider drag 폭주를 막기
 // 위해 200ms debounce — `filters` 가 빠르게 바뀌면 마지막 값만 fetch.
@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { UseQueryResult } from '@tanstack/react-query';
 
-import { getDongMatchCounts } from '@/lib/api';
+import { getAdongMatchCounts } from '@/lib/api';
 import type { MatchCountsResponse, MatchFilters } from '@/types/api';
 
 const DEBOUNCE_MS = 200;
@@ -26,15 +26,15 @@ function useDebouncedFilters(filters: MatchFilters, delay: number): MatchFilters
   return debounced;
 }
 
-/** GET /api/dongs/match-counts 구독. 필터 변경은 200ms debounce. */
-export function useDongMatchCounts(
+/** GET /api/adongs/match-counts 구독. 필터 변경은 200ms debounce. */
+export function useAdongMatchCounts(
   filters: MatchFilters,
   enabled: boolean = true,
 ): UseQueryResult<MatchCountsResponse> {
   const debounced = useDebouncedFilters(filters, DEBOUNCE_MS);
   return useQuery({
     queryKey: [
-      'dongs',
+      'adongs',
       'match-counts',
       debounced.deal_types.join(','),
       debounced.period,
@@ -45,7 +45,7 @@ export function useDongMatchCounts(
       debounced.area_min,
       debounced.area_max,
     ] as const,
-    queryFn: () => getDongMatchCounts(debounced),
+    queryFn: () => getAdongMatchCounts(debounced),
     enabled,
     staleTime: 30_000,
     placeholderData: (prev) => prev, // 필터 변경 시 이전 결과 유지 (깜빡임 ↓)

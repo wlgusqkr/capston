@@ -1,4 +1,4 @@
-// /dong/:slug/explore — 자취 시세 BI 대시보드 (Phase 4.8).
+// /adong/:slug/explore — 자취 시세 BI 대시보드 (Phase 4.8).
 import { Link, useParams } from 'react-router-dom';
 import {
   Bar,
@@ -21,9 +21,9 @@ import { CHART_COLORS } from '@/lib/colors';
 import { usePageTitle } from '@/contexts/PageTitleContext';
 import {
   DEFAULT_EXPLORE_FILTERS,
-  useDongExplore,
+  useAdongExplore,
   useExploreFilters,
-} from '@/hooks/useDongExplore';
+} from '@/hooks/useAdongExplore';
 import type {
   ExploreDealType,
   ExploreFilters,
@@ -68,13 +68,13 @@ const SORT_OPTIONS: Array<{ value: ExploreSort; label: string }> = [
   { value: 'area_asc', label: '좁은순' },
 ];
 
-export default function DongExplore() {
+export default function AdongExplore() {
   const { slug } = useParams<{ slug: string }>();
   const { filters, patch, setPage, reset } = useExploreFilters();
-  const { data, isLoading, isError, error } = useDongExplore(slug, filters);
+  const { data, isLoading, isError, error } = useAdongExplore(slug, filters);
 
   usePageTitle(
-    data ? `${data.dong.gu} ${data.dong.name} · 자취 시세 탐색` : '자취 시세 탐색',
+    data ? `${data.adong.gu} ${data.adong.name} · 자취 시세 탐색` : '자취 시세 탐색',
   );
 
   if (!slug) {
@@ -94,11 +94,11 @@ export default function DongExplore() {
 
       <main className="flex flex-col gap-9 min-w-0" aria-busy={isLoading}>
         <header className="flex flex-col gap-3 mb-2">
-          <Link to={`/dong/${slug}`} className="no-underline text-text-subtle self-start mono-label hover:text-text">
+          <Link to={`/adong/${slug}`} className="no-underline text-text-subtle self-start mono-label hover:text-text">
             ← 동 상세로
           </Link>
           <h1 className="text-[28px] font-semibold m-0">
-            {data ? `${data.dong.gu} ${data.dong.name}` : '...'}{' '}
+            {data ? `${data.adong.gu} ${data.adong.name}` : '...'}{' '}
             <span className="text-body-base font-normal text-text-subtle">자취 시세 탐색</span>
           </h1>
           <p className="m-0 text-text-muted mono-label">

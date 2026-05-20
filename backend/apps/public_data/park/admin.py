@@ -2,7 +2,7 @@
 
 from django.contrib import admin
 
-from .models import Park, ParkDong, ParkLdong
+from .models import Park, ParkAdong, ParkLdong
 
 
 @admin.register(Park)
@@ -13,8 +13,8 @@ class ParkAdmin(admin.ModelAdmin):
     readonly_fields = ("boundary", "location")
 
 
-@admin.register(ParkDong)
-class ParkDongAdmin(admin.ModelAdmin):
+@admin.register(ParkAdong)
+class ParkAdongAdmin(admin.ModelAdmin):
     list_display = ("park", "adong")
     search_fields = ("park__name", "adong__name", "adong__gu__name")
     list_select_related = ("park", "adong")

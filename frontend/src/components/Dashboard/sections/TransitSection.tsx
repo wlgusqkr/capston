@@ -5,9 +5,9 @@
 //   2. Bus stats (stop_count, route_count) as big number cards
 //   3. Subway time-of-day congestion line (weekday / saturday / sunday)
 //   4. Bus time-of-day congestion line (weekday / weekend)
-//   5. Dong personality estimate (label + reason + pattern bars)
+//   5. Adong personality estimate (label + reason + pattern bars)
 //
-// Data: DongDetail.transit + TransitCongestionResponse
+// Data: AdongDetail.transit + TransitCongestionResponse
 
 import {
   CartesianGrid,
@@ -25,12 +25,12 @@ import Card from '@/components/ui/Card';
 import { CATEGORY_COLORS, CHART_COLORS } from '@/lib/colors';
 import type {
   CongestionPoint,
-  DongDetail,
+  AdongDetail,
   TransitCongestionResponse,
 } from '@/types/api';
 
 interface TransitSectionProps {
-  transit: DongDetail['transit'];
+  transit: AdongDetail['transit'];
   congestion?: TransitCongestionResponse;
 }
 

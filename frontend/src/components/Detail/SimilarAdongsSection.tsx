@@ -1,13 +1,13 @@
-// SimilarDongsSection — SPEC 6.3 Section 6 (비슷한 동네).
+// SimilarAdongsSection — SPEC 6.3 Section 6 (비슷한 동네).
 import { useNavigate } from 'react-router-dom';
 
-import type { DongDetail } from '@/types/api';
+import type { AdongDetail } from '@/types/api';
 
-interface SimilarDongsSectionProps {
-  similar: DongDetail['similar_dongs'];
+interface SimilarAdongsSectionProps {
+  similar: AdongDetail['similar_dongs'];
 }
 
-export default function SimilarDongsSection({ similar }: SimilarDongsSectionProps) {
+export default function SimilarAdongsSection({ similar }: SimilarAdongsSectionProps) {
   const navigate = useNavigate();
 
   if (similar.length === 0) {
@@ -35,7 +35,7 @@ export default function SimilarDongsSection({ similar }: SimilarDongsSectionProp
             <button
               type="button"
               className="w-full flex items-center justify-between gap-4 py-4 bg-none border-none cursor-pointer text-left text-inherit tracking-normal transition-all duration-[120ms] ease-out hover:bg-surface-alt hover:pl-3 hover:pr-3 hover:-ml-3 hover:-mr-3 focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2"
-              onClick={() => navigate(`/dong/${d.slug}`)}
+              onClick={() => navigate(`/adong/${d.slug}`)}
               aria-label={`${d.gu} ${d.name}, 유사도 ${d.similarity_pct}%`}
             >
               <span className="flex flex-col gap-[2px]">

@@ -27,7 +27,7 @@ from rest_framework.views import APIView
 
 from apps.service.neighborhoods.compare_dummy import compute_rent_converted_avgs
 from apps.service.neighborhoods.detail_dummy import NEAREST_STATIONS_FALLBACK
-# sub-plan 7G-B2: Dong → Adong + CurrentAdong join 치환.
+# sub-plan 7G-B2: Adong → Adong + CurrentAdong join 치환.
 # 결정 1A: current_adong 미존재 또는 score_rent NULL → 0 fallback.
 from apps.public_data.regions.models import Adong
 
@@ -37,7 +37,7 @@ from .optimizer import estimate_weights, to_integer_percent
 # 기본 가중치 (SPEC 6.1 — 첫 진입 시 33/33/34)
 DEFAULT_WEIGHTS = {"rent": 33 / 100, "amenity": 33 / 100, "transit": 34 / 100}
 
-# 한국어 라벨 매핑 (DongSummarySerializer.amenity_level과 일관)
+# 한국어 라벨 매핑 (AdongSummarySerializer.amenity_level과 일관)
 AMENITY_LABEL_KO: dict[str, str] = {
     "sufficient": "충분",
     "normal": "보통",
@@ -51,7 +51,7 @@ AMENITY_LABEL_KO: dict[str, str] = {
 
 
 def _amenity_level(score_amenity: float) -> str:
-    """DongSummarySerializer.get_amenity_level과 동일 임계값."""
+    """AdongSummarySerializer.get_amenity_level과 동일 임계값."""
     if score_amenity >= 70:
         return "sufficient"
     if score_amenity >= 40:
@@ -68,7 +68,7 @@ def _transit_min(slug: str) -> int:
 
 
 def _build_card(
-    dong: Adong,
+    adong: Adong,
     weights: dict[str, float],
     rent_converted: int | None = None,
 ) -> dict:
@@ -89,18 +89,18 @@ def _build_card(
     응답 dict key는 보존 (slug/name/gu/rent_avg/rent_converted/transit_min/
     amenity_label/score).
     """
-    rent_avg = max(0, int(120 - dong.score_rent))
-    transit_min = _transit_min(dong.slug)
-    level = _amenity_level(dong.score_amenity)
+    rent_avg = max(0, int(120 - adong.score_rent))
+    transit_min = _transit_min(adong.slug)
+    level = _amenity_level(adong.score_amenity)
     composite = (
-        dong.score_rent * weights["rent"]
-        + dong.score_amenity * weights["amenity"]
-        + dong.score_transit * weights["transit"]
+        adong.score_rent * weights["rent"]
+        + adong.score_amenity * weights["amenity"]
+        + adong.score_transit * weights["transit"]
     )
     return {
-        "slug": dong.slug,
-        "name": dong.name,
-        "gu": dong.gu.name,
+        "slug": adong.slug,
+        "name": adong.name,
+        "gu": adong.gu.name,
         "rent_avg": rent_avg,
         "rent_converted": rent_converted,
         "transit_min": transit_min,
@@ -114,7 +114,7 @@ def _build_card(
 # ---------------------------------------------------------------------------
 
 
-def _select_pairs(dongs: list[Adong], count: int) -> list[tuple[Adong, Adong]]:
+def _select_pairs(adongs: list[Adong], count: int) -> list[tuple[Adong, Adong]]:
     """
     정보량 최대화 휴리스틱.
 
@@ -126,11 +126,11 @@ def _select_pairs(dongs: list[Adong], count: int) -> list[tuple[Adong, Adong]]:
     축별 우선순위에 따라 결국 다 소진하고 부족분은 라운드 로빈으로 반복 허용.
     더미 환경에서도 항상 count 개 반환을 보장.
     """
-    if len(dongs) < 2:
+    if len(adongs) < 2:
         return []
 
     # 모든 가능한 (i, j) 쌍 (i < j)
-    pairs = list(combinations(range(len(dongs)), 2))
+    pairs = list(combinations(range(len(adongs)), 2))
 
     # 축별로 (|차이|, i, j) 내림차순 정렬한 인덱스 리스트 생성
     axes = [
@@ -142,7 +142,7 @@ def _select_pairs(dongs: list[Adong], count: int) -> list[tuple[Adong, Adong]]:
     for _, getter in axes:
         ranked = sorted(
             pairs,
-            key=lambda ij, g=getter: abs(g(dongs[ij[0]]) - g(dongs[ij[1]])),
+            key=lambda ij, g=getter: abs(g(adongs[ij[0]]) - g(adongs[ij[1]])),
             reverse=True,
         )
         axis_pairs.append(ranked)
@@ -172,7 +172,7 @@ def _select_pairs(dongs: list[Adong], count: int) -> list[tuple[Adong, Adong]]:
         ij = axis_pairs[0][len(selected) % len(axis_pairs[0])]
         selected.append(ij)
 
-    return [(dongs[i], dongs[j]) for i, j in selected]
+    return [(adongs[i], adongs[j]) for i, j in selected]
 
 
 # ---------------------------------------------------------------------------
@@ -216,7 +216,7 @@ class PreferencePairsView(APIView):
 
         # sub-plan 7G-B2: Adong + CurrentAdong join + annotate score_*.
         # 결정 1A: current_adong 미존재/score NULL → 0.
-        dongs = list(
+        adongs = list(
             Adong.objects.select_related("gu").annotate(
                 score_rent=Coalesce(
                     F("current_score__score_rent"),
@@ -235,12 +235,12 @@ class PreferencePairsView(APIView):
                 ),
             )
         )
-        if len(dongs) < 2:
+        if len(adongs) < 2:
             raise ValidationError(
                 {"detail": "비교할 동이 부족합니다 (최소 2개 필요)."}
             )
 
-        pair_dongs = _select_pairs(dongs, count)
+        pair_dongs = _select_pairs(adongs, count)
 
         # 환산월세 평균을 한 번에 사전 계산 (N+1 회피).
         # 같은 구의 RentDeal 만 fetch 하므로 비용 제한적. compute_rent_converted_avgs
@@ -279,7 +279,7 @@ class PreferenceSubmitView(APIView):
     POST /api/preference/submit
     body: {"comparisons": [{"won": "slug_a", "lost": "slug_b"}, ...]}
 
-    won/lost 슬러그 → Dong → (score_rent, score_amenity, score_transit) 추출
+    won/lost 슬러그 → Adong → (score_rent, score_amenity, score_transit) 추출
     → estimate_weights → 정수 % 변환 → 응답.
 
     응답: {"w_rent": int, "w_amenity": int, "w_transit": int}  (합 100)
@@ -374,7 +374,7 @@ class PreferenceSubmitView(APIView):
             )
 
         # (won_features, lost_features) 튜플 리스트.
-        # rent feature 는 dong.score_rent 사용 — score_rent 는 compute_scores 가
+        # rent feature 는 adong.score_rent 사용 — score_rent 는 compute_scores 가
         # 환산월세(보증금×0.005 + 월세, apps.public_data.rent_deal.utils.convert_to_monthly)
         # 분포의 백분위로 산출하므로 이미 환산 기반이다. 따라서 학습 로직은
         # raw 월세가 아닌 환산월세 차이를 비교한다 (rent metric 환산 통일).

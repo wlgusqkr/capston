@@ -7,7 +7,7 @@
 //   4. Avg age card (POP_MEAN_AGE + male/female chips) — Phase 4 B1
 //   5. 1-person household estimate donut (household vs population ratio)
 //
-// Data: DongPopulationResponse + DongGuMetricsResponse
+// Data: AdongPopulationResponse + AdongGuMetricsResponse
 
 import {
   Bar,
@@ -26,11 +26,11 @@ import {
 import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
 import { CATEGORY_COLORS, CHART_COLORS } from '@/lib/colors';
-import type { DongGuMetricsResponse, DongPopulationResponse } from '@/types/api';
+import type { AdongGuMetricsResponse, AdongPopulationResponse } from '@/types/api';
 
 interface PopulationSectionProps {
-  population: DongPopulationResponse;
-  guMetrics: DongGuMetricsResponse | undefined;
+  population: AdongPopulationResponse;
+  guMetrics: AdongGuMetricsResponse | undefined;
 }
 
 const GENDER_COLORS = [CATEGORY_COLORS.transport, '#EC4899'] as const; // blue for male, pink for female

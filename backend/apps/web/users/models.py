@@ -58,7 +58,7 @@ class Favorite(models.Model):
         related_name="favorites",
         on_delete=models.CASCADE,
     )
-    # sub-plan 7G-B2 (F1-A): Dong → Adong FK 치환.
+    # sub-plan 7G-B2 (F1-A): Adong → Adong FK 치환.
     # related_name 유지(`favorited_by`)는 cross-app 영향이 있을 수 있어 그대로 둔다.
     adong = models.ForeignKey(
         "regions.Adong",

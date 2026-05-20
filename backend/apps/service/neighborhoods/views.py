@@ -1,18 +1,18 @@
 """
-Dong 관련 뷰.
+Adong 관련 뷰.
 
 엔드포인트:
-- GET /api/dongs/scores?w_rent=33&w_amenity=33&w_transit=34
+- GET /api/adongs/scores?w_rent=33&w_amenity=33&w_transit=34
   → 행정동 종합 점수 리스트 (메인 지도 히트맵용)
-- GET /api/dongs/<slug>/summary?w_rent=&w_amenity=&w_transit=
+- GET /api/adongs/<slug>/summary?w_rent=&w_amenity=&w_transit=
   → 동네 패널용 요약 (SPEC 6.2)
-- GET /api/dongs/<slug>/detail?w_rent=&w_amenity=&w_transit=
+- GET /api/adongs/<slug>/detail?w_rent=&w_amenity=&w_transit=
   → 동네 상세 페이지 (SPEC 6.3)
 - GET /api/compare?slugs=A,B,C[&w_rent=&w_amenity=&w_transit=]
   → 동네 비교 (SPEC 6.4, 최대 3개)
-- GET /api/dongs/<slug>/population
+- GET /api/adongs/<slug>/population
   → 행정동 인구 시계열 (대시보드 Phase 2)
-- GET /api/dongs/<slug>/gu-metrics
+- GET /api/adongs/<slug>/gu-metrics
   → 소속 구의 최신 지표 + 서울 평균 (대시보드 Phase 2)
 """
 
@@ -28,15 +28,15 @@ from rest_framework.views import APIView
 
 from datetime import date
 
-from .adong_compat import build_adong_qs, wrap
+from .adong_surface import build_adong_qs, wrap
 from .compare_dummy import build_compare_row, compute_rent_converted_avgs
 from .explore import build_explore_response
 from .score_point import compute_point_score
 from .serializers import (
-    DongCompareItemSerializer,
-    DongDetailSerializer,
-    DongScoreSerializer,
-    DongSummarySerializer,
+    AdongCompareItemSerializer,
+    AdongDetailSerializer,
+    AdongScoreSerializer,
+    AdongSummarySerializer,
     KernelScoreRequestSerializer,
 )
 
@@ -68,7 +68,7 @@ def _parse_weight(request: Request, key: str, default: int) -> int:
 
 def _parse_and_validate_weights(request: Request) -> dict[str, float]:
     """
-    DongScoresView / DongSummaryView 공통 — 쿼리 파라미터 가중치 파싱·검증.
+    AdongScoresView / AdongSummaryView 공통 — 쿼리 파라미터 가중치 파싱·검증.
 
     반환: {"rent": 0~1, "amenity": 0~1, "transit": 0~1} (정규화된 float)
     오류:
@@ -124,7 +124,7 @@ WEIGHT_PARAMS = [
 
 
 @extend_schema(
-    tags=["dongs"],
+    tags=["adongs"],
     summary="행정동 종합 점수 리스트 (메인 지도 히트맵용)",
     description=(
         "서울 425개 행정동의 가중합 종합 점수와 중심점 좌표, raw 축별 점수 3종을 반환. "
@@ -132,9 +132,9 @@ WEIGHT_PARAMS = [
     ),
     parameters=WEIGHT_PARAMS,
 )
-class DongScoresView(APIView):
+class AdongScoresView(APIView):
     """
-    GET /api/dongs/scores?w_rent=33&w_amenity=33&w_transit=34
+    GET /api/adongs/scores?w_rent=33&w_amenity=33&w_transit=34
 
     응답: [{slug, name, gu, score, lat, lng, score_rent, score_amenity, score_transit}, ...]
     score는 0~100 범위의 가중합 (소수점 둘째 자리), 내림차순 정렬.
@@ -150,7 +150,7 @@ class DongScoresView(APIView):
         # 7G-B1: Adong + current_score(LEFT) + Gu 합성. score_rent NULL→0 (결정 1A).
         adongs = build_adong_qs()
         wrapped = [wrap(a) for a in adongs]
-        serialized = DongScoreSerializer(
+        serialized = AdongScoreSerializer(
             wrapped, many=True, context={"weights": weights}
         ).data
         # score 내림차순 정렬 (SPEC 6.1: 사용자가 "어디가 좋은가"를 보기 편함)
@@ -160,14 +160,14 @@ class DongScoresView(APIView):
 
 
 @extend_schema(
-    tags=["dongs"],
+    tags=["adongs"],
     summary="동네 패널 요약 (SPEC 6.2)",
     description="단일 행정동의 패널용 핵심 지표 5종 + 한 줄 요약.",
     parameters=WEIGHT_PARAMS,
 )
-class DongSummaryView(APIView):
+class AdongSummaryView(APIView):
     """
-    GET /api/dongs/<slug>/summary?w_rent=&w_amenity=&w_transit=
+    GET /api/adongs/<slug>/summary?w_rent=&w_amenity=&w_transit=
 
     동네 패널(SPEC 6.2)용 요약. 가중치 파라미터는 옵션이며 default 33/33/34.
     응답: {slug, name, gu, score, summary, rent_avg, nearest_station,
@@ -185,13 +185,13 @@ class DongSummaryView(APIView):
         except Adong.DoesNotExist as exc:
             raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
 
-        dong = wrap(adong)
-        data = DongSummarySerializer(dong, context={"weights": weights}).data
+        adong = wrap(adong)
+        data = AdongSummarySerializer(adong, context={"weights": weights}).data
         return Response(data, status=status.HTTP_200_OK)
 
 
 @extend_schema(
-    tags=["dongs"],
+    tags=["adongs"],
     summary="동네 상세 — 6개 섹션 (SPEC 6.3)",
     description=(
         "Hero / 부동산 시세 / 편의시설 / 교통 / 자취생 리뷰 / 비슷한 동네를 한 번에 반환. "
@@ -199,12 +199,12 @@ class DongSummaryView(APIView):
     ),
     parameters=WEIGHT_PARAMS,
 )
-class DongDetailView(APIView):
+class AdongDetailView(APIView):
     """
-    GET /api/dongs/<slug>/detail?w_rent=&w_amenity=&w_transit=
+    GET /api/adongs/<slug>/detail?w_rent=&w_amenity=&w_transit=
 
     동네 상세 페이지(SPEC 6.3)용 전체 데이터. 6개 섹션을 한 번에 반환:
-    Hero / RealEstate / Amenities / Transit / Reviews / SimilarDongs.
+    Hero / RealEstate / Amenities / Transit / Reviews / SimilarAdongs.
 
     가중치 파라미터는 옵션이며 default 33/33/34. 가중치는 score 필드에만 영향.
     한 줄 요약과 vs_seoul_avg_pct는 raw 점수 기반이므로 가중치와 별개.
@@ -221,8 +221,8 @@ class DongDetailView(APIView):
         except Adong.DoesNotExist as exc:
             raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
 
-        dong = wrap(adong)
-        data = DongDetailSerializer(dong, context={"weights": weights}).data
+        adong = wrap(adong)
+        data = AdongDetailSerializer(adong, context={"weights": weights}).data
         return Response(data, status=status.HTTP_200_OK)
 
 
@@ -247,9 +247,9 @@ class CompareView(APIView):
 
     동네 비교(SPEC 6.4). 최대 3개 슬러그를 받아 7개 비교 지표를 한 번에 반환한다.
 
-    응답: { weights: {...}, dongs: [DongCompareItem, ...] }
+    응답: { weights: {...}, adongs: [AdongCompareItem, ...] }
       - weights: 적용된 가중치 (정수 0~100, 합 100±1) — 프론트가 표시용으로 사용
-      - dongs: 입력 슬러그 순서 그대로 (프론트가 비교표 컬럼 순서 보존하기 위함)
+      - adongs: 입력 슬러그 순서 그대로 (프론트가 비교표 컬럼 순서 보존하기 위함)
 
     오류:
       - slugs 미지정/공백 → 400 ({"slugs": "최소 1개의 슬러그가 필요합니다."})
@@ -306,14 +306,14 @@ class CompareView(APIView):
         return Response(
             {
                 "weights": applied_weights,
-                "dongs": DongCompareItemSerializer(rows, many=True).data,
+                "adongs": AdongCompareItemSerializer(rows, many=True).data,
             },
             status=status.HTTP_200_OK,
         )
 
 
 @extend_schema(
-    tags=["dongs"],
+    tags=["adongs"],
     summary="임의 지점 커널 점수 (SPEC 11, Phase 2a)",
     description=(
         "지도 위 임의 클릭 지점(lat/lng)에 대해 가우시안 커널(σ=300m, 1km 컷) "
@@ -365,12 +365,12 @@ class KernelScoreView(APIView):
 
 
 # ---------------------------------------------------------------------------
-# Phase 4.8 — 자취 시세 BI 대시보드 (`/dong/<slug>/explore`)
+# Phase 4.8 — 자취 시세 BI 대시보드 (`/adong/<slug>/explore`)
 # ---------------------------------------------------------------------------
 
 
 @extend_schema(
-    tags=["dongs"],
+    tags=["adongs"],
     summary="자취 시세 BI 대시보드 데이터 (Phase 4.8)",
     description=(
         "한 동의 자취 시장을 깊이 탐색하기 위한 BI 응답. 사용자가 거래유형/기간/"
@@ -463,11 +463,11 @@ class KernelScoreView(APIView):
         ),
     ],
 )
-class DongExploreView(APIView):
-    """GET /api/dongs/<slug>/explore?<filters>"""
+class AdongExploreView(APIView):
+    """GET /api/adongs/<slug>/explore?<filters>"""
 
     def get(self, request: Request, slug: str) -> Response:
-        # 7G-B1: Adong + current_score 합성. explore는 dong.code/gu(string)만 사용 (B2 확인 영역).
+        # 7G-B1: Adong + current_score 합성. explore는 adong.code/gu(string)만 사용 (B2 확인 영역).
         from apps.public_data.regions.models import Adong  # noqa: WPS433
 
         try:
@@ -475,8 +475,8 @@ class DongExploreView(APIView):
         except Adong.DoesNotExist as exc:
             raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
 
-        dong = wrap(adong)
-        data = build_explore_response(dong, request, today=date.today())
+        adong = wrap(adong)
+        data = build_explore_response(adong, request, today=date.today())
         return Response(data, status=status.HTTP_200_OK)
 
 
@@ -492,9 +492,9 @@ from apps.public_data.metrics.models import GuMetric, Metric, SeoulMetric
 
 
 def _get_dong_or_404(slug: str):
-    """slug로 Adong(+current_score+Gu)을 조회 후 Dong 인터페이스 호환 wrap 반환. 없으면 404.
+    """slug로 Adong(+current_score+Gu)을 조회 후 Adong 인터페이스 호환 wrap 반환. 없으면 404.
 
-    7G-B1: legacy Dong → Adong 합성. 응답 dict key 보존 lock 유지.
+    7G-B1: regions.Adong + current_score ??. ?? dict key ?? lock ??.
     """
     from apps.public_data.regions.models import Adong  # noqa: WPS433
 
@@ -505,42 +505,42 @@ def _get_dong_or_404(slug: str):
     return wrap(adong)
 
 
-def _dong_header(dong) -> dict:
-    """공통 dong 식별 dict."""
-    return {"slug": dong.slug, "name": dong.name, "gu": dong.gu}
+def _dong_header(adong) -> dict:
+    """공통 adong 식별 dict."""
+    return {"slug": adong.slug, "name": adong.name, "gu": adong.gu}
 
 
 @extend_schema(
-    tags=["dongs"],
+    tags=["adongs"],
     summary="행정동 인구 시계열 (대시보드 Phase 2)",
     description=(
         "한 행정동의 인구·세대 시계열 전체를 반환한다. "
         "latest는 가장 최근 행, trend는 날짜 오름차순 전체."
     ),
 )
-class DongPopulationView(APIView):
+class AdongPopulationView(APIView):
     """
-    GET /api/dongs/<slug>/population
+    GET /api/adongs/<slug>/population
 
     응답:
       {
-        "dong": { "slug": "...", "name": "...", "gu": "..." },
+        "adong": { "slug": "...", "name": "...", "gu": "..." },
         "latest": { "date": "...", "total_population": ..., ... },
         "trend": [ { "date": "...", ... }, ... ]
       }
     """
 
     def get(self, request: Request, slug: str) -> Response:
-        dong = _get_dong_or_404(slug)
+        adong = _get_dong_or_404(slug)
 
-        cache_key = f"dong_population:{dong.code}"
+        cache_key = f"dong_population:{adong.code}"
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached, status=status.HTTP_200_OK)
 
         rows = (
             AdongPopulation.objects
-            .filter(adong=dong.code)
+            .filter(adong=adong.code)
             .order_by("date")
             .values("date", "total_population", "household_count",
                     "male_population", "female_population")
@@ -559,7 +559,7 @@ class DongPopulationView(APIView):
         latest = trend[-1] if trend else None
 
         data = {
-            "dong": _dong_header(dong),
+            "adong": _dong_header(adong),
             "latest": latest,
             "trend": trend,
         }
@@ -569,7 +569,7 @@ class DongPopulationView(APIView):
 
 
 @extend_schema(
-    tags=["dongs"],
+    tags=["adongs"],
     summary="소속 구의 최신 지표 + 서울 평균 + 25구 순위/평균 (대시보드 Phase 2/5)",
     description=(
         "한 행정동이 속한 자치구의 GuMetric을 metric_code별로 가장 최신 1행씩 반환하고, "
@@ -579,9 +579,9 @@ class DongPopulationView(APIView):
         "서울시 전체 합/대표값 의미 (25구 산술 평균이 아님 — 비교 시 `gu_avg` 사용)."
     ),
 )
-class DongGuMetricsView(APIView):
+class AdongGuMetricsView(APIView):
     """
-    GET /api/dongs/<slug>/gu-metrics
+    GET /api/adongs/<slug>/gu-metrics
 
     `gu_metric`은 metric_code마다 적재 주기/최신 날짜가 다르다 (예: POP_RESIDENT*는
     월간 ~2026-04, SAFETY_GRADE_*·POP_YOUTH_*는 연간 ~2024-01). 따라서 "구의 가장
@@ -591,7 +591,7 @@ class DongGuMetricsView(APIView):
 
     응답:
       {
-        "dong": { "slug": "...", "name": "...", "gu": "..." },
+        "adong": { "slug": "...", "name": "...", "gu": "..." },
         "gu_code": "...",
         "gu_name": "중구",
         "metrics": {
@@ -621,19 +621,19 @@ class DongGuMetricsView(APIView):
     """
 
     def get(self, request: Request, slug: str) -> Response:
-        dong = _get_dong_or_404(slug)
+        adong = _get_dong_or_404(slug)
 
-        # Dong.gu는 CharField (예: "중구"). Gu.name도 동일 값.
-        gu = Gu.objects.filter(name=dong.gu).first()
+        # Adong.gu는 CharField (예: "중구"). Gu.name도 동일 값.
+        gu = Gu.objects.filter(name=adong.gu).first()
         if gu is None:
-            raise NotFound({"detail": f"구를 찾을 수 없습니다: {dong.gu}"})
+            raise NotFound({"detail": f"구를 찾을 수 없습니다: {adong.gu}"})
 
         # v2: 응답 모양 변경 (rank_in_seoul/gu_count/gu_avg 추가)
         cache_key = f"dong_gu_metrics:v2:{gu.gu_code}"
         cached = cache.get(cache_key)
         if cached is not None:
-            # cached 데이터에 dong 헤더만 교체 (같은 구의 다른 동에서도 재사용)
-            result = {**cached, "dong": _dong_header(dong)}
+            # cached 데이터에 adong 헤더만 교체 (같은 구의 다른 동에서도 재사용)
+            result = {**cached, "adong": _dong_header(adong)}
             return Response(result, status=status.HTTP_200_OK)
 
         # 메트릭 메타 사전 로드 (35행)
@@ -737,7 +737,7 @@ class DongGuMetricsView(APIView):
         }
         cache.set(cache_key, cacheable, timeout=300)  # 5분 TTL
 
-        data = {**cacheable, "dong": _dong_header(dong)}
+        data = {**cacheable, "adong": _dong_header(adong)}
         return Response(data, status=status.HTTP_200_OK)
 
 
@@ -796,7 +796,7 @@ def _parse_series_params(request: Request) -> tuple[list[str], int]:
 
 
 @extend_schema(
-    tags=["dongs"],
+    tags=["adongs"],
     summary="구별 지표 시계열 + 25구 평균선 (대시보드 추이 위젯용)",
     description=(
         "한 행정동이 속한 자치구의 GuMetric을 metric_code별 시계열로 반환한다. "
@@ -824,13 +824,13 @@ def _parse_series_params(request: Request) -> tuple[list[str], int]:
         ),
     ],
 )
-class DongGuMetricsSeriesView(APIView):
+class AdongGuMetricsSeriesView(APIView):
     """
-    GET /api/dongs/<slug>/gu-metrics/series?codes=...&years=10
+    GET /api/adongs/<slug>/gu-metrics/series?codes=...&years=10
 
     응답:
       {
-        "dong": { "slug": "...", "name": "...", "gu": "..." },
+        "adong": { "slug": "...", "name": "...", "gu": "..." },
         "gu_code": "...",
         "gu_name": "중구",
         "series": {
@@ -870,12 +870,12 @@ class DongGuMetricsSeriesView(APIView):
     """
 
     def get(self, request: Request, slug: str) -> Response:
-        dong = _get_dong_or_404(slug)
+        adong = _get_dong_or_404(slug)
         codes, years = _parse_series_params(request)
 
-        gu = Gu.objects.filter(name=dong.gu).first()
+        gu = Gu.objects.filter(name=adong.gu).first()
         if gu is None:
-            raise NotFound({"detail": f"구를 찾을 수 없습니다: {dong.gu}"})
+            raise NotFound({"detail": f"구를 찾을 수 없습니다: {adong.gu}"})
 
         # 캐시 키: (구, codes, years) 단위. codes는 정렬해서 키 안정화.
         # v2: 응답에 current_rank / gu_avg_series 추가됨.
@@ -883,7 +883,7 @@ class DongGuMetricsSeriesView(APIView):
         cache_key = f"dong_gu_metrics_series:v2:{gu.gu_code}:{codes_joined}:{years}"
         cached = cache.get(cache_key)
         if cached is not None:
-            result = {**cached, "dong": _dong_header(dong)}
+            result = {**cached, "adong": _dong_header(adong)}
             return Response(result, status=status.HTTP_200_OK)
 
         # cutoff: 오늘 기준 N년 전 1월 1일 (연 단위 적재 metric에서도 경계 포함)
@@ -1016,5 +1016,5 @@ class DongGuMetricsSeriesView(APIView):
         }
         cache.set(cache_key, cacheable, timeout=300)  # 5분 TTL
 
-        data = {**cacheable, "dong": _dong_header(dong)}
+        data = {**cacheable, "adong": _dong_header(adong)}
         return Response(data, status=status.HTTP_200_OK)

@@ -7,21 +7,19 @@ RentDeal 관련 뷰.
                             &from=YYYY-MM-DD&to=YYYY-MM-DD
                             &limit=200
   → 메인 지도 bbox 내 실거래 핀 (SPEC 6.1)
-- GET /api/dongs/<slug>/derived-indices
+- GET /api/adongs/<slug>/derived-indices
   → 자취촌 지수(0~100) + 계약 활발도 (SPEC 4.5)
 
 sub-plan 4.5B 정합:
-- RentDeal.dong FK 제거 → ldong FK 단일.
+- Derived indices use confirmed rent_deal.adong_code rows only.
 - 컬럼명 변경: deal_date → contract_date, build_year → construction_year.
 - deal_type 영문 enum 컬럼 제거 → housing_type 한글 raw 단일.
   쿼리 파라미터/응답 dict 'deal_type'은 영문 enum 그대로 보존 (frontend lock 1).
   → DEAL_TYPE_TO_HOUSING_TYPE으로 영문 ↔ 한글 변환.
 - N+1 회피: select_related("ldong", "ldong__gu").
-- /derived-indices는 행정동 단위 집계인데 rent_deal에는 adong_code 컬럼이 없다
-  (schema.dbml lock). 임시로 ldong → Adong 매핑이 정립되기 전까지 본 view는
-  Dong.code(=adong_code) 단위로 계산 불가 → 4.5C 단계에서 ldong-단위 또는
-  adong↔ldong 매핑 도입 후 재구성. 본 sub-plan에서는 view 시그니처/응답 구조를
-  유지하되 sample/aggregation 로직만 housing_type/contract_date에 맞춰 갱신한다.
+- /derived-indices는 rent_deal.adong_code가 확정된 거래만 행정동 단위로 집계한다.
+  법정동-행정동 관계 또는 위치 신뢰도가 불충분한 거래는 adong_code=NULL로 남겨
+  행정동별 지표에서 제외한다.
 
 설계 원칙:
 - bbox가 너무 크면 limit (default 200, max 500) 으로 자동 컷.
@@ -50,8 +48,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-# sub-plan 7G-B2 (결정 6A): Dong → Adong 치환 + null fallback 단순화.
-# Adong.adong_code를 직접 사용하여 dong.id → dong.code 매핑 우회.
+# sub-plan 7G-B2 (?? 6A): regions.Adong ?? ?? + null fallback ???.
+# Adong.adong_code를 직접 사용하여 adong.id → adong.code 매핑 우회.
 from apps.public_data.regions.models import Adong
 from apps.public_data.populations.models import AdongPopulation
 
@@ -306,44 +304,39 @@ def _compute_all_dongs_derived(today: date) -> dict[str, dict]:
     """
     서울 426개 행정동의 파생 지표를 한 번에 계산.
 
-    sub-plan 4.5B 정합:
-    - RentDeal.dong FK 제거 → ldong FK만 존재.
-    - rent_deal에는 adong_code 컬럼이 없으므로 (schema.dbml lock) 직접 dong_id
-      group_by 불가. 본 view는 adong/ldong 매핑이 정립되기 전까지 임시로
-      ldong 단위로 raw 집계만 수행하고, dong-slug 단위 응답은 ldong-name
-      매칭 fallback으로 구성한다. 정밀 매핑은 4.5C에서 처리.
-    - 따라서 본 view 응답 구조는 보존하되 일부 동의 score가 ldong-단위
-      raw 집계에 의존하게 된다 (응답 dict key 0 변경, frontend 영향 없음).
+    rent_deal.adong_code가 채워진 행만 행정동 단위 지표에 사용한다.
+    adong_code가 NULL인 행은 법정동-행정동 관계 또는 위치 신뢰도가 불충분한
+    거래이므로 행정동별 지표에서 제외한다.
 
     반환: {slug: {studio_index: {...}, activity: {...}}, ...}
     """
     cutoff = today - timedelta(days=WINDOW_DAYS)
 
-    # 1) 행정동 마스터 (Adong + Gu join). sub-plan 7G-B2 (결정 6A): Dong → Adong 직접 사용.
-    dongs = list(Adong.objects.select_related("gu").all())
-    total_dongs = len(dongs)
+    # 1) ??? ??? (Adong + Gu join).
+    adongs = list(Adong.objects.select_related("gu").all())
+    total_dongs = len(adongs)
 
-    # 2) ldong_code별 RentDeal 집계 (최근 12개월).
-    # rent_deal에는 adong_code가 없으므로 ldong_code 단위 raw 집계.
-    base = RentDeal.objects.filter(contract_date__gte=cutoff)
+    # 2) adong_code별 RentDeal 집계 (최근 12개월).
+    base = RentDeal.objects.filter(contract_date__gte=cutoff, adong__isnull=False)
     agg_rows = list(
-        base.values("ldong_id").annotate(
+        base.values("adong_id").annotate(
             total=Count("id"),
             non_apt=Count("id", filter=~Q(housing_type="아파트")),
             small=Count("id", filter=Q(area_m2__lte=SMALL_AREA_M2)),
             monthly=Count("id", filter=Q(monthly_rent__gt=0)),
         )
     )
+    agg_by_adong_code = {r["adong_id"]: r for r in agg_rows}
 
-    # 3) ldong-단위 집계 → adong(=행정동) slug에 매핑.
-    # rent_deal.ldong_code(법정동) → Adong(행정동) 매핑이 없어 임시로
-    # 코드 prefix가 동일한 동에 할당하지 않는다 (행정동≠법정동).
-    # 4.5C에서 adong↔ldong N:M 매핑 도입 후 보강.
-    # 본 sub-plan에서는 응답 구조만 보장 — 모든 동에 score=None으로 폴백.
-    _ = agg_rows  # 통계 보존 — 4.5C에서 사용 예정
+    monthly_counts = [r["monthly"] for r in agg_rows]
+    min_monthly = min(monthly_counts) if monthly_counts else 0
+    max_monthly = max(monthly_counts) if monthly_counts else 0
+
+    score_by_adong_code: dict[str, float] = {}
+    activity_by_adong_code: dict[str, float] = {}
 
     # 4) 최신 인구 per 행정동 (DISTINCT ON adong_id).
-    # sub-plan 7G-B2 (결정 6A): adong_code 직접 키. Dong.id 매핑 단계 제거.
+    # sub-plan 7G-B2 (결정 6A): adong_code 직접 키. Adong.id 매핑 단계 제거.
     pop_rows = list(
         AdongPopulation.objects
         .order_by("adong_id", "-date")
@@ -354,35 +347,97 @@ def _compute_all_dongs_derived(today: date) -> dict[str, dict]:
         r["adong_id"]: r["total_population"] for r in pop_rows
     }
 
-    # 5) 결과 dict (slug → payload) — sub-plan 4.5B 임시 null 폴백.
-    # rent_deal-side 정확 매핑은 4.5C에서 처리. 응답 dict 구조는 보존.
+    for adong_code, row in agg_by_adong_code.items():
+        total = row["total"] or 0
+        if total <= 0:
+            continue
+        non_apt_ratio = row["non_apt"] / total
+        small_area_ratio = row["small"] / total
+        if max_monthly > min_monthly:
+            monthly_norm = (row["monthly"] - min_monthly) / (max_monthly - min_monthly)
+        else:
+            monthly_norm = 0.0
+        score_by_adong_code[adong_code] = round(
+            100
+            * (
+                STUDIO_W_NON_APT * non_apt_ratio
+                + STUDIO_W_SMALL * small_area_ratio
+                + STUDIO_W_MONTHLY_NORM * monthly_norm
+            ),
+            2,
+        )
+
+    # 5) 결과 dict (slug → payload).
     result: dict[str, dict] = {}
-    for d in dongs:
+    for adong_code, score in score_by_adong_code.items():
+        row = agg_by_adong_code[adong_code]
+        pop = pop_by_adong_code.get(adong_code)
+        if pop:
+            activity_by_adong_code[adong_code] = round(row["total"] / pop * 1000, 2)
+
+    sorted_scores = sorted(score_by_adong_code.items(), key=lambda item: item[1], reverse=True)
+    rank_by_score = {adong_code: idx + 1 for idx, (adong_code, _) in enumerate(sorted_scores)}
+    sorted_activity = sorted(
+        activity_by_adong_code.items(), key=lambda item: item[1], reverse=True
+    )
+    rank_by_activity = {
+        adong_code: idx + 1 for idx, (adong_code, _) in enumerate(sorted_activity)
+    }
+
+    scored_count = len(sorted_scores)
+    activity_count = len(sorted_activity)
+
+    for d in adongs:
         pop = pop_by_adong_code.get(d.adong_code)
+        row = agg_by_adong_code.get(d.adong_code)
+        total = row["total"] if row else 0
+        score = score_by_adong_code.get(d.adong_code)
+        score_rank = rank_by_score.get(d.adong_code)
+        activity = activity_by_adong_code.get(d.adong_code)
+        activity_rank = rank_by_activity.get(d.adong_code)
+        non_apt_ratio = small_area_ratio = monthly_norm = None
+        if row and total:
+            non_apt_ratio = round(row["non_apt"] / total, 4)
+            small_area_ratio = round(row["small"] / total, 4)
+            if max_monthly > min_monthly:
+                monthly_norm = round(
+                    (row["monthly"] - min_monthly) / (max_monthly - min_monthly),
+                    4,
+                )
+            else:
+                monthly_norm = 0.0
+
         result[d.slug] = {
-            "dong": {"slug": d.slug, "name": d.name, "gu": d.gu.name},
+            "adong": {"slug": d.slug, "name": d.name, "gu": d.gu.name},
             "studio_index": {
-                "score": None,
-                "percentile": None,
-                "rank": None,
+                "score": score,
+                "percentile": (
+                    None
+                    if score_rank is None or scored_count <= 1
+                    else int(round((scored_count - score_rank) / (scored_count - 1) * 100))
+                ),
+                "rank": score_rank,
                 "total_dongs": total_dongs,
                 "breakdown": {
-                    "non_apt_ratio": None,
-                    "small_area_ratio": None,
-                    "monthly_deal_normalized": None,
+                    "non_apt_ratio": non_apt_ratio,
+                    "small_area_ratio": small_area_ratio,
+                    "monthly_deal_normalized": monthly_norm,
                 },
                 "formula": (
-                    "0.5 × 비아파트 비율 + 0.3 × ≤25㎡ 비율 + 0.2 × 월세 계약 건수 "
-                    "정규화 (서울 동별 min-max). sub-plan 4.5B 임시 null "
-                    "— rent_deal adong 매핑이 정립되는 4.5C에서 활성화."
+                    "0.5 × 비아파트 비율 + 0.3 × ≤25㎡ 비율 + 0.2 × 월세 계약 건수 정규화 "
+                    "(서울 행정동별 min-max). adong_code가 확정된 거래만 사용."
                 ),
             },
             "activity": {
-                "deals_per_1000": None,
-                "deals_12m": 0,
+                "deals_per_1000": activity,
+                "deals_12m": total,
                 "population": pop,
-                "percentile": None,
-                "rank": None,
+                "percentile": (
+                    None
+                    if activity_rank is None or activity_count <= 1
+                    else int(round((activity_count - activity_rank) / (activity_count - 1) * 100))
+                ),
+                "rank": activity_rank,
                 "total_dongs": total_dongs,
             },
         }
@@ -391,20 +446,19 @@ def _compute_all_dongs_derived(today: date) -> dict[str, dict]:
 
 
 @extend_schema(
-    tags=["dongs"],
+    tags=["adongs"],
     summary="자취촌 지수 + 계약 활발도 (대시보드 §4.5)",
     description=(
         "한 행정동의 파생 지표 2종을 반환한다.\n\n"
-        "sub-plan 4.5B 임시: rent_deal에 adong_code가 없으므로 (schema.dbml lock) "
-        "정확한 adong-단위 집계는 4.5C에서 활성화. 응답 dict key는 보존 "
-        "(score/breakdown 일시적 null)."
+        "rent_deal.adong_code가 확정된 거래만 사용해 행정동 단위 파생 지표를 계산한다. "
+        "응답 dict key는 보존한다."
     ),
 )
-class DongDerivedIndicesView(APIView):
+class AdongDerivedIndicesView(APIView):
     """
-    GET /api/dongs/<slug>/derived-indices
+    GET /api/adongs/<slug>/derived-indices
 
-    sub-plan 4.5B: 응답 dict key 구조 보존. score/percentile/rank는 null 폴백.
+    응답 dict key 구조를 보존하면서 adong_code 기반 score/percentile/rank를 계산한다.
     """
 
     def get(self, request: Request, slug: str) -> Response:
@@ -418,7 +472,7 @@ class DongDerivedIndicesView(APIView):
 
         payload = all_indices.get(slug)
         if payload is None:
-            # sub-plan 7G-B2 (결정 6A): Dong → Adong.
+            # slug? ???? ?? ????? 404.
             if not Adong.objects.filter(slug=slug).exists():
                 raise NotFound({"detail": "동을 찾을 수 없습니다."})
             cache.delete(cache_key)

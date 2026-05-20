@@ -204,7 +204,7 @@ class FavoriteItemSerializer(serializers.Serializer):
 def build_favorite_item(fav: Favorite, weights: dict[str, float]) -> dict:
     """Favorite 인스턴스 + 사용자 가중치 → dict.
 
-    sub-plan 7G-B2 (F1-A): Favorite.dong → Favorite.adong 치환.
+    sub-plan 7G-B2 (F1-A): Favorite.adong → Favorite.adong 치환.
     - score는 CurrentAdong.score_{rent,amenity,transit}로 합성.
       current_adong 미존재 또는 score_rent NULL은 결정 1A에 따라 0으로 fallback.
     - 응답 dict key set은 보존 (FavoriteItem schema lock — slug/name/gu/score/created_at).

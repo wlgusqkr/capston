@@ -1,4 +1,4 @@
-// DongPanel — slide-in summary panel for the main map (SPEC 6.2).
+// AdongPanel — slide-in summary panel for the main map (SPEC 6.2).
 //
 // Layout:
 //   - Fixed to the right edge, full viewport height, ~400px wide.
@@ -7,7 +7,7 @@
 //   - Internal scroll for tall content.
 //
 // Sections (top → bottom, per SPEC 6.2):
-//   1. Header (gu small, dong large, close button)
+//   1. Header (gu small, adong large, close button)
 //   2. 종합 점수 카드 (Card variant="inset" + Score size="lg" + 한 줄 요약)
 //   3. 핵심 지표 5개 (key/value 행)
 //        - 평균 월세, 가까운 역, 편의시설, 자취생 비율, 안전 지수
@@ -16,8 +16,8 @@
 //
 // Score breakdown source:
 //   The backend's /summary response no longer carries score_rent/amenity/transit;
-//   they live on /scores. The parent MainMap already calls useDongScores, so
-//   it passes `rawScores` (the matching DongScore row) as a prop. This avoids
+//   they live on /scores. The parent MainMap already calls useAdongScores, so
+//   it passes `rawScores` (the matching AdongScore row) as a prop. This avoids
 //   a duplicate query and matches SPEC 14.3 (client recomputation friendly).
 //
 // Keyboard:
@@ -26,22 +26,22 @@
 import type { ReactNode } from 'react';
 
 import { Badge, Button, Card, MetricBar, Score } from '@/components/ui';
-import { useDongSummary } from '@/hooks/useDongs';
+import { useAdongSummary } from '@/hooks/useAdongs';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import type {
   AmenityLevel,
-  DongSummary,
+  AdongSummary,
   SafetyLevel,
   Weights,
 } from '@/types/api';
 
-export interface DongPanelProps {
-  /** Selected dong slug; null means panel is closed. */
+export interface AdongPanelProps {
+  /** Selected adong slug; null means panel is closed. */
   slug: string | null;
   /** Current main-map weights — passed through to /summary. */
   weights: Weights;
-  /** Raw per-axis scores (rent/amenity/transit) for the selected dong.
-   *  Sourced from the parent's useDongScores result so we don't refetch.
+  /** Raw per-axis scores (rent/amenity/transit) for the selected adong.
+   *  Sourced from the parent's useAdongScores result so we don't refetch.
    *  Null while the parent's scores list hasn't loaded or slug not found.
    */
   rawScores: { rent: number; amenity: number; transit: number } | null;
@@ -74,7 +74,7 @@ const SAFETY_LABELS: Record<
   low: { text: '낮음', variant: 'danger' },
 };
 
-export default function DongPanel({
+export default function AdongPanel({
   slug,
   weights,
   rawScores,
@@ -83,9 +83,9 @@ export default function DongPanel({
   onAddCompare,
   onFavorite,
   matchKpi,
-}: DongPanelProps) {
+}: AdongPanelProps) {
   const isOpen = slug != null;
-  const { data, isLoading, isError, error } = useDongSummary(slug, weights);
+  const { data, isLoading, isError, error } = useAdongSummary(slug, weights);
 
   // ESC closes the panel when open — shared useEscapeKey (post-A-7 dedup).
   useEscapeKey(onClose, isOpen);
@@ -146,7 +146,7 @@ export default function DongPanel({
 /* -------------------------------------------------------------------------- */
 
 interface PanelHeaderProps {
-  summary: DongSummary | null;
+  summary: AdongSummary | null;
   fallbackSlug: string | null;
   onClose: () => void;
 }
@@ -176,7 +176,7 @@ function PanelHeader({ summary, fallbackSlug, onClose }: PanelHeaderProps) {
 /* Section 1 — Score card                                                      */
 /* -------------------------------------------------------------------------- */
 
-function ScoreCard({ summary }: { summary: DongSummary }) {
+function ScoreCard({ summary }: { summary: AdongSummary }) {
   return (
     <Card variant="inset" padding="lg" className="flex flex-col gap-3">
       <Score
@@ -194,7 +194,7 @@ function ScoreCard({ summary }: { summary: DongSummary }) {
 /* Section 2 — Key metrics (5 rows)                                            */
 /* -------------------------------------------------------------------------- */
 
-function KeyMetrics({ summary }: { summary: DongSummary }) {
+function KeyMetrics({ summary }: { summary: AdongSummary }) {
   const amenity = AMENITY_LABELS[summary.amenity_level];
   const safety = SAFETY_LABELS[summary.safety_level];
   return (
@@ -269,7 +269,7 @@ function MetricRow({
 /* -------------------------------------------------------------------------- */
 
 interface ScoreBreakdownProps {
-  rawScores: DongPanelProps['rawScores'];
+  rawScores: AdongPanelProps['rawScores'];
 }
 
 function ScoreBreakdown({ rawScores }: ScoreBreakdownProps) {

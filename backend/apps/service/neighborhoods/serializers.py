@@ -1,11 +1,11 @@
 """
-Dong 시리얼라이저.
+Adong 시리얼라이저.
 
-- DongScoreSerializer: SPEC 9 GET /api/dongs/scores 응답 한 항목
+- AdongScoreSerializer: SPEC 9 GET /api/adongs/scores 응답 한 항목
   [{slug, name, gu, score, lat, lng, score_rent, score_amenity, score_transit}, ...]
   (raw 점수 3종은 SPEC 14.3 클라 재계산용으로 추가)
 
-- DongSummarySerializer: SPEC 6.2 GET /api/dongs/:slug/summary 응답
+- AdongSummarySerializer: SPEC 6.2 GET /api/adongs/:slug/summary 응답
   {slug, name, gu, score, summary, rent_avg, nearest_station,
    amenity_level, single_household_pct, safety_level}
   rent_avg/nearest_station/amenity_level/single_household_pct/safety_level는
@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from .adong_compat import composite_score as _composite_score
+from .adong_surface import composite_score as _composite_score
 from .detail_dummy import build_dummy_detail  # legacy fallback
 from .detail_real import build_real_detail
 from .summary import generate_summary
@@ -41,10 +41,10 @@ SINGLE_HOUSEHOLD_PCT_FALLBACK: dict[str, float] = {
 }
 
 
-class DongScoreSerializer(serializers.Serializer):
+class AdongScoreSerializer(serializers.Serializer):
     """메인 지도 히트맵용 — 가중합 종합 점수 + 중심점 좌표 + raw 점수 3종.
 
-    7G-B1: ModelSerializer(Dong) → Serializer(Adong wrap). 응답 dict key 보존 lock.
+    7G-B1: ModelSerializer(Adong) → Serializer(Adong wrap). 응답 dict key 보존 lock.
     """
 
     slug = serializers.CharField()
@@ -79,7 +79,7 @@ class DongScoreSerializer(serializers.Serializer):
         return round(obj.centroid.x, 6) if obj.centroid else 0.0
 
 
-class DongSummarySerializer(serializers.Serializer):
+class AdongSummarySerializer(serializers.Serializer):
     """
     동네 패널(SPEC 6.2)용 요약 응답.
 
@@ -87,7 +87,7 @@ class DongSummarySerializer(serializers.Serializer):
     safety_level은 현재 점수 기반 휴리스틱 또는 slug 매핑으로 더미 값 산출. 10단계
     실데이터 적재 후 raw 데이터 기반으로 교체 예정.
 
-    7G-B1: ModelSerializer(Dong) → Serializer(Adong wrap). 응답 dict key 보존 lock.
+    7G-B1: ModelSerializer(Adong) → Serializer(Adong wrap). 응답 dict key 보존 lock.
     """
 
     slug = serializers.CharField()
@@ -158,9 +158,9 @@ class DongSummarySerializer(serializers.Serializer):
         return "low"
 
 
-class DongCompareItemSerializer(serializers.Serializer):
+class AdongCompareItemSerializer(serializers.Serializer):
     """
-    동네 비교(SPEC 6.4) 응답의 한 동(dong) 항목.
+    동네 비교(SPEC 6.4) 응답의 한 동(adong) 항목.
 
     `compare_dummy.build_compare_row`가 만든 dict를 그대로 직렬화. 검증/형 변환은
     빌더가 보장하므로 본 시리얼라이저는 필드 정의(스키마)만 책임진다.
@@ -184,7 +184,7 @@ class DongCompareItemSerializer(serializers.Serializer):
     review_count = serializers.IntegerField()
 
 
-class DongDetailSerializer(serializers.Serializer):
+class AdongDetailSerializer(serializers.Serializer):
     """
     동네 상세 페이지(SPEC 6.3) 응답 시리얼라이저.
 

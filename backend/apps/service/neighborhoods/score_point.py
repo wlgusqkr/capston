@@ -12,15 +12,15 @@
    - 카테고리별 GROUP BY 한 쿼리로 끝낸다.
 
 2. **점수 정규화 (간단 옵션 채택)**:
-   - 학부 데모 우선순위. 백분위 정규화는 raw 값과 Dong 분포가 같은 메트릭이어야 하나,
+   - 학부 데모 우선순위. 백분위 정규화는 raw 값과 Adong 분포가 같은 메트릭이어야 하나,
      커널 raw (Gaussian sum)와 동 단위 raw (log-scale 카운트 가중합)는 서로 다른 척도.
    - 채택: kernel raw → min-max 클램프 0~100. radius_counts 와 nearest 가 사용자에게
      충분한 직관 보충 신호.
    - 참고: handoff 20260503-phase0a-step4-scores.md — 동 분포 mean=50 std≈29.
 
 3. **Rent 점수**:
-   - 점이 속한 Dong 의 `score_rent` 그대로 사용 (이미 백분위 정규화 됨).
-   - Dong 매핑 실패(서울 외) → 50.0 + warning 로그.
+   - 점이 속한 Adong 의 `score_rent` 그대로 사용 (이미 백분위 정규화 됨).
+   - Adong 매핑 실패(서울 외) → 50.0 + warning 로그.
 
 4. **Transit 점수**:
    - 가장 가까운 지하철역 → 거리 → walk_min (`distance_m / 80`).
@@ -46,7 +46,7 @@ from typing import Optional
 from django.contrib.gis.geos import Point
 from django.db import connection
 
-from apps.service.neighborhoods.adong_compat import build_adong_qs, wrap
+from apps.service.neighborhoods.adong_surface import build_adong_qs, wrap
 
 
 logger = logging.getLogger(__name__)
@@ -259,7 +259,7 @@ def compute_transit(
 
 
 # ---------------------------------------------------------------------------
-# Rent — Dong score 활용
+# Rent — Adong score 활용
 # ---------------------------------------------------------------------------
 def compute_rent_score(lat: float, lng: float) -> tuple[float, Optional[object]]:
     """
@@ -267,21 +267,21 @@ def compute_rent_score(lat: float, lng: float) -> tuple[float, Optional[object]]
 
     행정동 매핑 실패 → 50.0 (중간값) + warning.
 
-    7G-B1: legacy Dong(geom 컬럼) → Adong(boundary 컬럼) + current_score 합성.
+    7G-B1: legacy Adong(geom 컬럼) → Adong(boundary 컬럼) + current_score 합성.
     공간 검색 인덱스: adong_boundary_gist_idx (regions.models.Adong.Meta.indexes).
     """
     point = Point(lng, lat, srid=4326)
     adong = build_adong_qs().filter(boundary__contains=point).first()
     if adong is None:
         logger.warning(
-            "score_point: dong 매핑 실패 lat=%s lng=%s (서울 외 또는 경계). "
+            "score_point: adong 매핑 실패 lat=%s lng=%s (서울 외 또는 경계). "
             "score_rent fallback=50.0",
             lat,
             lng,
         )
         return 50.0, None
-    dong = wrap(adong)
-    return float(dong.score_rent), dong
+    adong = wrap(adong)
+    return float(adong.score_rent), adong
 
 
 # ---------------------------------------------------------------------------
@@ -405,7 +405,7 @@ def compute_point_score(
     # 2) 각 축별 점수
     score_amenity = amenity_score_from_kernel(kernel)
     score_transit, nearest_subway, bus_count = compute_transit(lat, lng)
-    score_rent, dong = compute_rent_score(lat, lng)
+    score_rent, adong = compute_rent_score(lat, lng)
 
     # 3) Composite (가중치 정규화는 View 에서 처리)
     composite = (
@@ -440,8 +440,8 @@ def compute_point_score(
         "commute_min": commute_min,
         # debug/observability
         "_meta": {
-            "dong_slug": dong.slug if dong else None,
-            "dong_name": f"{dong.gu} {dong.name}" if dong else None,
+            "dong_slug": adong.slug if adong else None,
+            "dong_name": f"{adong.gu} {adong.name}" if adong else None,
             "bus_count_1km": bus_count,
         },
     }

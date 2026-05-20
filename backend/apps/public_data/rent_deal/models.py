@@ -8,7 +8,7 @@ schema.dbml 정합 (sub-plan 4.5B):
 - 컬럼 정합:
   - housing_type: NOT NULL varchar(20) (5종 한글 raw).
   - ldong_code: NOT NULL FK → regions.Ldong (db_column='ldong_code').
-  - dong FK 제거 (schema.dbml에 없음).
+  - adong FK 제거 (schema.dbml에 없음).
   - contract_date (date, NOT NULL) ← 기존 deal_date 이름 변경.
   - construction_year (smallint) ← 기존 build_year 이름 변경.
   - area_m2 decimal(NULL 허용).
@@ -84,6 +84,17 @@ class RentDeal(models.Model):
         help_text="법정동 (NOT NULL, schema.dbml line 162).",
     )
 
+    # 행정동 FK. 법정동과 행정동은 N:M일 수 있으므로 확실한 공간 매핑만 채운다.
+    adong = models.ForeignKey(
+        "regions.Adong",
+        on_delete=models.PROTECT,
+        related_name="rent_deals",
+        db_column="adong_code",
+        null=True,
+        blank=True,
+        help_text="행정동. 확실한 ldong 포함/동일 또는 신뢰 가능한 위치 매핑만 저장.",
+    )
+
     # 지번 / 건물명 / 면적 (NULL 허용 — 응답 결측 시 그대로).
     jibun = models.CharField(
         max_length=50, null=True, blank=True, help_text="'법정동 + 지번' 원문 (NULL 허용)"
@@ -130,14 +141,13 @@ class RentDeal(models.Model):
         null=True, blank=True, help_text="종전 계약 월세 (만원)"
     )
 
-    # 위치 — 지번 보유 행은 외부 지오코딩 API, 미보유 행은 법정동 centroid.
+    # 위치 — 지번 보유 행은 외부 지오코딩 API 결과만 저장한다.
     location = gis_models.PointField(
         srid=4326,
         null=True,
         blank=True,
         help_text=(
-            "지번 보유 행은 외부 지오코딩 API, 미보유 행은 법정동 centroid "
-            "(NULL 허용 유지, schema.dbml line 176)."
+            "지번 보유 행의 외부 지오코딩 API 결과. 단독/다가구 또는 신뢰 불가 좌표는 NULL."
         ),
     )
 
@@ -147,6 +157,7 @@ class RentDeal(models.Model):
         verbose_name_plural = "전월세 실거래"
         indexes = [
             models.Index(fields=["ldong", "contract_date"]),
+            models.Index(fields=["adong", "contract_date"], name="rent_deal_adong_contract_idx"),
             models.Index(fields=["housing_type", "contract_date"]),
             models.Index(fields=["housing_type"]),
             GistIndex(fields=["location"], name="rentdeal_location_gist_idx"),
@@ -158,3 +169,40 @@ class RentDeal(models.Model):
             f"{self.contract_date} [{self.housing_type}] "
             f"{self.ldong_id} {self.deposit}/{self.monthly_rent}"
         )
+
+
+class RentDealLdongAdongMap(models.Model):
+    """Ldong to adong map for rent_deal.adong_code backfill.
+
+    adong is NULL when one legal dong touches multiple admin dongs and cannot be
+    mapped safely without row-level location evidence.
+    """
+
+    ldong = models.OneToOneField(
+        "regions.Ldong",
+        on_delete=models.PROTECT,
+        primary_key=True,
+        related_name="rent_deal_adong_map",
+        db_column="ldong_code",
+        help_text="Legal dong. One mapping decision per ldong.",
+    )
+    adong = models.ForeignKey(
+        "regions.Adong",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="rent_deal_ldong_maps",
+        db_column="adong_code",
+        help_text="Admin dong when this ldong maps to exactly one adong; otherwise NULL.",
+    )
+
+    class Meta:
+        db_table = "rent_deal_ldong_adong_map"
+        verbose_name = "rent deal ldong-adong map"
+        verbose_name_plural = "rent deal ldong-adong maps"
+        indexes = [
+            models.Index(fields=["adong"], name="rent_ld_ad_map_adong_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.ldong_id} -> {self.adong_id or 'NULL'}"

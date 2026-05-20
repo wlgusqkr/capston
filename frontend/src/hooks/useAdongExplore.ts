@@ -1,4 +1,4 @@
-// React Query hook + URL state helpers for /dong/:slug/explore (Phase 4.8).
+// React Query hook + URL state helpers for /adong/:slug/explore (Phase 4.8).
 //
 // 필터 상태는 URL 쿼리스트링과 1:1 동기화 — 새로고침/공유 시에도 동일 화면.
 // 필터 변경 → URL push → query refetch.
@@ -8,7 +8,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import type { UseQueryResult } from '@tanstack/react-query';
 
-import { getDongExplore } from '@/lib/api';
+import { getAdongExplore } from '@/lib/api';
 import type {
   ExploreDealType,
   ExploreFilters,
@@ -156,13 +156,13 @@ export function useExploreFilters(): UseExploreFiltersReturn {
 }
 
 /** Explore API 응답을 React Query 로 구독. slug 없으면 disabled. */
-export function useDongExplore(
+export function useAdongExplore(
   slug: string | null | undefined,
   filters: ExploreFilters,
 ): UseQueryResult<ExploreResponse> {
   return useQuery({
-    queryKey: ['dongs', 'explore', slug, filters],
-    queryFn: () => getDongExplore(slug as string, filters),
+    queryKey: ['adongs', 'explore', slug, filters],
+    queryFn: () => getAdongExplore(slug as string, filters),
     enabled: !!slug,
     staleTime: 30_000,
     placeholderData: (prev) => prev, // 필터 변경 시 깜빡임 줄이기

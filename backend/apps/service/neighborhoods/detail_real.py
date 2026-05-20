@@ -5,16 +5,14 @@ amenity counts/nearest_stations/bus stop_count 를 RentDeal/Amenity/NearestSubwa
 BusStop 실 쿼리로 교체. reviews 와 similar_dongs 는 데이터 부재/점수 기반이라
 detail_dummy 의 helper 를 그대로 재사용.
 
-응답 형식은 detail_dummy.build_dummy_detail 과 100% 동일 (DongDetail 타입 호환).
+응답 형식은 detail_dummy.build_dummy_detail 과 100% 동일 (AdongDetail 타입 호환).
 
-sub-plan 4.5D 정합:
-- RentDeal.dong FK 제거 → ldong FK 기반. dong_id=dong.id 직접 매칭 불가.
-  → ldong__gu__name=dong.gu로 같은 자치구의 법정동 거래 집계.
-- 컬럼명: deal_type → housing_type 한글 raw + serializer 영문 enum 매핑.
-  deal_date → contract_date.
-- NearestSubway: legacy(neighborhoods.Dong FK) → NearestSubwayAdong(regions.Adong FK).
-  dong.code(adong_code) 매칭.
-- BusStop.adong FK는 sub-plan 4.5B에서 정합 완료 (adong_id=dong.code).
+RentDeal scope:
+- Uses only rent_deal rows with confirmed adong_code for the current adong.
+- Sparse or unmapped areas naturally return null/0 through the existing aggregations.
+- NearestSubway: legacy(neighborhoods.Adong FK) → NearestSubwayAdong(regions.Adong FK).
+  adong.code(adong_code) 매칭.
+- BusStop.adong FK는 sub-plan 4.5B에서 정합 완료 (adong_id=adong.code).
 
 응답 dict key 보존 (frontend lock 1).
 """
@@ -35,7 +33,7 @@ from apps.public_data.rent_deal.models import (
 from apps.public_data.bus.models import BusStop
 from apps.public_data.subway.models import NearestSubwayAdong
 
-from .adong_compat import build_adong_qs, composite_score as _composite_score, wrap
+from .adong_surface import build_adong_qs, composite_score as _composite_score, wrap
 from .detail_dummy import (
     SEOUL_AVG_BASELINE,
     _amenity_level,
@@ -88,17 +86,14 @@ AMENITY_DISPLAY: list[tuple[str, list[str], float]] = [
 ]
 
 
-def _real_real_estate(dong, today: date) -> dict:
+def _real_real_estate(adong, today: date) -> dict:
     """SPEC 6.3 섹션 2 — 부동산 시세 (RentDeal SQL aggregation).
 
-    sub-plan 4.5D 정합:
-    - RentDeal.dong FK 제거 → ldong 기반. Dong은 행정동, ldong은 법정동.
-      직접 1:1 매핑 부재 → 같은 자치구(ldong__gu__name=dong.gu)의 법정동 거래 집계.
-    - housing_type 한글 → DEAL_TYPE_LABEL 영문 enum 매핑(응답 dict key 'deal_type' 보존).
-    - deal_date → contract_date 컬럼명 정합.
+    RentDeal scope:
+    - Uses only rent_deal rows with confirmed adong_code for the current adong.
+    - Sparse or unmapped areas naturally return null/0 through the existing aggregations.
     """
-    # 같은 자치구의 ldong 거래로 dong-단위 추적 (sub-plan 4.5D).
-    base_qs = RentDeal.objects.filter(ldong__gu__name=dong.gu)
+    base_qs = RentDeal.objects.filter(adong_id=adong.code)
 
     # ---- 1) 최근 6개월 monthly_trend (housing_type별 평균 monthly_rent) ----
     # 6개월 전 1일 기준
@@ -272,10 +267,10 @@ def _real_real_estate(dong, today: date) -> dict:
     }
 
 
-def _real_amenities(dong) -> list[dict]:
+def _real_amenities(adong) -> list[dict]:
     """SPEC 6.3 섹션 3 — 8 카테고리 카운트 + 카테고리별 실 카운트 percentile.
 
-    sub-plan 4C: Amenity.dong FK 제거에 따라 AmenityAdong N:M join 사용.
+    sub-plan 4C: Amenity.adong FK 제거에 따라 AmenityAdong N:M join 사용.
     응답 dict key — {"category", "count", "density_per_km2", "percentile", "level"}.
     percentile: 카테고리별 실 카운트 기반 TOP X% (1=최상위, 100=최하위). NULL=산출 불가.
     """
@@ -283,7 +278,7 @@ def _real_amenities(dong) -> list[dict]:
 
     counts: dict[str, int] = defaultdict(int)
     qs = (
-        AmenityAdong.objects.filter(adong=dong.code)
+        AmenityAdong.objects.filter(adong=adong.code)
         .values(category=F("amenity__category"))
         .annotate(n=Count("amenity_id"))
     )
@@ -306,8 +301,8 @@ def _real_amenities(dong) -> list[dict]:
 
     total_adong = Adong.objects.count()
 
-    level = _amenity_level(dong.score_amenity)
-    area = max(0.1, dong.area_km2 or 0.25)
+    level = _amenity_level(adong.score_amenity)
+    area = max(0.1, adong.area_km2 or 0.25)
 
     out = []
     for label, internal_keys, _weight in AMENITY_DISPLAY:
@@ -336,19 +331,19 @@ def _real_amenities(dong) -> list[dict]:
     return out
 
 
-def _real_transit(dong) -> dict:
+def _real_transit(adong) -> dict:
     """SPEC 6.3 섹션 4 — 가까운 역 top-3 + 버스 정류장 카운트.
 
     sub-plan 4.5D 정합:
-    - legacy NearestSubway(neighborhoods.Dong FK) → NearestSubwayAdong(regions.Adong FK).
-    - Dong.code(행정동 10자리) = Adong.adong_code, 직접 매칭.
+    - legacy NearestSubway(neighborhoods.Adong FK) → NearestSubwayAdong(regions.Adong FK).
+    - Adong.code(행정동 10자리) = Adong.adong_code, 직접 매칭.
     - station FK 제거 → station_name 비정규화 컬럼. line은 SubwayStation에서 lookup.
     """
     from apps.public_data.subway.models import SubwayStation  # noqa: WPS433
 
     # NearestSubwayAdong 사전계산 (compute_nearest_subway.py).
     rows = list(
-        NearestSubwayAdong.objects.filter(adong_id=dong.code)
+        NearestSubwayAdong.objects.filter(adong_id=adong.code)
         .order_by("rank")[:3]
     )
     # 한꺼번에 line lookup (같은 name 환승역은 첫 line만 부여, frontend가 mergeStationsByName).
@@ -382,9 +377,9 @@ def _real_transit(dong) -> dict:
         })
 
     # 버스: stop_count = BusStop.adong=this. route_count는 노선정보 없으니 stop*3 추정.
-    # sub-plan 4.5B 정합: BusStop.dong FK 제거 → adong FK (regions.Adong, PK=adong_code).
-    # Dong.code (행정동 코드) == Adong.adong_code 이므로 adong_code로 직접 매칭.
-    stop_count = BusStop.objects.filter(adong_id=dong.code).count()
+    # sub-plan 4.5B 정합: BusStop.adong FK 제거 → adong FK (regions.Adong, PK=adong_code).
+    # Adong.code (행정동 코드) == Adong.adong_code 이므로 adong_code로 직접 매칭.
+    stop_count = BusStop.objects.filter(adong_id=adong.code).count()
     route_count = stop_count * 3  # 단순 추정 (노선 데이터 부재)
 
     return {
@@ -401,7 +396,7 @@ def _real_transit(dong) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def build_real_detail(dong, weights: dict, today: date | None = None) -> dict:
+def build_real_detail(adong, weights: dict, today: date | None = None) -> dict:
     """SPEC 6.3 동네 상세 응답 dict — 실 DB 쿼리 기반.
 
     detail_dummy.build_dummy_detail 과 응답 키/형식 100% 동일. 차이는 값이
@@ -417,11 +412,11 @@ def build_real_detail(dong, weights: dict, today: date | None = None) -> dict:
     if today is None:
         today = date.today()
 
-    # ---- Hero (Dong 컬럼 직접) ----
-    # 7G-B1: Dong.composite_score 메서드 제거 → adong_compat.composite_score 함수 호출.
+    # ---- Hero (Adong 컬럼 직접) ----
+    # 7G-B1: Adong.composite_score 메서드 제거 → adong_surface.composite_score 함수 호출.
     score = round(
         _composite_score(
-            dong,
+            adong,
             w_rent=weights["rent"],
             w_amenity=weights["amenity"],
             w_transit=weights["transit"],
@@ -429,39 +424,39 @@ def build_real_detail(dong, weights: dict, today: date | None = None) -> dict:
         2,
     )
     summary = generate_summary(
-        score_rent=dong.score_rent,
-        score_amenity=dong.score_amenity,
-        score_transit=dong.score_transit,
+        score_rent=adong.score_rent,
+        score_amenity=adong.score_amenity,
+        score_transit=adong.score_transit,
     )
     vs_seoul_avg_pct = int(round(score - SEOUL_AVG_BASELINE))
     centroid = {
-        "lat": round(dong.centroid.y, 6) if dong.centroid else 0.0,
-        "lng": round(dong.centroid.x, 6) if dong.centroid else 0.0,
+        "lat": round(adong.centroid.y, 6) if adong.centroid else 0.0,
+        "lng": round(adong.centroid.x, 6) if adong.centroid else 0.0,
     }
 
     # ---- 비슷한 동네 (점수 기반, dummy helper 재사용) ----
     # 7G-B1: Adong + current_score 합성 후 wrap. _build_similar_dongs는 slug/name/gu/
     # score_* 만 사용 → wrap 객체 호환.
     all_dongs = [wrap(a) for a in build_adong_qs()]
-    similar_dongs = _build_similar_dongs(dong, all_dongs)
+    similar_dongs = _build_similar_dongs(adong, all_dongs)
 
     return {
         # 1. Hero
-        "slug": dong.slug,
-        "name": dong.name,
-        "gu": dong.gu,
+        "slug": adong.slug,
+        "name": adong.name,
+        "gu": adong.gu,
         "score": score,
         "summary": summary,
         "vs_seoul_avg_pct": vs_seoul_avg_pct,
         "centroid": centroid,
         # 2. 부동산 (실)
-        "real_estate": _real_real_estate(dong, today),
+        "real_estate": _real_real_estate(adong, today),
         # 3. 편의시설 (실)
-        "amenities": _real_amenities(dong),
+        "amenities": _real_amenities(adong),
         # 4. 교통 (실)
-        "transit": _real_transit(dong),
+        "transit": _real_transit(adong),
         # 5. 리뷰 (데이터 없음 — dummy 그대로)
-        "reviews": _build_reviews(dong, today),
+        "reviews": _build_reviews(adong, today),
         # 6. 비슷한 동네 (점수 기반)
         "similar_dongs": similar_dongs,
     }

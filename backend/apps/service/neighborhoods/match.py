@@ -1,6 +1,6 @@
 """Phase 5 — 메인 지도 자취 거래량 분포 (Studio Match).
 
-`/dong/:slug/explore`(Phase 4.8)와 동일한 base filter 를 받아 한 번에 모든 동에
+`/adong/:slug/explore`(Phase 4.8)와 동일한 base filter 를 받아 한 번에 모든 동에
 대해 GROUP BY count + ratio 정규화. 메인 지도 히트맵의 'match 모드' 가 이 응답으로
 색칠된다.
 
@@ -9,28 +9,24 @@
 
 엔드포인트
 ----------
-- GET /api/dongs/match-counts?<filters>     (DongMatchCountsView)
-    응답: { filters_applied, total_matched, min_sample, dongs[] }
-- GET /api/dongs/<slug>/match-detail?<filters>  (DongMatchDetailView)
-    응답: { dong, filters_applied, count, avg_converted_rent, avg_deposit,
+- GET /api/adongs/match-counts?<filters>     (AdongMatchCountsView)
+    응답: { filters_applied, total_matched, min_sample, adongs[] }
+- GET /api/adongs/<slug>/match-detail?<filters>  (AdongMatchDetailView)
+    응답: { adong, filters_applied, count, avg_converted_rent, avg_deposit,
             match_ratio, period_total }
 
 성능 / 캐시
 ----------
-- SQL: rent_deal GROUP BY ldong__gu_id  + base filter 7건. (ldong, contract_date) +
-  (housing_type, contract_date) 인덱스 활용.
-- Redis 5분 TTL. 캐시 키 = sha1(canonicalized filters) — default 와 같은 필드
-  omit 으로 캐시 효율 ↑ (eng-review #10).
+- SQL groups filtered rent_deal rows by adong_id.
+- Redis 5 minute TTL. Cache key = sha1(canonicalized filters).
 
-sub-plan 4.5D 정합:
-- RentDeal.dong FK 제거 → ldong/gu 단위 집계.
-- match-counts는 모든 동(slug) 응답 필수 → 같은 자치구의 ldong 거래수를 dong들에
-  동일하게 부여(자치구 내 dong은 동일 count, ratio 동일).
-- match-detail은 단일 dong → dong.gu 기반.
-- 컬럼명: deal_type → housing_type, deal_date → contract_date.
+RentDeal scope
+--------------
+- Uses only rent_deal rows with confirmed adong_code.
+- Response keys are preserved for the frontend contract.
 
-ratio 정규화 (eng-review #3)
----------------------------
+Ratio normalization (eng-review #3)
+-----------------------------------
 log scale + min_sample (default 10):
     ratio = log1p(count) / log1p(max_count) * 100
     count < min_sample → ratio = 0
@@ -58,7 +54,7 @@ from apps.public_data.rent_deal.models import (
     RentDeal,
 )
 
-from .adong_compat import build_adong_qs, wrap
+from .adong_surface import build_adong_qs, wrap
 from .explore import (
     PERIOD_TO_DAYS,
     apply_base_filters,
@@ -101,58 +97,37 @@ def _normalize_ratio(count: int, max_count: int) -> float:
 
 
 def compute_match_counts(filters: dict[str, Any], today: date) -> dict[str, Any]:
-    """모든 동에 대해 필터 통과 거래수 + ratio. 캐시 hit 시 Redis 응답.
-
-    sub-plan 4.5D: RentDeal.dong FK 제거 → ldong__gu_id 단위 GROUP BY로 자치구별
-    거래수 집계 후, 같은 자치구의 모든 행정동에 동일 count 부여 (dong 단위 직접
-    매핑 불가). 응답 dict key 보존 (count/ratio/has_data).
-    """
+    """Count filtered rent deals per adong using confirmed adong_code rows."""
     cache_key = f"match-counts:{canonicalize_filters(filters)}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
 
-    qs = apply_base_filters(RentDeal.objects.all(), filters, today)
-    # 자치구별 거래수 집계 (ldong__gu_id GROUP BY; ldong.gu FK의 db_column='gu_code').
-    rows = qs.values("ldong__gu_id").annotate(cnt=Count("id"))
-    counts_by_gu_code: dict[str, int] = {
-        r["ldong__gu_id"]: r["cnt"]
+    qs = apply_base_filters(RentDeal.objects.filter(adong_id__isnull=False), filters, today)
+    rows = qs.values("adong_id").annotate(cnt=Count("id"))
+    counts_by_adong_code: dict[str, int] = {
+        r["adong_id"]: r["cnt"]
         for r in rows
-        if r["ldong__gu_id"] is not None
+        if r["adong_id"] is not None
     }
 
-    # 자치구 이름(Dong.gu) → 자치구 코드 매핑 (Dong은 Ldong/Adong 모델과 별도 legacy).
-    # Ldong.gu = regions.Gu(gu_code PK). Dong.gu는 한글 이름 → Gu.name → gu_code 매핑.
-    from apps.public_data.regions.models import Gu  # noqa: WPS433 (지역 import)
-
-    gu_name_to_code = {g.name: g.gu_code for g in Gu.objects.only("name", "gu_code")}
-
-    # 모든 동 (count 0 도 응답에 포함 — has_data 표시용).
-    # 7G-B1: Dong.objects → Adong.objects. 응답 dict key 보존 (code=adong_code, gu=gu.name).
     from apps.public_data.regions.models import Adong  # noqa: WPS433
 
-    all_dongs = list(
-        Adong.objects.select_related("gu").values(
-            "adong_code", "slug", "gu__name"
-        )
+    all_adongs = list(
+        Adong.objects.select_related("gu").values("adong_code", "slug")
     )
-    max_count = max(counts_by_gu_code.values()) if counts_by_gu_code else 0
-    total_matched = sum(counts_by_gu_code.values())
+    max_count = max(counts_by_adong_code.values()) if counts_by_adong_code else 0
+    total_matched = sum(counts_by_adong_code.values())
 
-    dong_items: list[dict[str, Any]] = []
-    for d in all_dongs:
-        gu_code = gu_name_to_code.get(d["gu__name"])
-        cnt = counts_by_gu_code.get(gu_code, 0) if gu_code else 0
-        dong_items.append(
+    adong_items: list[dict[str, Any]] = []
+    for item in all_adongs:
+        cnt = counts_by_adong_code.get(item["adong_code"], 0)
+        adong_items.append(
             {
-                "code": d["adong_code"],
-                "slug": d["slug"],
+                "code": item["adong_code"],
+                "slug": item["slug"],
                 "count": cnt,
                 "ratio": _normalize_ratio(cnt, max_count),
-                # has_data: 동 자체는 적재됐고 (rent_deal 적재 0건도 정상 0건),
-                # min_sample 미만은 ratio 0 으로 회색 처리되되 has_data=true
-                # (적재 자체는 됐다는 의미). 향후 동 적재 누락 케이스가 생기면
-                # 여기서 false 분기.
                 "has_data": True,
             }
         )
@@ -161,14 +136,14 @@ def compute_match_counts(filters: dict[str, Any], today: date) -> dict[str, Any]
         "filters_applied": filters,
         "total_matched": total_matched,
         "min_sample": MIN_SAMPLE,
-        "dongs": dong_items,
+        "adongs": adong_items,
     }
     cache.set(cache_key, response, CACHE_TTL)
     return response
 
 
-class DongMatchCountsView(APIView):
-    """GET /api/dongs/match-counts?<filters>"""
+class AdongMatchCountsView(APIView):
+    """GET /api/adongs/match-counts?<filters>"""
 
     def get(self, request: Request) -> Response:
         filters = parse_base_filters(request)
@@ -181,17 +156,10 @@ class DongMatchCountsView(APIView):
 # ---------------------------------------------------------------------------
 
 
-def compute_match_detail(dong, filters: dict[str, Any], today: date) -> dict[str, Any]:
-    """단일 동의 매칭 통계 + 분모(같은 자치구·기간·유형 set 전체).
-
-    매칭률 = (필터 통과 거래) / (같은 자치구·같은 기간·deal_types set 전체) * 100.
-    eng-review #7 정의.
-
-    sub-plan 4.5D: RentDeal.dong FK 제거 → 같은 자치구(ldong__gu__name=dong.gu)
-    의 법정동 거래로 dong-단위 추적. 컬럼명 housing_type/contract_date 정합.
-    """
+def compute_match_detail(adong, filters: dict[str, Any], today: date) -> dict[str, Any]:
+    """Return match stats for one adong and its period/type denominator."""
     cache_key = (
-        f"match-detail:{dong.id}:{canonicalize_filters(filters)}"
+        f"match-detail:{adong.id}:{canonicalize_filters(filters)}"
     )
     cached = cache.get(cache_key)
     if cached is not None:
@@ -199,7 +167,7 @@ def compute_match_detail(dong, filters: dict[str, Any], today: date) -> dict[str
 
     # 1) 필터 통과 거래 (이 동 + base filter)
     matched_qs = apply_base_filters(
-        RentDeal.objects.filter(ldong__gu__name=dong.gu), filters, today
+        RentDeal.objects.filter(adong_id=adong.code), filters, today
     )
     matched_agg = matched_qs.aggregate(
         n=Count("id"),
@@ -207,7 +175,7 @@ def compute_match_detail(dong, filters: dict[str, Any], today: date) -> dict[str
         avg_deposit=Avg("deposit"),
     )
 
-    # 2) 분모 — 같은 자치구/기간/deal_types set 전체 (deposit/monthly/area 무관).
+    # 2) Denominator: same adong/period/deal_types set (ignores deposit/monthly/area).
     # 응답 영문 enum → DB 한글 housing_type 변환 (lock 1).
     housing_types = [
         DEAL_TYPE_TO_HOUSING_TYPE[k]
@@ -215,7 +183,7 @@ def compute_match_detail(dong, filters: dict[str, Any], today: date) -> dict[str
         if k in DEAL_TYPE_TO_HOUSING_TYPE
     ]
     period_qs = RentDeal.objects.filter(
-        ldong__gu__name=dong.gu, housing_type__in=housing_types
+        adong_id=adong.code, housing_type__in=housing_types
     )
     days = PERIOD_TO_DAYS[filters["period"]]
     if days is not None:
@@ -227,11 +195,11 @@ def compute_match_detail(dong, filters: dict[str, Any], today: date) -> dict[str
     match_ratio = round(count / period_total * 100, 1) if period_total > 0 else None
 
     response = {
-        "dong": {
-            "slug": dong.slug,
-            "code": dong.code,
-            "name": dong.name,
-            "gu": dong.gu,
+        "adong": {
+            "slug": adong.slug,
+            "code": adong.code,
+            "name": adong.name,
+            "gu": adong.gu,
         },
         "filters_applied": filters,
         "count": count,
@@ -248,8 +216,8 @@ def compute_match_detail(dong, filters: dict[str, Any], today: date) -> dict[str
     return response
 
 
-class DongMatchDetailView(APIView):
-    """GET /api/dongs/<slug>/match-detail?<filters>"""
+class AdongMatchDetailView(APIView):
+    """GET /api/adongs/<slug>/match-detail?<filters>"""
 
     def get(self, request: Request, slug: str) -> Response:
         # 7G-B1: Adong + current_score 합성. compute_match_detail은 slug/code/name/gu/id만 사용.
@@ -259,7 +227,7 @@ class DongMatchDetailView(APIView):
             adong = build_adong_qs().get(slug=slug)
         except Adong.DoesNotExist as exc:
             raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
-        dong = wrap(adong)
+        adong = wrap(adong)
         filters = parse_base_filters(request)
-        data = compute_match_detail(dong, filters, today=date.today())
+        data = compute_match_detail(adong, filters, today=date.today())
         return Response(data, status=status.HTTP_200_OK)
