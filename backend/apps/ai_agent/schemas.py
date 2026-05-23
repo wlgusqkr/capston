@@ -1,104 +1,104 @@
 """
 =============================================================================
-Pydantic 구조화 출력 스키마 정의 (schemas.py)
+Pydantic 구조??출력 ?�키�??�의 (schemas.py)
 =============================================================================
-LLM의 응답을 단순한 텍스트가 아닌, 시스템에서 처리할 수 있는 JSON 형태의
-객체로 강제하기 위한 데이터 구조(Schema)를 정의합니다.
+LLM???�답???�순???�스?��? ?�닌, ?�스?�에??처리?????�는 JSON ?�태??
+객체�?강제?�기 ?�한 ?�이??구조(Schema)�??�의?�니??
 
-[주요 스키마]
-  - ClassificationOutput: 1단계 의도 파악 결과 (라우팅, 쿼리 타입, 필요 테이블 등)
-  - SelectionOutput: 3단계 동네 추천 결과 및 시각화(차트/지도) 데이터 셋
-  - NeighborhoodItem, VisualizationData: UI에서 렌더링하기 편하도록 분리된 하위 모델
+[주요 ?�키�?
+  - ClassificationOutput: 1?�계 ?�도 ?�악 결과 (?�우?? 쿼리 ?�?? ?�요 ?�이�???
+  - SelectionOutput: 3?�계 ?�네 추천 결과 �??�각??차트/지?? ?�이????
+  - NeighborhoodItem, VisualizationData: UI?�서 ?�더링하�??�하?�록 분리???�위 모델
 =============================================================================
 """
 from pydantic import BaseModel, Field
 from typing import Optional
 
 class SqlPlan(BaseModel):
-    """조건별 SQL 실행 계획"""
-    description: str = Field(description="이 SQL이 조회하는 내용. 예: 동국대 근처 월별 평균 월세 추이")
-    sql_hint: str = Field(description="이 SQL 생성에 필요한 힌트. 예: GROUP BY 월별, LIMIT 12")
+    """조건�?SQL ?�행 계획"""
+    description: str = Field(description="??SQL??조회?�는 ?�용. ?? ?�국?� 근처 ?�별 ?�균 ?�세 추이")
+    sql_hint: str = Field(description="??SQL ?�성???�요???�트. ?? GROUP BY ?�별, LIMIT 12")
 
 
-# ── 1단계: 질문 분류 출력 ────────────────────────────────────────────────────
+# ?�?� 1?�계: 질문 분류 출력 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 class ClassificationOutput(BaseModel):
     route: str = Field(
-        description="'db'(DB 조회 가능) | 'direct'(DB 불필요, 바로 답변) | 'blocked'(제공 불가)"
+        description="'db'(DB 조회 가?? | 'direct'(DB 불필?? 바로 ?��?) | 'blocked'(?�공 불�?)"
     )
     message: str = Field(
-        description="route가 direct/blocked일 때 사용자에게 바로 보여줄 답변"
+        description="route가 direct/blocked?????�용?�에�?바로 보여�??��?"
     )
     query_type: str = Field(
         description=(
-            "'recommendation': 동네 추천이 목적인 질문 | "
-            "'info': 특정 시설/정보 조회가 목적인 질문 | "
-            "'none': route가 direct/blocked인 경우"
+            "'recommendation': ?�네 추천??목적??질문 | "
+            "'info': ?�정 ?�설/?�보 조회가 목적??질문 | "
+            "'none': route가 direct/blocked??경우"
         )
     )
     needed_tables: list[str] = Field(
-        description="질문에 필요한 테이블 목록"
+        description="질문???�요???�이�?목록"
     )
     join_hint: str = Field(
-        description="올바른 조인 경로 힌트"
+        description="?�바�?조인 경로 ?�트"
     )
     sql_plans: list[SqlPlan] = Field(
         default_factory=list,
-        description="조건별 SQL 실행 계획. 조건마다 별도 SQL이 필요하면 여러 개 작성. 단순 조건은 1개"
+        description="조건�?SQL ?�행 계획. 조건마다 별도 SQL???�요?�면 ?�러 �??�성. ?�순 조건?� 1�?
     )
 
 
-# ── 3단계: 시각화 데이터 ─────────────────────────────────────────────────────
+# ?�?� 3?�계: ?�각???�이???�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 class VisualizationData(BaseModel):
-    label: str = Field(description="항목 레이블. 예: '장충동2가', '서울 평균'")
-    value: float = Field(description="수치 값")
-    is_baseline: bool = Field(default=False, description="True면 비교 기준선으로 표시")
+    label: str = Field(description="??�� ?�이�? ?? '?�충??가', '?�울 ?�균'")
+    value: float = Field(description="?�치 �?)
+    is_baseline: bool = Field(default=False, description="True�?비교 기�??�으�??�시")
 
 class VisualizationChart(BaseModel):
     type: str = Field(description="'bar' | 'line' | 'table' | 'none'")
-    title: str = Field(default="", description="차트 제목")
-    unit: str = Field(default="", description="수치 단위. 예: 만원, 개, %")
+    title: str = Field(default="", description="차트 ?�목")
+    unit: str = Field(default="", description="?�치 ?�위. ?? 만원, �? %")
     data: list[VisualizationData] = Field(default_factory=list)
-    reason: str = Field(default="", description="이 시각화를 선택한 이유")
+    reason: str = Field(default="", description="???�각?��? ?�택???�유")
 
 class InfoVisualizationData(BaseModel):
-    """info query_type용 범용 테이블 데이터"""
-    label: str = Field(description="항목 이름 (도서관명, 동네명, 시설명 등)")
+    """info query_type??범용 ?�이�??�이??""
+    label: str = Field(description="??�� ?�름 (?�서관�? ?�네�? ?�설�???")
     columns: dict = Field(
         default_factory=dict,
-        description="key-value 형태 데이터. 예: {'월': '09:00-21:00'} 또는 {'카페수': 12}"
+        description="key-value ?�태 ?�이?? ?? {'??: '09:00-21:00'} ?�는 {'카페??: 12}"
     )
 
 
 class InfoOutput(BaseModel):
-    answer: str = Field(description="사용자에게 보여줄 최종 자연어 답변. 한국어로 작성")
+    answer: str = Field(description="?�용?�에�?보여�?최종 ?�연???��?. ?�국?�로 ?�성")
     visualization_type: str = Field(
-        description="'table'(목록/시간표) | 'bar'(수치 비교) | 'line'(시간 추이) | 'none'"
+        description="'table'(목록/?�간?? | 'bar'(?�치 비교) | 'line'(?�간 추이) | 'none'"
     )
-    visualization_title: str = Field(default="", description="시각화 제목")
+    visualization_title: str = Field(default="", description="?�각???�목")
     visualization_data: list[InfoVisualizationData] = Field(
         default_factory=list,
-        description="테이블/차트 데이터"
+        description="?�이�?차트 ?�이??
     )
 
-# ── 3단계 (recommendation): 동네 선정 출력 ──────────────────────────────────
+# ?�?� 3?�계 (recommendation): ?�네 ?�정 출력 ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 class NeighborhoodItem(BaseModel):
-    rank: int = Field(description="추천 순위 (1 또는 2)")
-    ldong_name: str = Field(description="법정동 또는 행정동 이름. 예: 장충동2가")
-    gu_name: str = Field(description="자치구 이름. 예: 중구")
-    one_liner: str = Field(description="수치 데이터 기반 동네 고유 특징. 두 동네에 동일 표현 금지")
-    data_summary: str = Field(description="조회된 핵심 데이터 요약. 예: 평균월세 49만원 (서울 평균 65만원)")
+    rank: int = Field(description="추천 ?�위 (1 ?�는 2)")
+    ldong_name: str = Field(description="법정???�는 ?�정???�름. ?? ?�충??가")
+    gu_name: str = Field(description="?�치�??�름. ?? 중구")
+    one_liner: str = Field(description="?�치 ?�이??기반 ?�네 고유 ?�징. ???�네???�일 ?�현 금�?")
+    data_summary: str = Field(description="조회???�심 ?�이???�약. ?? ?�균?�세 49만원 (?�울 ?�균 65만원)")
 
 
 class SelectionOutput(BaseModel):
     neighborhoods: list[NeighborhoodItem] = Field(
-        description="조건을 만족하는 상위 동네 최대 2곳"
+        description="조건??만족?�는 ?�위 ?�네 최�? 2�?
     )
     additional_sql: Optional[str] = Field(
         default=None,
-        description="비교 기준(서울 평균 등) 보강이 필요할 때 추가로 실행할 SQL. 반드시 실제 존재하는 테이블만 사용"
+        description="비교 기�?(?�울 ?�균 ?? 보강???�요????추�?�??�행??SQL. 반드???�제 존재?�는 ?�이블만 ?�용"
     )
     visualizations: list[VisualizationChart] = Field(
         default_factory=list,
-        description="조건마다 별도 차트. 수치화 가능한 조건만 포함. 최대 3개. 시각화 불필요시 빈 배열"
+        description="조건마다 별도 차트. ?�치??가?�한 조건�??�함. 최�? 3�? ?�각??불필?�시 �?배열"
     )
-    answer: str = Field(description="사용자에게 보여줄 최종 자연어 답변. 한국어로 작성")
+    answer: str = Field(description="?�용?�에�?보여�?최종 ?�연???��?. ?�국?�로 ?�성")
