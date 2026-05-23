@@ -1,106 +1,106 @@
-# table_metadata.yaml ???�이블별 조인 ?�턴 �?메�??�이??
-# ??공공?�이??추�? ?????�일?�만 ??�� 추�??�면 ?�니??
+# table_metadata.yaml — 테이블별 조인 패턴 및 메타데이터
+# 새 공공데이터 추가 시 이 파일에만 항목 추가하면 됩니다.
 
 rent_deal:
-  description: ?�월???�거???�이??(2011~?�재)
-  category: 부?�산
+  description: 전월세 실거래 데이터 (2011~현재)
+  category: 부동산
   key_column: ldong_code
   join_path: rent_deal.ldong_code = ldong.ldong_code
   filters: monthly_rent > 10
   note: |
-    adong_code 직접 조인 ?��? 금�?. MIN ?�??AVG ?�용 권장
-    store?� 직접 조인 금�? ??카운????�� 발생
-    ?�세?� ?�설 ?��? 같이 조회???�는 반드??별도 SQL�?분리??�?
+    adong_code 직접 조인 절대 금지. MIN 대신 AVG 사용 권장
+    store와 직접 조인 금지 — 카운트 폭발 발생
+    월세와 시설 수를 같이 조회할 때는 반드시 별도 SQL로 분리할 것
 library:
-  description: ?�서관 마스??(공공/?��??�서관)
-  category: ?�설
+  description: 도서관 마스터 (공공/작은도서관)
+  category: 시설
   key_column: adong_code
   join_path: library.adong_code = adong.adong_code
   sub_join: library_hours.library_id = library.id
-  note: univ_adong�?library 직접 조인 금�?
+  note: univ_adong과 library 직접 조인 금지
 
 store:
-  description: ?��? ?�포 (?�상공인 ?�이??
-  category: ?�설
+  description: 상가 점포 (소상공인 데이터)
+  category: 시설
   key_column: adong_code
   join_path: store.adong_code = adong.adong_code
   note: |
-    ?�종코드 ?�면 WHERE store.category_code = '코드' �?직접 ?�터�? business_category 조인 불필??
-    rent_deal�?직접 조인 금�? ??카운????�� 발생
-    ?�세?� ?�설 ?��? 같이 조회???�는 반드??별도 SQL�?분리??�?
+    업종코드 알면 WHERE store.category_code = '코드' 로 직접 필터링. business_category 조인 불필요
+    rent_deal과 직접 조인 금지 — 카운트 폭발 발생
+    월세와 시설 수를 같이 조회할 때는 반드시 별도 SQL로 분리할 것
 
 park:
-  description: ?�울??공원
-  category: ?�설
+  description: 서울시 공원
+  category: 시설
   bridge_table: park_adong
   join_path: park_adong.park_id = park.id, park_adong.adong_code = adong.adong_code
-  alt_join: park_ldong.ldong_code = ldong.ldong_code (법정??기�? ??
+  alt_join: park_ldong.ldong_code = ldong.ldong_code (법정동 기준 시)
 
 univ:
-  description: ?�??캠퍼??
-  category: ?�소
-  to_rent_deal: univ ??univ_ldong(ldong_code) ??adjacent_ldong(?�방?? ??rent_deal(ldong_code)
-  to_facility: univ ??univ_adong(adong_code) ??adjacent_adong(?�방?? ??[?�설](adong_code)
-  note: ?�세??ldong 경로, ?�서관/공원/?��???adong 경로 ?�용
+  description: 대학 캠퍼스
+  category: 장소
+  to_rent_deal: univ → univ_ldong(ldong_code) → adjacent_ldong(양방향) → rent_deal(ldong_code)
+  to_facility: univ → univ_adong(adong_code) → adjacent_adong(양방향) → [시설](adong_code)
+  note: 월세는 ldong 경로, 도서관/공원/상가는 adong 경로 사용
 
 subway_station:
-  description: 지?�철??(1~9?�선 ?�울 구간)
+  description: 지하철역 (1~9호선 서울 구간)
   category: 교통
   key_column: adong_code
   join_path: subway_station.adong_code = adong.adong_code
   sub_join: subway_congestion.station_id = subway_station.id
   note: |
-    ?�선 ?�터??line 컬럼 ?�용 (name ?�님). ?? WHERE line = '2?�선'
-    ldong_code??보유?��?�?rent_deal�?직접 조인 가??
-    subway_station.ldong_code = rent_deal.ldong_code ??ldong ??gu
-    day_type = '?�일'/'?�요??/'?�요??/'?�일'
+    호선 필터는 line 컬럼 사용 (name 아님). 예: WHERE line = '2호선'
+    ldong_code도 보유하므로 rent_deal과 직접 조인 가능:
+    subway_station.ldong_code = rent_deal.ldong_code → ldong → gu
+    day_type = '평일'/'토요일'/'일요일'/'휴일'
 
 bus_stop:
-  description: 버스 ?�류??
+  description: 버스 정류장
   category: 교통
   key_column: adong_code
   join_path: bus_stop.adong_code = adong.adong_code
   sub_join: bus_congestion.bus_stop_id = bus_stop.id
-  note: location NULL 719�?존재 (가??차고지)
+  note: location NULL 719건 존재 (가상/차고지)
 
 adong:
-  description: ?�정??(426�?
-  category: ?�정구역
+  description: 행정동 (426개)
+  category: 행정구역
   key_column: adong_code
   join_path: adong.gu_code = gu.gu_code
-  note: ldong_code 컬럼 ?�음. LEFT(adong_code, 5) = gu_code�?gu ?�결 가??
+  note: ldong_code 컬럼 없음. LEFT(adong_code, 5) = gu_code로 gu 연결 가능
 
 ldong:
-  description: 법정??(467�?
-  category: ?�정구역
+  description: 법정동 (467개)
+  category: 행정구역
   key_column: ldong_code
   join_path: ldong.gu_code = gu.gu_code
-  note: gu_code 컬럼 ?�음. adong??경유?��? ?�고 ldong ??gu 직접 조인
+  note: gu_code 컬럼 있음. adong을 경유하지 않고 ldong → gu 직접 조인
 
 ldong_population:
-  description: 법정???�별 ?�구 (2022-09~?�재)
-  category: ?�구
+  description: 법정동 월별 인구 (2022-09~현재)
+  category: 인구
   key_column: ldong_code
   join_path: ldong_population.ldong_code = ldong.ldong_code
-  note: date 컬럼?�로 기간 ?�터�?권장
+  note: date 컬럼으로 기간 필터링 권장
 
 adong_population:
-  description: ?�정???�별 ?�구 (2022-09~?�재)
-  category: ?�구
+  description: 행정동 월별 인구 (2022-09~현재)
+  category: 인구
   key_column: adong_code
   join_path: adong_population.adong_code = adong.adong_code
-  note: date 컬럼?�로 기간 ?�터�?권장
+  note: date 컬럼으로 기간 필터링 권장
 
 gu_metric:
-  description: ?�치구별 지???�계??(?�전?�급, ?�구, 교통 ??
-  category: 지??
+  description: 자치구별 지표 시계열 (안전등급, 인구, 교통 등)
+  category: 지표
   key_column: gu_code
   join_path: gu_metric.gu_code = gu.gu_code
-  note: metric_code�??�하??지???�터�? metric ?�이블에??코드 ?�인 가??
+  note: metric_code로 원하는 지표 필터링. metric 테이블에서 코드 확인 가능
 
-# ??공공?�이??추�? ?�시:
+# 새 공공데이터 추가 예시:
 # welfare_center:
-#   description: 복�?관 ?�설 ?�이??
-#   category: ?�설
+#   description: 복지관 시설 데이터
+#   category: 시설
 #   key_column: adong_code
 #   join_path: welfare_center.adong_code = adong.adong_code

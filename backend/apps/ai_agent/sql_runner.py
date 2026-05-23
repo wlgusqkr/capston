@@ -1,6 +1,6 @@
 """
 =============================================================================
-Text-to-SQL ?�행 �??�동 복구 루프 (sql_runner.py)
+Text-to-SQL 실행 및 자동 복구 루프 (sql_runner.py)
 =============================================================================
 """
 import json
@@ -31,7 +31,7 @@ def run_text_to_sql(
     filtered_schema = get_filtered_schema_context(needed_tables)
     yaml_hints = get_join_hints(needed_tables)
 
-    # sql_plans가 ?�으�??�일 SQL ?�행
+    # sql_plans가 없으면 단일 SQL 실행
     if not sql_plans:
         return _run_single_sql(
             question, llm, db, filtered_schema,
@@ -39,7 +39,7 @@ def run_text_to_sql(
             sql_cfg, max_retry
         )
 
-    # sql_plans가 ?�으�?�?계획마다 SQL ?�행
+    # sql_plans가 있으면 각 계획마다 SQL 실행
     all_results = []
     for idx, plan in enumerate(sql_plans):
         print(f"\n[SQL 계획] {plan.get('description', '')}")
@@ -95,7 +95,7 @@ def _run_single_sql(
             join_hint=join_hint,
             yaml_hints=yaml_hints,
             error_history=json.dumps(error_history, ensure_ascii=False, indent=2)
-            if error_history else "?�음",
+            if error_history else "없음",
             monthly_rent_min=pipeline_cfg.get("monthly_rent_min", 10),
             result_limit=sql_cfg.get("result_limit", 5),
             store_codes=get_store_codes_text(),
@@ -110,18 +110,18 @@ def _run_single_sql(
 
         sql = raw.replace("```sql", "").replace("```", "").strip()
         label = f"{plan_label} " if plan_label else ""
-        print(f"\n[SQL {label}?�도 {attempt}/{max_retry}]\n{sql}")
+        print(f"\n[SQL {label}시도 {attempt}/{max_retry}]\n{sql}")
 
         try:
             result = db.run(sql)
             elapsed = round(time.time() - t, 2)
-            # 결과가 ?�무 길면 ?�르�?
+            # 결과가 너무 길면 자르기
             if result and len(result) > 3000:
-                result = result[:3000] + "\n... (결과 ?��? ?�략)"
-            preview = result[:300] if result else "비어?�음"
+                result = result[:3000] + "\n... (결과 일부 생략)"
+            preview = result[:300] if result else "비어있음"
             print(f"[결과 ({elapsed}s)] {preview}")
 
-            # 결과 ?�으�?바로 반환
+            # 결과 있으면 바로 반환
             if result and result.strip() not in ("", "[]"):
                 return {
                     "sql": sql,
@@ -130,24 +130,24 @@ def _run_single_sql(
                     "confidence": 1.0,
                 }
 
-            # 결과 비어?�으�??�시??
+            # 결과 비어있으면 재시도
             error_history.append({
                 "attempt": attempt,
                 "sql": sql,
-                "error": "결과 ?�음 ??조인 경로 ?�는 조건 ?��????�요",
+                "error": "결과 없음 — 조인 경로 또는 조건 재검토 필요",
             })
 
         except Exception as e:
             elapsed = round(time.time() - t, 2)
-            print(f"[?�류 ({elapsed}s)] {e}")
+            print(f"[오류 ({elapsed}s)] {e}")
             error_history.append({
                 "attempt": attempt,
                 "sql": sql,
                 "error": str(e),
             })
 
-    # 최�? ?�시??초과
-    print(f"\n[SQL] {max_retry}???�도 ?�료")
+    # 최대 재시도 초과
+    print(f"\n[SQL] {max_retry}회 시도 완료")
     return {
         "sql": sql,
         "result": result,
