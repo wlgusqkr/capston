@@ -85,6 +85,8 @@ LOCAL_APPS = [
     "apps.web.users",
     "apps.service.neighborhoods",
     "apps.service.preference",
+    # LLM 질의 API. 현재 모델은 없지만 URL/DRF 뷰 등록을 위해 Django 앱으로 둔다.
+    "apps.ai_agent",
     "apps.public_data.regions",
     "apps.public_data.metrics",
     "apps.public_data.park",

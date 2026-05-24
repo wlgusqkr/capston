@@ -14,6 +14,8 @@ import type {
   AdongPopulationResponse,
   AdongScore,
   AdongSummary,
+  AgentQueryRequest,
+  AgentQueryResponse,
   TransitCongestionResponse,
   ExploreFilters,
   ExploreResponse,
@@ -343,6 +345,23 @@ export async function postScorePoint(
 ): Promise<KernelScoreResponse> {
   const { data } = await api.post<KernelScoreResponse>('/score/point', body, {
     signal,
+  });
+  return data;
+}
+
+// -------- AI Agent (POST /api/agent/query) --------------------------------
+
+/** POST /api/agent/query — natural-language neighborhood Q&A.
+ *
+ *  Agent calls can run LLM classification + SQL + answer generation, so this
+ *  endpoint gets a longer timeout than the shared axios default.
+ */
+export async function postAgentQuery(
+  question: string,
+): Promise<AgentQueryResponse> {
+  const body: AgentQueryRequest = { question };
+  const { data } = await api.post<AgentQueryResponse>('/agent/query', body, {
+    timeout: 60_000,
   });
   return data;
 }

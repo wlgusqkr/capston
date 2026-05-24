@@ -87,6 +87,10 @@ services:
       - ./backend/.env
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.local
+      # backend/.env may contain macOS Homebrew GIS library paths for local uv
+      # runs. Docker needs the Debian library paths installed by Dockerfile.dev.
+      GDAL_LIBRARY_PATH: /usr/lib/aarch64-linux-gnu/libgdal.so
+      GEOS_LIBRARY_PATH: /usr/lib/aarch64-linux-gnu/libgeos_c.so
     volumes:
       - ./backend:/app
     depends_on:
