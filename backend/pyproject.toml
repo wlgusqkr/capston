@@ -18,8 +18,7 @@ dependencies = [
     "gunicorn>=21.2",
     "drf-spectacular>=0.27",
     "django-prometheus>=2.3",
-    # ── OpenTelemetry — Tempo로 trace export.
-    # opentelemetry-instrument 명령으로 자동 계측(Dockerfile CMD 참조).
+    # OpenTelemetry: automatic instrumentation and Tempo trace export.
     "opentelemetry-distro>=0.49b0",
     "opentelemetry-exporter-otlp>=1.28",
     "opentelemetry-instrumentation-django>=0.49b0",
@@ -48,7 +47,7 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 # placeholder package list — Django apps are not installed via setuptools
 packages = []
-# 
+
 [tool.black]
 line-length = 100
 target-version = ["py312"]

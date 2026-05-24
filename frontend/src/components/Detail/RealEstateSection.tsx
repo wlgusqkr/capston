@@ -21,7 +21,7 @@ import {
 
 import { CHART_COLORS } from '@/lib/colors';
 import { formatConvertedRent } from '@/lib/rent';
-import type { DongDetail } from '@/types/api';
+import type { AdongDetail } from '@/types/api';
 
 type DealTypeKey = 'villa' | 'dagagu' | 'danok' | 'officetel';
 
@@ -33,7 +33,7 @@ const DEAL_TYPE_FILL: Record<DealTypeKey, string> = {
 };
 
 interface RealEstateSectionProps {
-  realEstate: DongDetail['real_estate'];
+  realEstate: AdongDetail['real_estate'];
 }
 
 type Period = '3m' | '6m' | '12m';

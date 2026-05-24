@@ -1,5 +1,5 @@
 // Phase 4.7 fix 회귀 가드 — GeoJSON feature.properties.adm_cd2 (10자리
-// 행정동 코드) 와 DongScore.code 가 동일 키여야 정상 매칭된다.
+// 행정동 코드) 와 AdongScore.code 가 동일 키여야 정상 매칭된다.
 //
 // Leaflet 컴포넌트 자체 마운트는 jsdom 에서 비용이 높아 실제 렌더 대신
 // 매칭 로직만 단위 테스트. (HeatMap 의 styleFn 가 dongByCode[feature.adm_cd2]
@@ -7,10 +7,10 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { indexDongsByCode, pickScore } from './HeatMap';
-import type { DongScore } from '@/types/api';
+import { indexAdongsByCode, pickScore } from './HeatMap';
+import type { AdongScore } from '@/types/api';
 
-const SAMPLE: DongScore[] = [
+const SAMPLE: AdongScore[] = [
   {
     slug: 'mapo-seogyo',
     code: '1144055000', // 10자리 — adm_cd2 와 동일 폭
@@ -37,16 +37,16 @@ const SAMPLE: DongScore[] = [
   },
 ];
 
-describe('indexDongsByCode (HeatMap regression: adm_cd2 ↔ code)', () => {
+describe('indexAdongsByCode (HeatMap regression: adm_cd2 ↔ code)', () => {
   it('indexes by 10-자리 code (matches GeoJSON feature.properties.adm_cd2)', () => {
-    const idx = indexDongsByCode(SAMPLE);
+    const idx = indexAdongsByCode(SAMPLE);
     // adm_cd2 와 같은 키로 lookup 가능해야 함.
     expect(idx['1144055000']?.name).toBe('서교동');
     expect(idx['1111053000']?.gu).toBe('종로구');
   });
 
   it('does NOT index by slug (회귀 — slug 키였던 구버전 패턴 금지)', () => {
-    const idx = indexDongsByCode(SAMPLE);
+    const idx = indexAdongsByCode(SAMPLE);
     expect(idx['mapo-seogyo']).toBeUndefined();
   });
 });

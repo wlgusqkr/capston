@@ -34,7 +34,7 @@ export interface MatchFilterPanelProps {
   onReset: () => void;
   modeActive: boolean;
   totalMatched: number | null | undefined;
-  matchedDongs: number | null | undefined;
+  matchedAdongs: number | null | undefined;
   isLoading: boolean;
   nearUniversityOnly: boolean;
   onNearUniversityToggle: (next: boolean) => void;
@@ -46,7 +46,7 @@ export default function MatchFilterPanel({
   onReset,
   modeActive,
   totalMatched,
-  matchedDongs,
+  matchedAdongs,
   isLoading,
   nearUniversityOnly,
   onNearUniversityToggle,
@@ -196,9 +196,9 @@ export default function MatchFilterPanel({
               {totalMatched.toLocaleString()}
             </span>
             <span className="text-body-base text-text-subtle">건</span>
-            {matchedDongs != null ? (
+            {matchedAdongs != null ? (
               <span className="ml-auto text-mono-label text-text-muted">
-                {matchedDongs.toLocaleString()}개 동에서
+                {matchedAdongs.toLocaleString()}개 동에서
               </span>
             ) : null}
           </>

@@ -367,15 +367,17 @@ DB 스키마는 사용자 보유 별도 문서 참조. 본 SPEC은 **DB를 변�
 
 | 위젯군 | 사용 테이블 |
 |---|---|
-| 부동산 | `rent_deal`, `adong` |
-| 편의시설 | `store`, `business_category`, `ksci_category`, `park`, `park_adong`, `library`, `library_hours` |
-| 교통 | `subway_station`, `subway_congestion`, `bus_stop`, `bus_congestion` |
+| 부동산 | `rent_deal`, `adong`, `current_adong` |
+| 편의시설 | `store`, `business_category`, `ksci_category`, `park`, `park_adong`, `library`, `library_hours`, `amenity`, `amenity_adong`, `amenity_ldong` |
+| 교통 | `subway_station`, `subway_congestion`, `bus_stop`, `bus_congestion`, `nearest_subway_adong`, `nearest_subway_ldong` |
 | 인구·사회 | `adong_population`, `gu_metric` (POP_*, YOUTH_*) |
 | 안전·환경·경제 | `gu_metric` (SAFETY_*, ACC_*, AREA_*, GRDP_*, FIRE_*) |
 | 대학 | `univ`, `univ_adong` |
 | 인기 차트·리뷰·AI 대화 | 사용자 입력 (백엔드 신규 테이블 필요 시 사용자에게 요청) |
 
 **자치구 단위 지표 처리 원칙**: `gu_metric` 데이터는 해당 동이 속한 자치구 값을 그대로 표시하고, 위젯에 "○○구 단위" 뱃지를 단다. 동 단위로 추정하지 않는다.
+
+**Dong 레거시 폐기 (2026-05-19)**: 백엔드는 `Dong` 모델·`dong` 테이블을 사용하지 않는다. 동 단위 응답은 모두 `Adong` + `current_seoul/gu/ldong/adong` score 합성 + `Gu`로 산출하되 응답 schema(dict key set)는 기존 그대로 유지한다. 가까운 지하철역은 `nearest_subway_adong`(행정동 단위) / `nearest_subway_ldong`(법정동 단위) 합성 테이블로 분리되어 있다.
 
 ---
 

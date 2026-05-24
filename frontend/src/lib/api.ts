@@ -6,14 +6,14 @@ import type { AxiosInstance } from 'axios';
 import type {
   Bbox,
   CompareResponse,
-  DongDerivedIndicesResponse,
-  DongDetail,
-  DongGuMetricsResponse,
-  DongParksResponse,
+  AdongDerivedIndicesResponse,
+  AdongDetail,
+  AdongGuMetricsResponse,
+  AdongParksResponse,
   GuMetricSeriesResponse,
-  DongPopulationResponse,
-  DongScore,
-  DongSummary,
+  AdongPopulationResponse,
+  AdongScore,
+  AdongSummary,
   TransitCongestionResponse,
   ExploreFilters,
   ExploreResponse,
@@ -51,13 +51,13 @@ export const api: AxiosInstance = axios.create({
   },
 });
 
-/** GET /api/dongs/scores — main map heatmap data (SPEC 6.1).
+/** GET /api/adongs/scores — main map heatmap data (SPEC 6.1).
  *
  *  Backend validates that w_rent + w_amenity + w_transit sums to 100±1
  *  and that each is in 0~100. Caller should normalize on the client first.
  */
-export async function getDongScores(weights: Weights): Promise<DongScore[]> {
-  const { data } = await api.get<DongScore[]>('/dongs/scores', {
+export async function getAdongScores(weights: Weights): Promise<AdongScore[]> {
+  const { data } = await api.get<AdongScore[]>('/adongs/scores', {
     params: {
       w_rent: weights.rent,
       w_amenity: weights.amenity,
@@ -67,16 +67,16 @@ export async function getDongScores(weights: Weights): Promise<DongScore[]> {
   return data;
 }
 
-/** GET /api/dongs/:slug/summary — dong panel data (SPEC 6.2).
+/** GET /api/adongs/:slug/summary — adong panel data (SPEC 6.2).
  *
  *  Same weight params as /scores; backend recomputes weighted score and
  *  returns 5 핵심 지표 + rule-based 한 줄 요약.
  */
-export async function getDongSummary(
+export async function getAdongSummary(
   slug: string,
   weights: Weights
-): Promise<DongSummary> {
-  const { data } = await api.get<DongSummary>(`/dongs/${slug}/summary`, {
+): Promise<AdongSummary> {
+  const { data } = await api.get<AdongSummary>(`/adongs/${slug}/summary`, {
     params: {
       w_rent: weights.rent,
       w_amenity: weights.amenity,
@@ -86,16 +86,16 @@ export async function getDongSummary(
   return data;
 }
 
-/** GET /api/dongs/:slug/detail — full detail page data (SPEC 6.3).
+/** GET /api/adongs/:slug/detail — full detail page data (SPEC 6.3).
  *
  *  Same weight params as /scores and /summary. Backend returns all six
- *  sections in a single payload. See DongDetail in types/api.ts.
+ *  sections in a single payload. See AdongDetail in types/api.ts.
  */
-export async function getDongDetail(
+export async function getAdongDetail(
   slug: string,
   weights: Weights
-): Promise<DongDetail> {
-  const { data } = await api.get<DongDetail>(`/dongs/${slug}/detail`, {
+): Promise<AdongDetail> {
+  const { data } = await api.get<AdongDetail>(`/adongs/${slug}/detail`, {
     params: {
       w_rent: weights.rent,
       w_amenity: weights.amenity,
@@ -105,14 +105,14 @@ export async function getDongDetail(
   return data;
 }
 
-/** GET /api/dongs/:slug/explore — 자취 시세 BI 대시보드 (Phase 4.8).
+/** GET /api/adongs/:slug/explore — 자취 시세 BI 대시보드 (Phase 4.8).
  *  필터는 ExploreFilters 그대로 전송. deal_types 는 콤마 join.
  */
-export async function getDongExplore(
+export async function getAdongExplore(
   slug: string,
   filters: ExploreFilters,
 ): Promise<ExploreResponse> {
-  const { data } = await api.get<ExploreResponse>(`/dongs/${slug}/explore`, {
+  const { data } = await api.get<ExploreResponse>(`/adongs/${slug}/explore`, {
     params: {
       deal_types: filters.deal_types.join(','),
       period: filters.period,
@@ -130,27 +130,27 @@ export async function getDongExplore(
   return data;
 }
 
-/** GET /api/dongs/match-counts — 메인 지도 자취 거래량 분포 (Phase 5).
+/** GET /api/adongs/match-counts — 메인 지도 자취 거래량 분포 (Phase 5).
  *  필터 통과 거래 수를 동별로 반환. ratio 는 log scale 정규화 + min_sample 가드.
  */
-export async function getDongMatchCounts(
+export async function getAdongMatchCounts(
   filters: MatchFilters,
 ): Promise<MatchCountsResponse> {
-  const { data } = await api.get<MatchCountsResponse>('/dongs/match-counts', {
+  const { data } = await api.get<MatchCountsResponse>('/adongs/match-counts', {
     params: matchFiltersToParams(filters),
   });
   return data;
 }
 
-/** GET /api/dongs/:slug/match-detail — 동 패널 매칭 KPI 카드 (Phase 5).
+/** GET /api/adongs/:slug/match-detail — 동 패널 매칭 KPI 카드 (Phase 5).
  *  count / 평균 환산월세 / 평균 보증금 / 매칭률 + denominator.
  */
-export async function getDongMatchDetail(
+export async function getAdongMatchDetail(
   slug: string,
   filters: MatchFilters,
 ): Promise<MatchDetailResponse> {
   const { data } = await api.get<MatchDetailResponse>(
-    `/dongs/${slug}/match-detail`,
+    `/adongs/${slug}/match-detail`,
     { params: matchFiltersToParams(filters) },
   );
   return data;
@@ -185,7 +185,7 @@ export async function getPreferencePairs(
 
 /** GET /api/compare?slugs=A,B,C[&w_rent=&w_amenity=&w_transit=] — compare
  *  table data (SPEC 6.4). Backend preserves input slug order in the response
- *  so the caller can map slugs[i] → dongs[i] directly into table columns.
+ *  so the caller can map slugs[i] → adongs[i] directly into table columns.
  *  1~3 slugs allowed; weights default to 33/33/34 if omitted.
  */
 export async function getCompare(
@@ -220,34 +220,34 @@ export async function submitPreferenceComparisons(
 
 // -------- Dashboard Phase 2 — Population + Gu Metrics ----------------------
 
-/** GET /api/dongs/:slug/population — time-series population data. */
-export async function getDongPopulation(
+/** GET /api/adongs/:slug/population — time-series population data. */
+export async function getAdongPopulation(
   slug: string,
-): Promise<DongPopulationResponse> {
-  const { data } = await api.get<DongPopulationResponse>(
-    `/dongs/${slug}/population`,
+): Promise<AdongPopulationResponse> {
+  const { data } = await api.get<AdongPopulationResponse>(
+    `/adongs/${slug}/population`,
   );
   return data;
 }
 
-/** GET /api/dongs/:slug/gu-metrics — gu-level metrics + Seoul averages. */
-export async function getDongGuMetrics(
+/** GET /api/adongs/:slug/gu-metrics — gu-level metrics + Seoul averages. */
+export async function getAdongGuMetrics(
   slug: string,
-): Promise<DongGuMetricsResponse> {
-  const { data } = await api.get<DongGuMetricsResponse>(
-    `/dongs/${slug}/gu-metrics`,
+): Promise<AdongGuMetricsResponse> {
+  const { data } = await api.get<AdongGuMetricsResponse>(
+    `/adongs/${slug}/gu-metrics`,
   );
   return data;
 }
 
-/** GET /api/dongs/:slug/gu-metrics/series — gu-level metric time series.
+/** GET /api/adongs/:slug/gu-metrics/series — gu-level metric time series.
  *
  *  - `codes` is sent as a comma-joined whitelist (backend caps at 10).
  *  - `years` defaults backend-side to 10 (clamp 1~20).
  *  - All requested codes are present in the response (empty points array
  *    when no data) — frontend can iterate without per-code existence checks.
  */
-export async function getDongGuMetricsSeries(
+export async function getAdongGuMetricsSeries(
   slug: string,
   codes: string[],
   years?: number,
@@ -257,41 +257,41 @@ export async function getDongGuMetricsSeries(
   };
   if (years != null) params.years = years;
   const { data } = await api.get<GuMetricSeriesResponse>(
-    `/dongs/${slug}/gu-metrics/series`,
+    `/adongs/${slug}/gu-metrics/series`,
     { params },
   );
   return data;
 }
 
-/** GET /api/dongs/:slug/derived-indices — 자취촌 지수 + 계약 활발도 (SPEC §4.5).
- *  Backend pre-computes all 426 dongs in one pass and caches the dict 5 h
+/** GET /api/adongs/:slug/derived-indices — 자취촌 지수 + 계약 활발도 (SPEC §4.5).
+ *  Backend pre-computes all 426 adongs in one pass and caches the dict 5 h
  *  (daily refresh). Warm hits 7~30 ms; cold ~2 s. */
-export async function getDongDerivedIndices(
+export async function getAdongDerivedIndices(
   slug: string,
-): Promise<DongDerivedIndicesResponse> {
-  const { data } = await api.get<DongDerivedIndicesResponse>(
-    `/dongs/${slug}/derived-indices`,
+): Promise<AdongDerivedIndicesResponse> {
+  const { data } = await api.get<AdongDerivedIndicesResponse>(
+    `/adongs/${slug}/derived-indices`,
   );
   return data;
 }
 
-/** GET /api/dongs/:slug/transit-congestion — time-of-day congestion patterns
- *  for subway (TOP 3 nearby stations) + bus (mapped BusStops) + derived dong
+/** GET /api/adongs/:slug/transit-congestion — time-of-day congestion patterns
+ *  for subway (TOP 3 nearby stations) + bus (mapped BusStops) + derived adong
  *  personality estimate (SPEC 4.4 Section C). Backend caches 5 min. */
-export async function getDongTransitCongestion(
+export async function getAdongTransitCongestion(
   slug: string,
 ): Promise<TransitCongestionResponse> {
   const { data } = await api.get<TransitCongestionResponse>(
-    `/dongs/${slug}/transit-congestion`,
+    `/adongs/${slug}/transit-congestion`,
   );
   return data;
 }
 
-/** GET /api/dongs/:slug/parks — parks mapped to the dong (SPEC 4.4 Section B).
+/** GET /api/adongs/:slug/parks — parks mapped to the adong (SPEC 4.4 Section B).
  *  Backend orders by area_m2 desc (nulls last). RDS 원본에 동일 공원 중복 행이
  *  존재하므로 호출부에서 id 기준 dedupe 처리 권장. 캐시 5분(서버측). */
-export async function getDongParks(slug: string): Promise<DongParksResponse> {
-  const { data } = await api.get<DongParksResponse>(`/dongs/${slug}/parks`);
+export async function getAdongParks(slug: string): Promise<AdongParksResponse> {
+  const { data } = await api.get<AdongParksResponse>(`/adongs/${slug}/parks`);
   return data;
 }
 
@@ -407,7 +407,7 @@ export async function getFavorites(): Promise<FavoriteItem[]> {
   return data;
 }
 
-/** POST /api/users/me/favorites — adds a dong by slug. */
+/** POST /api/users/me/favorites — adds a adong by slug. */
 export async function addFavorite(slug: string): Promise<FavoriteItem> {
   const { data } = await api.post<FavoriteItem>('/users/me/favorites', {
     slug,

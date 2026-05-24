@@ -1,14 +1,14 @@
 // MainMap interaction-state reducer (post-A-1 expanded scope).
 //
 // Owns ALL "which panel is open?" state — right-side slide-in panels
-// (DongPanel / TransactionPanel / KernelScorePanel are mutually exclusive),
+// (AdongPanel / TransactionPanel / KernelScorePanel are mutually exclusive),
 // the bottom-left CriteriaPanel collapse state, and the ephemeral
 // first-time coach-mark.
 //
 // State machine diagram (post-design-polish-v2 R-1):
 //
 //   ┌─────────────┐  open_dong   ┌──────────────────┐
-//   │ idle (none) │ ───────────→ │ DongPanel (right)│
+//   │ idle (none) │ ───────────→ │ AdongPanel (right)│
 //   └─────────────┘              └──────────────────┘
 //        ▲ ▲                            │
 //        │ │ close_all_right            │ open_jibun / open_kernel

@@ -2,7 +2,7 @@
 //   A: Real Estate, B: Amenities, C: Transit, D: Population, E: Safety/Economy
 //   F: Popularity (TOP10 / school / similar), G: Reviews (avg / cards / CTA)
 //
-// URL-driven dong selection via ?dong= search param. Default: "중구-필동".
+// URL-driven adong selection via ?adong= search param. Default: "중구-필동".
 
 import { useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -18,7 +18,7 @@ import ReviewDashboardSection from '@/components/Dashboard/sections/ReviewDashbo
 import SafetyEconomySection from '@/components/Dashboard/sections/SafetyEconomySection';
 import TransitSection from '@/components/Dashboard/sections/TransitSection';
 import Card from '@/components/ui/Card';
-import { useDongDerivedIndices, useDongDetail, useDongGuMetrics, useDongGuMetricsSeries, useDongParks, useDongPopulation, useDongScores, useDongSummary, useDongTransitCongestion } from '@/hooks/useDongs';
+import { useAdongDerivedIndices, useAdongDetail, useAdongGuMetrics, useAdongGuMetricsSeries, useAdongParks, useAdongPopulation, useAdongScores, useAdongSummary, useAdongTransitCongestion } from '@/hooks/useAdongs';
 import { DEFAULT_WEIGHTS } from '@/types/api';
 
 const DEFAULT_DONG_SLUG = '중구-필동';
@@ -28,43 +28,43 @@ const SAFETY_SERIES_CODES = ['ACC_TOTAL_COUNT', 'FIRE_COUNT'];
 
 export default function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const dongSlug = searchParams.get('dong') ?? DEFAULT_DONG_SLUG;
+  const dongSlug = searchParams.get('adong') ?? DEFAULT_DONG_SLUG;
 
   // Data hooks
-  const { data: dongs } = useDongScores(DEFAULT_WEIGHTS);
-  const { data: detail, isLoading: detailLoading, isError: detailError } = useDongDetail(dongSlug, DEFAULT_WEIGHTS);
-  const { data: summary } = useDongSummary(dongSlug, DEFAULT_WEIGHTS);
-  const { data: population } = useDongPopulation(dongSlug);
-  const { data: guMetrics } = useDongGuMetrics(dongSlug);
+  const { data: adongs } = useAdongScores(DEFAULT_WEIGHTS);
+  const { data: detail, isLoading: detailLoading, isError: detailError } = useAdongDetail(dongSlug, DEFAULT_WEIGHTS);
+  const { data: summary } = useAdongSummary(dongSlug, DEFAULT_WEIGHTS);
+  const { data: population } = useAdongPopulation(dongSlug);
+  const { data: guMetrics } = useAdongGuMetrics(dongSlug);
   // Phase 4: 교통사고 + 화재 시계열 (Section E 추이 차트). 10년치.
-  const { data: safetySeries } = useDongGuMetricsSeries(
+  const { data: safetySeries } = useAdongGuMetricsSeries(
     dongSlug,
     SAFETY_SERIES_CODES,
     10,
   );
   // Section B 보강: 대형 공원 리스트 (행정동 매핑).
-  const { data: parks } = useDongParks(dongSlug);
+  const { data: parks } = useAdongParks(dongSlug);
   // Section C 보강: 시간대 혼잡도 + 동 성격 추정.
-  const { data: congestion } = useDongTransitCongestion(dongSlug);
+  const { data: congestion } = useAdongTransitCongestion(dongSlug);
   // KPI 보강: SPEC §4.5 자취촌 지수 + 계약 활발도 (백엔드 일일 갱신, staleTime 30분).
-  const { data: derived } = useDongDerivedIndices(dongSlug);
+  const { data: derived } = useAdongDerivedIndices(dongSlug);
 
-  const selectedDong = useMemo(
-    () => dongs?.find((d) => d.slug === dongSlug) ?? null,
-    [dongs, dongSlug],
+  const selectedAdong = useMemo(
+    () => adongs?.find((d) => d.slug === dongSlug) ?? null,
+    [adongs, dongSlug],
   );
 
-  const handleDongChange = useCallback(
+  const handleAdongChange = useCallback(
     (slug: string) => {
-      setSearchParams({ dong: slug }, { replace: true });
+      setSearchParams({ adong: slug }, { replace: true });
     },
     [setSearchParams],
   );
 
-  // If no dong param in URL, set the default
+  // If no adong param in URL, set the default
   useEffect(() => {
-    if (!searchParams.has('dong')) {
-      setSearchParams({ dong: DEFAULT_DONG_SLUG }, { replace: true });
+    if (!searchParams.has('adong')) {
+      setSearchParams({ adong: DEFAULT_DONG_SLUG }, { replace: true });
     }
   }, [searchParams, setSearchParams]);
 
@@ -76,14 +76,14 @@ export default function Dashboard() {
   return (
     <main id="main" className="min-h-[calc(100vh-var(--space-14))] bg-primary-soft">
       <div className="max-w-[1280px] mx-auto px-5 py-5 flex flex-col gap-3">
-        {/* Header: dong selector + selected dong info */}
+        {/* Header: adong selector + selected adong info */}
         <DashboardHeader
-          selectedDong={
-            selectedDong
-              ? { slug: selectedDong.slug, name: selectedDong.name, gu: selectedDong.gu }
+          selectedAdong={
+            selectedAdong
+              ? { slug: selectedAdong.slug, name: selectedAdong.name, gu: selectedAdong.gu }
               : null
           }
-          onDongChange={handleDongChange}
+          onAdongChange={handleAdongChange}
           summaryText={summaryText}
         />
 
@@ -93,13 +93,13 @@ export default function Dashboard() {
             detail={detail}
             summary={summary}
             derived={derived}
-            allDongs={dongs}
+            allAdongs={adongs}
             isLoading={detailLoading}
           />
           <DashboardMiniMap
-            dongs={dongs ?? []}
+            adongs={adongs ?? []}
             selectedSlug={dongSlug}
-            onDongSelect={handleDongChange}
+            onAdongSelect={handleAdongChange}
           />
         </div>
 
@@ -145,8 +145,8 @@ export default function Dashboard() {
               </div>
               <AmenitySection
                 amenities={detail.amenities}
-                allDongs={dongs}
-                currentAmenityScore={selectedDong?.score_amenity ?? 50}
+                allAdongs={adongs}
+                currentAmenityScore={selectedAdong?.score_amenity ?? 50}
                 parks={parks}
               />
             </Card>
@@ -223,10 +223,10 @@ export default function Dashboard() {
               </h2>
             </div>
             <PopularitySection
-              allDongs={dongs}
-              similarDongs={detail?.similar_dongs}
+              allAdongs={adongs}
+              similarAdongs={detail?.similar_dongs}
               currentSlug={dongSlug}
-              onDongSelect={handleDongChange}
+              onAdongSelect={handleAdongChange}
             />
           </Card>
         </section>
@@ -246,7 +246,7 @@ export default function Dashboard() {
             <ReviewDashboardSection
               reviews={detail?.reviews}
               dongSlug={dongSlug}
-              dongName={selectedDong?.name}
+              dongName={selectedAdong?.name}
             />
           </Card>
         </section>

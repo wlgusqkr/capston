@@ -2,22 +2,21 @@
 //
 // Widgets:
 //   1. Category table (8 categories: count, density, TOP X%, sufficiency badge)
-//   2. Large parks list (TOP N by area) — DongParksResponse
+//   2. Large parks list (TOP N by area) — AdongParksResponse
 //   3. Library placeholder (data not available)
 //
-// Data: DongDetail.amenities + DongScore[] (for percentile) + DongParksResponse
+// Data: AdongDetail.amenities + AdongScore[] (for percentile) + AdongParksResponse
 
 import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
 import { CATEGORY_COLORS } from '@/lib/colors';
-import { computeAmenityPercentile } from '@/lib/percentile';
-import type { AmenityLevel, DongDetail, DongPark, DongParksResponse, DongScore } from '@/types/api';
+import type { AmenityLevel, AdongDetail, AdongPark, AdongParksResponse, AdongScore } from '@/types/api';
 
 interface AmenitySectionProps {
-  amenities: DongDetail['amenities'];
-  allDongs: DongScore[] | undefined;
+  amenities: AdongDetail['amenities'];
+  allAdongs: AdongScore[] | undefined;
   currentAmenityScore: number;
-  parks?: DongParksResponse;
+  parks?: AdongParksResponse;
 }
 
 const LEVEL_BADGE: Record<AmenityLevel, { variant: 'success' | 'warning' | 'danger'; label: string }> = {
@@ -29,8 +28,8 @@ const LEVEL_BADGE: Record<AmenityLevel, { variant: 'success' | 'warning' | 'dang
 const PARKS_DISPLAY_LIMIT = 6;
 const WALK_METERS_PER_MIN = 67;
 
-function dedupeParks(parks: DongPark[]): DongPark[] {
-  const seen = new Map<string, DongPark>();
+function dedupeParks(parks: AdongPark[]): AdongPark[] {
+  const seen = new Map<string, AdongPark>();
   for (const p of parks) {
     if (!seen.has(p.id)) seen.set(p.id, p);
   }
@@ -58,7 +57,7 @@ function walkMinutes(distance_m: number | null): number | null {
 }
 
 /** Amenity insight: count sufficient vs lacking categories. */
-function getAmenityInsight(amenities: DongDetail['amenities']): string | undefined {
+function getAmenityInsight(amenities: AdongDetail['amenities']): string | undefined {
   if (amenities.length === 0) return undefined;
   const sufficient = amenities.filter((a) => a.level === 'sufficient').length;
   const lacking = amenities.filter((a) => a.level === 'lacking').length;
@@ -69,12 +68,10 @@ function getAmenityInsight(amenities: DongDetail['amenities']): string | undefin
 
 export default function AmenitySection({
   amenities,
-  allDongs,
-  currentAmenityScore,
+  allAdongs: _allAdongs,
+  currentAmenityScore: _currentAmenityScore,
   parks,
 }: AmenitySectionProps) {
-  const percentile = computeAmenityPercentile(allDongs, '', currentAmenityScore);
-
   const dedupedParks = parks ? dedupeParks(parks.parks) : [];
   const sortedParks = [...dedupedParks].sort((a, b) => {
     const aa = a.area_m2 ?? -1;
@@ -134,9 +131,9 @@ export default function AmenitySection({
                       {a.density_per_km2.toFixed(1)}
                     </td>
                     <td className="py-2 px-3 border-b border-divider text-center">
-                      {percentile != null ? (
+                      {a.percentile != null ? (
                         <span className="text-[11px] text-text-muted tabular">
-                          TOP {percentile}%
+                          TOP {a.percentile}%
                         </span>
                       ) : (
                         <span className="text-[11px] text-text-subtle">-</span>

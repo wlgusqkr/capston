@@ -5,16 +5,28 @@
 
 ---
 
+## 폴더 구조 (단계 4A 이후)
+
+| 폴더 | 목적 |
+|---|---|
+| `etl/` | 초기 적재 (initial load). `seed/`(행정동 매핑 등), `legacy_from_rds/`(팀원 RDS 참고용), 추후 `from_dp_db/`(DP_DB → SLGI 임시 ETL, 단계 4B) |
+| `update/` | 일일 업데이트 fetch (공공데이터 API). idempotent 설계. |
+| `scoring/` | 점수 산식 + 보조 산출 (NearestSubway 캐시 등). |
+| `validate/` | 스키마/데이터 품질/공간 데이터 검증 placeholder. |
+
+루트 유지 파일: `_django.py` (공통 setup helper), `__init__.py`, 본 `README.md`.
+
 ## 스크립트 목록
 
 | 파일 | 목적 | 필요 키 | 모델 의존 |
 |---|---|---|---|
 | `_django.py` | Django setup helper, 환경변수 검증 | — | — |
-| `build_dong_mapping.py` | 행정동 GeoJSON 검증 + 법정동→행정동 매핑 CSV 생성 | — | Dong |
-| `fetch_realestate.py` | 국토부 실거래가 (전월세) 수집 | `DATA_GO_KR_API_KEY` | RentDeal (미존재) |
-| `fetch_amenities.py` | 소상공인진흥공단 상가정보 수집 | `DATA_GO_KR_API_KEY` (동일 키) | Amenity (미존재) |
-| `fetch_transit.py` | 지하철역/버스 정류장 좌표 + 가까운 역 사전계산 | `SEOUL_OPEN_API_KEY` | SubwayStation/BusStop (미존재) |
-| `compute_scores.py` | 점수 계산 (SPEC 11.2) | — | 위 모델들 |
+| `etl/seed/build_dong_mapping.py` | 행정동 GeoJSON 검증 + 법정동→행정동 매핑 CSV 생성 | — | Dong |
+| `update/fetch_realestate.py` | 국토부 실거래가 (전월세) 수집 | `DATA_GO_KR_API_KEY` | RentDeal |
+| `update/fetch_amenities.py` | 소상공인진흥공단 상가정보 수집 | `DATA_GO_KR_API_KEY` (동일 키) | Amenity |
+| `update/fetch_transit.py` | 지하철역/버스 정류장 좌표 수집 | `SEOUL_OPEN_API_KEY` | SubwayStation/BusStop |
+| `scoring/compute_nearest_subway.py` | 가까운 지하철역 사전계산 (NearestSubway 캐시) | — | SubwayStation/Dong |
+| `scoring/compute_scores.py` | 점수 계산 (SPEC 11.2) | — | 위 모델들 |
 
 ---
 
@@ -84,7 +96,7 @@ cd backend
 source .venv/bin/activate
 
 # 1. 행정동 GeoJSON 검증 + 매핑 CSV 생성
-python scripts/build_dong_mapping.py /path/to/seoul_dongs.geojson \
+python scripts/etl/seed/build_dong_mapping.py /path/to/seoul_dongs.geojson \
     --bjd-mapping /path/to/bjd_to_adm.csv \
     --output bjd_to_adm_primary.csv
 
@@ -96,12 +108,13 @@ export DATA_GO_KR_API_KEY=...    # 실거래가 + 상가, 1개 키
 export SEOUL_OPEN_API_KEY=...
 
 # 4. 데이터 수집 (각 1~수십 분 소요)
-python scripts/fetch_realestate.py --months 12 --deal-type all
-python scripts/fetch_amenities.py
-python scripts/fetch_transit.py --target all
+python scripts/update/fetch_realestate.py --months 12 --deal-type all
+python scripts/update/fetch_amenities.py
+python scripts/update/fetch_transit.py --target all
 
 # 5. 점수 계산
-python scripts/compute_scores.py --mode real
+python scripts/scoring/compute_nearest_subway.py
+python scripts/scoring/compute_scores.py --mode real
 ```
 
 ---
@@ -112,18 +125,18 @@ python scripts/compute_scores.py --mode real
 
 ```bash
 # 키 누락 시 친절한 에러 메시지 + exit 1
-python scripts/fetch_realestate.py
-python scripts/fetch_amenities.py
-python scripts/fetch_transit.py --target subway
+python scripts/update/fetch_realestate.py
+python scripts/update/fetch_amenities.py
+python scripts/update/fetch_transit.py --target subway
 
 # 모델 존재 점검 (현재 미존재 모델 확인용)
-python scripts/compute_scores.py --mode check
+python scripts/scoring/compute_scores.py --mode check
 
 # 더미 5개 동 점수 sanity 갱신 (이미 seed_dummy_dongs 가 처리하므로 보통 NO-OP)
-python scripts/compute_scores.py --mode dummy
+python scripts/scoring/compute_scores.py --mode dummy
 
 # GeoJSON 파일이 있으면 코드/이름 추출 (키 불필요)
-python scripts/build_dong_mapping.py /path/to/seoul_dongs.geojson
+python scripts/etl/seed/build_dong_mapping.py /path/to/seoul_dongs.geojson
 ```
 
 ---

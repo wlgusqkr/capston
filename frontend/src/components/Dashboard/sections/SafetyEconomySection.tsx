@@ -9,7 +9,7 @@
 //   Transit (B3):  TRAFFIC_CULTURE_INDEX, TRAFFIC_SAFETY, TRAFFIC_WALK,
 //                  TRAFFIC_DRIVE, TRAFFIC_VULNERABLE
 //
-// Data: DongGuMetricsResponse
+// Data: AdongGuMetricsResponse
 
 import {
   Bar,
@@ -34,13 +34,13 @@ import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
 import { CATEGORY_COLORS, CHART_COLORS } from '@/lib/colors';
 import type {
-  DongGuMetricsResponse,
+  AdongGuMetricsResponse,
   GuMetricSeriesPoint,
   GuMetricSeriesResponse,
 } from '@/types/api';
 
 interface SafetyEconomySectionProps {
-  guMetrics: DongGuMetricsResponse;
+  guMetrics: AdongGuMetricsResponse;
   /** Optional time-series payload (ACC_TOTAL_COUNT / FIRE_COUNT) for the
    *  trend line charts. May be undefined while loading; charts render an
    *  empty state when the corresponding code has zero points. */
@@ -93,7 +93,7 @@ function formatMetricDate(date: string | null | undefined): string {
 
 /** Helper to get metric value with fallback. */
 function mv(
-  metrics: DongGuMetricsResponse['metrics'],
+  metrics: AdongGuMetricsResponse['metrics'],
   code: string,
 ): number | null {
   return metrics[code]?.value ?? null;
@@ -101,7 +101,7 @@ function mv(
 
 /** Helper to get metric date. */
 function mDate(
-  metrics: DongGuMetricsResponse['metrics'],
+  metrics: AdongGuMetricsResponse['metrics'],
   code: string,
 ): string | null | undefined {
   return metrics[code]?.date;
@@ -109,7 +109,7 @@ function mDate(
 
 /** Helper to get 25-구 average value for a code. */
 function ga(
-  metrics: DongGuMetricsResponse['metrics'],
+  metrics: AdongGuMetricsResponse['metrics'],
   code: string,
 ): number | null {
   return metrics[code]?.gu_avg ?? null;
@@ -117,7 +117,7 @@ function ga(
 
 /** Helper to get rank in Seoul (25구 중 N위). */
 function rank(
-  metrics: DongGuMetricsResponse['metrics'],
+  metrics: AdongGuMetricsResponse['metrics'],
   code: string,
 ): number | null {
   return metrics[code]?.rank_in_seoul ?? null;

@@ -3,7 +3,7 @@
 // KPI row (4-col): 지가변동률 + 주택수 (narrower)
 // 4-col chart grid: 월세추이(col-span-2) + 유형분포 + 산점도 + 보증금대역
 //
-// Data: DongDetail.real_estate + DongGuMetricsResponse
+// Data: AdongDetail.real_estate + AdongGuMetricsResponse
 
 import { Link } from 'react-router-dom';
 import {
@@ -28,7 +28,7 @@ import {
 import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
 import { CHART_COLORS } from '@/lib/colors';
-import type { DongDetail, DongGuMetricsResponse } from '@/types/api';
+import type { AdongDetail, AdongGuMetricsResponse } from '@/types/api';
 
 type DealTypeKey = 'villa' | 'dagagu' | 'danok' | 'officetel';
 
@@ -56,9 +56,9 @@ const TOOLTIP_STYLE = {
 const LABEL_STYLE = { color: 'var(--color-text)' };
 
 interface RealEstateSectionProps {
-  realEstate: DongDetail['real_estate'];
+  realEstate: AdongDetail['real_estate'];
   slug: string;
-  guMetrics?: DongGuMetricsResponse;
+  guMetrics?: AdongGuMetricsResponse;
 }
 
 /** Format ISO date "YYYY-MM-DD" → "YYYY년 기준". */
@@ -465,7 +465,7 @@ export default function RealEstateSection({ realEstate, slug, guMetrics }: RealE
       </div>
 
       <Link
-        to={`/dong/${slug}/explore`}
+        to={`/adong/${slug}/explore`}
         className="self-end text-[12px] text-link hover:underline"
       >
         자세한 시세 탐색 →

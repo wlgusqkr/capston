@@ -1,9 +1,9 @@
 // ReviewSection — SPEC 6.3 Section 5 (자취생 리뷰).
 import { Button } from '@/components/ui';
-import type { DongDetail } from '@/types/api';
+import type { AdongDetail } from '@/types/api';
 
 interface ReviewSectionProps {
-  reviews: DongDetail['reviews'];
+  reviews: AdongDetail['reviews'];
 }
 
 function Stars({ rating, ariaLabel }: { rating: number; ariaLabel?: string }) {

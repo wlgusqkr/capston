@@ -36,7 +36,7 @@ import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import CompareChip from '@/components/Map/CompareChip';
-import DongPanel from '@/components/Map/DongPanel';
+import AdongPanel from '@/components/Map/AdongPanel';
 import HeatMap from '@/components/Map/HeatMap';
 import KernelScoreLayer from '@/components/Map/KernelScoreLayer';
 import KernelScorePanel from '@/components/Map/KernelScorePanel';
@@ -56,8 +56,8 @@ import WeightSliders from '@/components/Map/WeightSliders';
 import PreferenceModal from '@/components/Onboarding/PreferenceModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAddFavorite } from '@/hooks/useFavorites';
-import { useDongMatchCounts } from '@/hooks/useDongMatchCounts';
-import { useDongScores } from '@/hooks/useDongs';
+import { useAdongMatchCounts } from '@/hooks/useAdongMatchCounts';
+import { useAdongScores } from '@/hooks/useAdongs';
 import { useKernelScore } from '@/hooks/useKernelScore';
 import { useStudioMatchFilters } from '@/hooks/useStudioMatchFilters';
 import { useTransactions } from '@/hooks/useTransactions';
@@ -65,7 +65,7 @@ import { putMyPreference } from '@/lib/api';
 import { getAuthErrorMessage } from '@/lib/authErrors';
 import { DEFAULT_WEIGHTS } from '@/types/api';
 import type {
-  DongScore,
+  AdongScore,
   ExplorePeriod,
   MatchFilters,
   RentDealPin,
@@ -158,7 +158,7 @@ export default function MainMap() {
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | null>(null);
 
-  // Studio Match 필터 (URL state 동기, debounce는 useDongMatchCounts 안에서).
+  // Studio Match 필터 (URL state 동기, debounce는 useAdongMatchCounts 안에서).
   const { filters: matchFilters, patch: patchMatchFilters, reset: resetMatchFilters } =
     useStudioMatchFilters();
 
@@ -260,18 +260,18 @@ export default function MainMap() {
   }, [searchParams, setSearchParams]);
 
   const { data: scoresData, isLoading: scoresLoading, isError: scoresError, error: scoresErr } =
-    useDongScores(weights);
+    useAdongScores(weights);
 
   // Phase 5: match-counts 항상 fetch (히트맵 둘 다 동시 사용 가능).
-  const matchQuery = useDongMatchCounts(matchFilters);
-  const matchCounts = matchQuery.data?.dongs ?? [];
+  const matchQuery = useAdongMatchCounts(matchFilters);
+  const matchCounts = matchQuery.data?.adongs ?? [];
   const totalMatched = matchQuery.data?.total_matched ?? null;
-  const matchedDongs = useMemo(() => {
+  const matchedAdongs = useMemo(() => {
     if (!matchQuery.data) return null;
-    return matchQuery.data.dongs.filter((d) => d.count > 0).length;
+    return matchQuery.data.adongs.filter((d) => d.count > 0).length;
   }, [matchQuery.data]);
 
-  /** Raw per-axis scores for the currently selected dong, looked up on the
+  /** Raw per-axis scores for the currently selected adong, looked up on the
    *  /scores list we already have. Avoids a second network call. */
   const selectedRawScores = useMemo(() => {
     if (!selectedSlug || !scoresData) return null;
@@ -294,8 +294,8 @@ export default function MainMap() {
 
   /* ---------- Click handlers (dispatch into the reducer) ------------------ */
 
-  const handleDongClick = (dong: DongScore) => {
-    dispatchPanel({ type: 'open_dong', slug: dong.slug });
+  const handleAdongClick = (adong: AdongScore) => {
+    dispatchPanel({ type: 'open_dong', slug: adong.slug });
   };
 
   const handleClosePanel = () => {
@@ -316,7 +316,7 @@ export default function MainMap() {
   };
 
   const handleOpenDetail = (slug: string) => {
-    navigate(`/dong/${slug}`);
+    navigate(`/adong/${slug}`);
   };
 
   const flashToast = (message: string) => {
@@ -359,7 +359,7 @@ export default function MainMap() {
 
   const handleOpenCompare = () => {
     if (compareSlugs.length === 0) return;
-    navigate(`/compare?dongs=${compareSlugs.join(',')}`);
+    navigate(`/compare?adongs=${compareSlugs.join(',')}`);
   };
 
   const handleFavorite = (slug: string) => {
@@ -401,7 +401,7 @@ export default function MainMap() {
           onReset={resetMatchFilters}
           modeActive={isMatchMode}
           totalMatched={totalMatched}
-          matchedDongs={matchedDongs}
+          matchedAdongs={matchedAdongs}
           isLoading={matchQuery.isLoading || matchQuery.isFetching}
           nearUniversityOnly={nearUniversityOnly}
           onNearUniversityToggle={setNearUniversityOnly}
@@ -462,8 +462,8 @@ export default function MainMap() {
         aria-label="서울 동네 히트맵"
       >
         <HeatMap
-          dongs={scoresData ?? []}
-          onDongClick={handleDongClick}
+          adongs={scoresData ?? []}
+          onAdongClick={handleAdongClick}
           heatmapVisible={heatmapVisible}
           mode={heatmapMode}
           activeLayer="composite"
@@ -529,7 +529,7 @@ export default function MainMap() {
         <ViewToggle />
 
         {/* ---- Right slide-in panels ---- */}
-        <DongPanel
+        <AdongPanel
           slug={selectedSlug}
           weights={weights}
           rawScores={selectedRawScores}
