@@ -16,9 +16,33 @@ import os
 import warnings
 import yaml
 from functools import lru_cache
-from dotenv import load_dotenv 
+from pathlib import Path
 
-load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))  
+APP_DIR = Path(__file__).resolve().parent
+BACKEND_DIR = APP_DIR.parent.parent
+
+
+def _load_env_file(path: Path) -> None:
+    """Django 밖에서 단독 실행할 때만 .env를 보조 로드한다."""
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        key = key.strip()
+        if key and key not in os.environ:
+            os.environ[key] = value.strip().strip("\"'")
+
+
+# Django 실행 시에는 settings/base.py가 backend/.env를 이미 읽는다.
+# 이 로더는 `python agent.py` 같은 단독 실행 경로를 위한 fallback이며 기존 env를 덮지 않는다.
+_load_env_file(BACKEND_DIR / ".env")
+_load_env_file(APP_DIR / ".env")
 
 from langchain_community.utilities import SQLDatabase
 from langchain_openai import ChatOpenAI
@@ -80,23 +104,29 @@ def get_join_hints(needed_tables: list[str]) -> str:
 
 
 # ── DB 연결 ───────────────────────────────────────────────────────────────────
-def _build_database_url() -> str:
-    database_url = os.environ.get("DATABASE_URL")
-    if database_url:
-        if "sslmode=" not in database_url:
-            database_url += "?sslmode=require"
+def _normalize_database_url(database_url: str) -> str:
+    """SQLAlchemy가 사용할 수 있도록 read-only DB URL scheme을 정규화한다."""
+    if database_url.startswith("postgresql+psycopg://"):
         return database_url
+    if database_url.startswith("postgresql://"):
+        return database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    if database_url.startswith("postgres://"):
+        return database_url.replace("postgres://", "postgresql+psycopg://", 1)
+    if database_url.startswith("postgis://"):
+        return database_url.replace("postgis://", "postgresql+psycopg://", 1)
+    return database_url
 
-    required = ["DB_USER", "DB_PASSWORD", "DB_HOST"]
-    missing = [name for name in required if not os.environ.get(name)]
-    if missing:
-        raise RuntimeError(f"누락된 환경변수: {', '.join(missing)}")
 
-    return (
-        f"postgresql+psycopg2://{os.environ['DB_USER']}:{os.environ['DB_PASSWORD']}"
-        f"@{os.environ['DB_HOST']}:{os.environ.get('DB_PORT', 5432)}"
-        f"/{os.environ.get('DB_NAME', 'dp_db')}"
-    )
+def _build_database_url() -> str:
+    # LLM이 생성한 SQL은 Django의 쓰기 가능한 DATABASE_URL로 실행하면 안 된다.
+    # DB 권한 레벨에서도 막기 위해 AI Agent 전용 read-only 계정을 강제한다.
+    database_url = os.environ.get("AI_AGENT_DATABASE_URL")
+    if not database_url:
+        raise RuntimeError(
+            "AI_AGENT_DATABASE_URL 환경변수가 필요합니다. "
+            "AI Agent는 쓰기 가능한 DATABASE_URL을 사용하지 않습니다."
+        )
+    return _normalize_database_url(database_url)
 
 
 def get_db() -> SQLDatabase:

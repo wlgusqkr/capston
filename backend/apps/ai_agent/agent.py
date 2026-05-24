@@ -19,9 +19,6 @@
 import json
 import time
 import argparse
-from dotenv import load_dotenv
-
-load_dotenv()
 
 from langchain_core.messages import SystemMessage, HumanMessage
 
