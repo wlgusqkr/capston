@@ -25,10 +25,11 @@ load_dotenv()
 
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from db import get_db, get_llm, get_schema_context, get_config, get_stage_model, get_store_codes_text
-from schemas import ClassificationOutput, SelectionOutput, InfoOutput
-from sql_runner import run_text_to_sql
-from prompts import CLASSIFICATION_PROMPT, SELECTION_PROMPT, INFO_ANSWER_PROMPT
+# Django가 apps.ai_agent 패키지로 import하므로 내부 모듈은 상대 import로 고정한다.
+from .db import get_db, get_llm, get_schema_context, get_config, get_stage_model, get_store_codes_text
+from .schemas import ClassificationOutput, SelectionOutput, InfoOutput
+from .sql_runner import run_text_to_sql
+from .prompts import CLASSIFICATION_PROMPT, SELECTION_PROMPT, INFO_ANSWER_PROMPT
 
 
 def run_agent(question: str) -> dict:

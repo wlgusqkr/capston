@@ -7,8 +7,17 @@ import json
 import time
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from db import get_db, get_llm, get_filtered_schema_context, get_join_hints, get_config, get_stage_model, get_store_codes_text
-from prompts import SQL_GENERATION_PROMPT
+# Django 앱 패키지 안에서 실행되므로 ai_agent 내부 의존성은 상대 import를 사용한다.
+from .db import (
+    get_config,
+    get_db,
+    get_filtered_schema_context,
+    get_join_hints,
+    get_llm,
+    get_stage_model,
+    get_store_codes_text,
+)
+from .prompts import SQL_GENERATION_PROMPT
 
 
 def run_text_to_sql(
