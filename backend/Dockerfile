@@ -22,7 +22,10 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["gunicorn", "config.wsgi:application", \
+# opentelemetry-instrument wraps gunicorn for Tempo trace export when OTLP
+# environment variables are provided. Without them, app startup still works.
+CMD ["opentelemetry-instrument", \
+     "gunicorn", "config.wsgi:application", \
      "--bind", "0.0.0.0:8000", \
      "--workers", "3", \
      "--access-logfile", "-", \
