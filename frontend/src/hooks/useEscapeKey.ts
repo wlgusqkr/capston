@@ -1,6 +1,6 @@
 // Shared ESC-to-close hook.
 //
-// Replaces 4+ duplicated `keydown` listeners across Modal, DongPanel,
+// Replaces 4+ duplicated `keydown` listeners across Modal, AdongPanel,
 // TransactionPanel, KernelScorePanel (and R-1 CriteriaPanel later). All five
 // previously rolled their own `useEffect → window.addEventListener('keydown')
 // → if (e.key === 'Escape') close()` pattern.

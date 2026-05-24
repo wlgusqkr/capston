@@ -3,7 +3,7 @@
 사용 예:
     from _django import setup
     setup()
-    from apps.neighborhoods.models import Dong  # noqa: E402
+    from apps.public_data.regions.models import Adong  # noqa: E402
 """
 
 from __future__ import annotations

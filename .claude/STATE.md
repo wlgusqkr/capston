@@ -1,12 +1,12 @@
 # 자취맵 -- 프로젝트 상태
 
-마지막 업데이트: 2026-05-14
+마지막 업데이트: 2026-05-20
 
 ## Project Status
 
-- **단계**: Phase 3 완료 + QA 라운드 1 (위젯 컴팩트화, 데이터 출처 정리, 오분류 문서화)
-- **활성 모드**: 프론트엔드 + 디자인 집중. 백엔드/데이터는 휴면.
-- **데이터**: 426개 행정동 실데이터 적재 완료 (RDS ETL).
+- **단계**: 프론트엔드 Phase 3 완료 + QA 라운드 1 그대로. 백엔드 정합 후속 2026-05-20 적용 — Dong/NearestSubway 레거시 모델·테이블 폐기 상태 유지, `/api/adongs/*` 기준 응답과 `rent_deal.adong_code` 행정동 집계 활성화.
+- **활성 모드**: 백엔드 회귀 fix 1회 적용 완료. 새 백엔드/API/DB 변경은 사용자 보고 후 진행. 남은 후속은 scoring/update 레거시 재작성과 의심 location 정책 결정.
+- **데이터**: 426개 행정동 + 36 테이블 실데이터 적재 완료. `rent_deal` 7,442,630건 중 `adong_code` 5,752,729건 매핑, 1,689,901건 NULL.
 - **CSS 방식**: Tailwind CSS v4 (globals.css 단일 파일). 컴포넌트별 CSS 파일 없음.
 
 ## Design System
@@ -229,7 +229,26 @@ Badge 타이포 정책: sm/md 모두 `text-caption`(14px, Pretendard, 0 tracking
 
 ## Backend (휴면)
 
-Django + DRF + GeoDjango. 9개 앱, 28개 모델, 24개 API 엔드포인트.
+Django + DRF + GeoDjango. 15개 앱(web 1 + service 4 + public_data 10), 39개 모델, 24개+ API 엔드포인트.
+
+### Backend 정합 후속 (2026-05-20)
+
+- **rent_deal 행정동 매핑 활성화**: `rent_deal.adong_code` FK 추가 상태에서 `rent_deal_ldong_adong_map` 기준표를 도입. 법정동 467개 중 단일 행정동 매핑 334개, 다중 행정동 133개는 `adong_code=NULL`로 보존.
+- **기존 거래 추가 매핑**: 기준표로 `rent_deal.adong_code IS NULL` 중 387,572건을 추가 매핑. 최종 `rent_deal` 7,442,630건 중 mapped 5,752,729 / NULL 1,689,901. FK violation 0.
+- **API 정리**: 기존 `/api/dongs/*`, `/dong/:slug` 표면을 `/api/adongs/*`, `/adong/:slug` 기준으로 정리. 프론트 내부도 Adong 타입/훅/라우트 기준으로 정리하되 응답 dict 구조는 가능한 보존.
+- **주의**: `scripts/scoring/compute_scores.py`와 `scripts/update/*`는 아직 Dong 기반 레거시가 남아 있어 재작성 전 실행 금지. `compute_scores.py`에는 legacy 경고 추가.
+
+### Backend 정합 완료 (2026-05-19)
+
+DP_DB orchestrator 측에서 단계 1~7G 누적 백엔드 정합 작업 완료. 위젯·API 응답 schema는 그대로 유지(frontend types/api.ts 변동 0, SHA256 동일), DB 스키마는 schema.dbml 1:1 정합으로 정리.
+
+- **apps 폴더 3계층 분리**: `apps.users` → `apps.web.users`, neighborhoods·preference·amenities → `apps.service.*`, regions·metrics·parks·transit·realestate → `apps.public_data.*`. 9개 `AppConfig.name` 갱신, 9개 `label` 미변경(db_table 안정 lock).
+- **신규 도메인 8개 앱**: populations / scoring / store / subway / bus / univ / library / amenity. parks → park rename. RentDeal → rent_deal 이동. Store + 2 Category → store 이동. transit/realestate 빈 폴더 삭제. 공간 컬럼명 통일(geom → boundary/location). amenity 17 카테고리 + AmenityAdong/Ldong N:M join 신설. scoring 4 모델(CurrentSeoul/Gu/Ldong/Adong) 신설. subway 2 모델(NearestSubwayAdong/Ldong) 신설. univ + library + library_hours 신설.
+- **schema.dbml 1:1 정합**: rent_deal housing_type 5종 통일(연립다세대) + contract_date 컬럼명 + id 19자. amenity AmenityAdong join. subway/bus_stop raw SQL geom→location. scoring `compute_scores.py` rent metric `ldong__gu__name` GROUP BY + amenity AmenityAdong N:M join + transit NearestSubwayAdong scope. docker fresh migrate + ETL 22 실행 → 36 테이블 +0 diff 적재.
+- **Dong / NearestSubway legacy 완전 제거**: SLGI 측 Dong 모델 + dong 테이블 + NearestSubway 모델 + nearest_subway 테이블 모두 폐기 후 **Adong + current_score + Gu 합성으로 14개 endpoint 응답 schema 보존**. Favorite F1-A FK 치환(neighborhoods.Dong → regions.Adong). 14/14 endpoint live 검증 PASS. **frontend types/api.ts 변동 0** (SHA256 동일).
+- **frontend tsc + build 0 error**: capston ↔ SLGI 응답 schema type-level 정합 유지.
+
+기존 대시보드 §4.4~§4.5 endpoint(아래 subsection)는 위 작업 결과 dong 참조 부분이 Adong + current_score 합성으로 내부 치환되었으며, 외부 응답 schema는 동일.
 
 ### 대시보드 §4.5 파생 지표 엔드포인트 (2026-05-13)
 - `GET /api/dongs/<slug>/derived-indices` — 자취촌 지수 + 계약 활발도. 426동 통째 계산 후 dict 캐시.
@@ -243,13 +262,13 @@ Django + DRF + GeoDjango. 9개 앱, 28개 모델, 24개 API 엔드포인트.
   - 응답시간: **cold 1.9~2.2s** (RentDeal 3개 conditional Count + AdongPopulation DISTINCT ON, 단일 요청만 계산), **warm 7~30ms** (Redis dict 조회).
   - 라이브 검증: 신림동 score 63.78 rank 21/426 (백분위 95) — 비아파트 82%, 소형 67%로 자취촌 명확. 역삼1동 score 58.59 rank 50 (오피스텔 많아 비아파트 82%, 소형 38%). 합정동 score 55.81 rank 66 (비아파트 95%). 필동 score 45.48 rank 152 (거래량 적어 monthly_norm=0.04).
   - view 파일: `apps/realestate/views.py` (`DongDerivedIndicesView` + `_compute_all_dongs_derived` 함수). URL은 `apps/neighborhoods/urls.py`의 dong-scoped 패턴에 추가.
-  - 주의: RentDeal.dong은 Dong.id(int) FK이지만 AdongPopulation.dong은 `to_field='code'`라 dong_id에 code 문자열이 들어감. `_compute_all_dongs_derived`에서 `code_to_dong` 매핑으로 정렬.
+  - 주의: 단계 7G 정합 이후 RentDeal.adong / AdongPopulation.adong 모두 Adong.code(문자열) 기준으로 통일. `_compute_all_dongs_derived`에서 `code_to_adong` 매핑으로 정렬. (legacy Dong.id(int) FK 경로는 완전 제거됨.)
   - 스키마 변경 없음. `python manage.py check` / `makemigrations --dry-run` PASS.
 
 ### 대시보드 §4.4 섹션 C / §4.5 추가 엔드포인트 (2026-05-13)
 - `GET /api/dongs/<slug>/transit-congestion` -- 시간대 혼잡도 + 동 성격 추정. 캐시 5분 (`dong_transit_congestion:v1:<slug>`). 스키마 변경 없음.
-  - subway: `NearestSubway` 사전계산된 TOP 3 역의 `SubwayCongestion` 평균. day_type=`평일/토요일/일요일` x hour 0~23 배열. `direction`(상선/하선/내선/외선)과 `express_yn`(일반/급행)은 전부 합산 평균. `휴일` day_type 행은 `일요일` 버킷에 가중평균(행 수 n 기준)으로 합쳐서 일요일 평균 계산. 30분 단위 raw 행은 같은 hour로 추가 평균.
-  - bus: `BusStop.dong` FK 매핑된 정류장 전체의 `BusCongestion`. **주의: BusStop.dong은 `to_field='code'`라 `dong_id`(컬럼)에 code 값이 들어감. 반드시 `BusStop.objects.filter(dong__id=dong.id)` 조인** (`dong_id=dong.id`로 필터하면 0건). 평일/주말은 `EXTRACT(DOW FROM date) IN (0,6)` 분기. 최근 60일 윈도우 (현재 RDS 적재 31일치라 사실상 전체). `congestion IS NOT NULL` 필터.
+  - subway: `NearestSubwayAdong` 사전계산된 TOP 3 역의 `SubwayCongestion` 평균. day_type=`평일/토요일/일요일` x hour 0~23 배열. `direction`(상선/하선/내선/외선)과 `express_yn`(일반/급행)은 전부 합산 평균. `휴일` day_type 행은 `일요일` 버킷에 가중평균(행 수 n 기준)으로 합쳐서 일요일 평균 계산. 30분 단위 raw 행은 같은 hour로 추가 평균. (legacy NearestSubway 모델은 단계 7G에서 폐기됨.)
+  - bus: `BusStop.adong` 매핑된 정류장 전체의 `BusCongestion`. Adong.code 기준 조인으로 통일 (legacy `BusStop.dong` to_field='code' 이중 경로 제거됨). 평일/주말은 `EXTRACT(DOW FROM date) IN (0,6)` 분기. 최근 60일 윈도우 (현재 RDS 적재 31일치라 사실상 전체). `congestion IS NOT NULL` 필터.
   - personality: subway 우선(데이터 있으면), 없으면 bus. 평일 morning_peak(7~9)/midday(11~14)/evening_peak(18~20) + weekend 평균. 우선순위: 1) `weekend/평일 > 1.2` → 유동인구 많음, 2) `midday/morning > 0.8` → 상업·업무 중심, 3) `morning/midday > 1.5 && evening/midday > 1.3` → 주거 중심. 모두 빗나가면 label=null.
   - hour 데이터 없는 슬롯은 `{hour: H, congestion: null}`. 24슬롯 길이 보장.
   - 응답시간: cold 400~440ms (subway 23ms + bus 35ms 집계, 나머지는 Django 오버헤드), warm 170~200ms.
@@ -326,6 +345,7 @@ PostgreSQL `DISTINCT ON (metric_code) ORDER BY metric_code, date DESC`로 35종 
 ## Data (휴면)
 
 426개 행정동, 740만 거래, 53만 상점, 800만 버스혼잡 데이터 적재 완료.
+current_* 4 + nearest_subway_adong/ldong + amenity_adong/ldong + library/library_hours + univ 추가 적재 (2026-05-19, 36 테이블 +0 diff).
 
 ## QA Notes
 
@@ -372,6 +392,13 @@ PostgreSQL `DISTINCT ON (metric_code) ORDER BY metric_code, date DESC`로 35종 
 - Phase 3 ReviewDashboardSection Stars text-secondary (#4C4C4C 회색): Detail/ReviewSection과 동일 패턴 의도적 재사용. SPEC 1.3 '알록달록' 톤과 다소 충돌 -- amber/warning 전환 시 두 군데 동시 변경 필요.
 - Phase 3 PopularitySection '비슷한 동' 카드: absolute-button + 내부 Link(stopPropagation) sibling 구조로 a11y 유효. outline-offset이 음수(-2px)라 outline이 카드 안쪽에 그려짐 (의도된 디자인이면 유지).
 - Phase 3 useCountup이 KpiCard와 사실상 같은 로직 (easeOutCubic, 1.2s default) -- hooks/useCountup.ts로 추출 권장.
+- SLGI 백엔드 schema 정합 + Dong 완전 폐기 후 정당 예외 5건 → 2건 축소(④ NearestSubwayAdong line 부분 손실 + ⑤ score_rent NULL 70건, DP_DB DECISIONS T-3/U-8 cross-ref). 둘 다 frontend 응답에서는 폴백/last-wins 처리로 보호.
+
+### Backend 알려진 이슈 (2026-05-19, 단계 8-B 후속)
+- **score_rent NULL 70건** — seoul 1 + ldong 67 + adong 2. 절삭평균 상하 5% 컷에서 거래 0 단위(60) + 거래 2건 케이스(7) + adong 단위(2) 산출 불가. 현재 frontend 응답 시 0 폴백 (DP_DB DECISIONS O-1 / T-3⑤ / U-8 cross-ref). 단계 8-B에서 fallback 산식 결정.
+- **NearestSubwayAdong line 부분 손실** — `nearest_subway_adong`은 (adong, station_name) 단위로 dedup하여 station_name 동일 다중 line(환승역) 케이스에서 dict last-wins로 1건 line만 노출. capston frontend `nearest_stations.line` 응답 dict key는 보존되나 환승 정보 정확도 손실. `nearest_subway_adong.station_id` 컬럼 추가 + 산식 재설계로 단계 8-B에서 해소 (DP_DB DECISIONS T-3④ / U-8 cross-ref).
+- **scripts/scoring / scripts/update 레거시** — `scripts/scoring/compute_scores.py`는 아직 삭제된 Dong score 컬럼과 gu-level rent fallback을 참조하므로 실행 금지. `scripts/update/*`도 Dong/NearestSubway 기반 레거시가 남아 있어 일일 업데이트 재개 전 Adong/CurrentAdong/rent_deal.adong_code 기준으로 재작성 필요.
+- **rent_deal location 의심 행 후속 정책** — 단독/다가구 location은 NULL 처리 완료. `rent_deal.location == ldong.location` 의심 행은 별도 검토 후 추가 NULL/매핑 정책 결정 필요.
 
 ### Phase 4 QA (2026-05-13 — metric 35종 데이터 확장 + 새 위젯 7개)
 - Verdict: **PASS WITH NOTES**. 블로커 없음.
@@ -387,3 +414,7 @@ PostgreSQL `DISTINCT ON (metric_code) ORDER BY metric_code, date DESC`로 35종 
   - greenRatio 계산 `AREA_GREEN / (AREA_GREEN + AREA_URBAN)` — 도시면적이 총면적을 포함하는지 별개인지 메트릭 카탈로그 정의 미확인. 결과값 자체는 합리적 범위로 보이나 정의 검증 권장.
   - GRDP 단위 변환: `백만원 → 조원(÷1,000,000)` 표기. `--unit` 응답 필드를 무시하고 클라이언트가 단위 결정 — 단위 변경 시 양쪽 동기화 필요.
   - vehiclePerCapita Card padding이 `md`, B5/B6 RealEstate KPI도 `padding="md"`. 기존 Phase 2 MetricCard/KpiCard는 `padding="lg"` 또는 inline 패딩(p-4). 의도된 컴팩트 KPI면 OK이나 시각적으로 살짝 얕음.
+
+## Open Questions / Decisions Pending
+
+- EC2 미적재 도메인 적재 + DB 회귀 fix + 일일 업데이트 코드 = DP_DB 측 단계 8에서 진행 (작업 무대 = EC2 `slgi-db` 컨테이너). SLGI 자체 코드 재진입은 단계 8-C에서. 사용자 명시 명령 필요(DP_DB DECISIONS V-2 lock).

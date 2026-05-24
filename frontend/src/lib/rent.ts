@@ -7,7 +7,7 @@
 //   쉬운 질문을 차단하기 위해 환산값을 UI 전반에 노출한다.
 //
 // Single source of truth:
-//   백엔드 `apps.realestate.utils.convert_to_monthly` 와 동일 계수.
+//   백엔드 `apps.public_data.realestate.utils.convert_to_monthly` 와 동일 계수.
 //   변경 시 백엔드/프런트 동시 수정 필요. SPEC §11.2 와 정합.
 //   (서울 평균 전환률 ≈ 6%/년 = 0.005/월)
 

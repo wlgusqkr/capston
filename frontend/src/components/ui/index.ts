@@ -6,7 +6,7 @@
  *   import type { ButtonVariant, BadgeVariant } from '@/components/ui';
  *
  * Add new primitives here as they are created. Feature components
- * (Map, DongPanel, etc.) live under their own folders, NOT here.
+ * (Map, AdongPanel, etc.) live under their own folders, NOT here.
  */
 
 export { default as Button } from './Button';

@@ -278,7 +278,7 @@ function FavoritesSection() {
 
   const handleCompareAll = () => {
     if (compareSlugs.length === 0) return;
-    navigate(`/compare?dongs=${compareSlugs.join(',')}`);
+    navigate(`/compare?adongs=${compareSlugs.join(',')}`);
   };
 
   return (
@@ -338,7 +338,7 @@ function FavoritesSection() {
             <FavoriteRow
               key={fav.slug}
               item={fav}
-              onOpen={() => navigate(`/dong/${fav.slug}`)}
+              onOpen={() => navigate(`/adong/${fav.slug}`)}
               onConfirmRemove={() => removeMut.mutate(fav.slug)}
               removing={removeMut.isPending && removeMut.variables === fav.slug}
             />

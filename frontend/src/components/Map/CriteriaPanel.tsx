@@ -5,7 +5,7 @@
 //   expanded   → 280×360 floating panel with WeightSliders + FilterControls
 //                + a (×) close button. ESC also collapses.
 //
-// Mutual exclusion: when ANY right-side panel opens (DongPanel etc.),
+// Mutual exclusion: when ANY right-side panel opens (AdongPanel etc.),
 // the parent reducer flips criteriaOpen to false. CriteriaPanel itself
 // only exposes a "toggle" callback — it doesn't know about other panels.
 

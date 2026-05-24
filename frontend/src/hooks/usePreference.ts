@@ -22,7 +22,7 @@ import type {
  *  Only runs when `enabled` is true — typically wired to the modal's open
  *  state so we don't pre-fetch pairs before the user clicks "자동 추천".
  *  staleTime is short (30s) so each onboarding session asks the backend
- *  freshly; the dummy 5-dong dataset returns deterministic pairs anyway.
+ *  freshly; the dummy 5-adong dataset returns deterministic pairs anyway.
  */
 export function usePreferencePairs(
   count: number = 5,

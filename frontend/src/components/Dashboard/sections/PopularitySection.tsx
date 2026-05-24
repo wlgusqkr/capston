@@ -4,7 +4,7 @@
 //   Row 1: 종합 점수 TOP 10 | 자취촌 지수 TOP 10 (placeholder)
 //   Row 2: 학교별 자취 TOP 5 (empty state) | 인근 비슷한 동
 //
-// Data: DongScore[] + DongDetail.similar_dongs (no new API)
+// Data: AdongScore[] + AdongDetail.similar_dongs (no new API)
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -12,14 +12,14 @@ import { Link } from 'react-router-dom';
 import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
 import Select from '@/components/ui/Select';
-import type { DongDetail, DongScore } from '@/types/api';
+import type { AdongDetail, AdongScore } from '@/types/api';
 import { KERNEL_SCHOOL_OPTIONS } from '@/types/api';
 
 interface PopularitySectionProps {
-  allDongs: DongScore[] | undefined;
-  similarDongs: DongDetail['similar_dongs'] | undefined;
+  allAdongs: AdongScore[] | undefined;
+  similarAdongs: AdongDetail['similar_dongs'] | undefined;
   currentSlug: string;
-  onDongSelect: (slug: string) => void;
+  onAdongSelect: (slug: string) => void;
 }
 
 /** Map a 0-100 score to a Badge variant. */
@@ -30,15 +30,15 @@ function scoreVariant(score: number): 'success' | 'warning' | 'danger' {
 }
 
 export default function PopularitySection({
-  allDongs,
-  similarDongs,
+  allAdongs,
+  similarAdongs,
   currentSlug,
-  onDongSelect,
+  onAdongSelect,
 }: PopularitySectionProps) {
   const [selectedSchool, setSelectedSchool] = useState<string>(KERNEL_SCHOOL_OPTIONS[0]);
 
-  const top10 = (allDongs ?? []).slice(0, 10);
-  const similarTop3 = (similarDongs ?? []).slice(0, 3);
+  const top10 = (allAdongs ?? []).slice(0, 10);
+  const similarTop3 = (similarAdongs ?? []).slice(0, 3);
 
   return (
     <div className="grid grid-cols-4 gap-2">
@@ -55,7 +55,7 @@ export default function PopularitySection({
                 <li key={d.slug}>
                   <button
                     type="button"
-                    onClick={() => onDongSelect(d.slug)}
+                    onClick={() => onAdongSelect(d.slug)}
                     className={`w-full flex items-center gap-2 px-1.5 py-1 rounded-card text-left transition-colors duration-[120ms] ease-out hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2 ${
                       isCurrent ? 'bg-primary-soft' : 'bg-transparent'
                     }`}
@@ -148,7 +148,7 @@ export default function PopularitySection({
               >
                 <button
                   type="button"
-                  onClick={() => onDongSelect(d.slug)}
+                  onClick={() => onAdongSelect(d.slug)}
                   className="absolute inset-0 w-full h-full rounded-card focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-[-2px]"
                   aria-label={`${d.name} 대시보드로 이동`}
                 />
@@ -167,7 +167,7 @@ export default function PopularitySection({
                 </div>
                 <div className="flex items-center justify-end">
                   <Link
-                    to={`/compare?dongs=${encodeURIComponent(currentSlug)},${encodeURIComponent(d.slug)}`}
+                    to={`/compare?adongs=${encodeURIComponent(currentSlug)},${encodeURIComponent(d.slug)}`}
                     className="relative z-10 text-[11px] text-link hover:underline focus-visible:outline-2 focus-visible:outline-focus-ring focus-visible:outline-offset-2 rounded-xs"
                     onClick={(e) => e.stopPropagation()}
                   >

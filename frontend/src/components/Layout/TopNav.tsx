@@ -10,13 +10,13 @@ import { usePageTitleValue } from '@/contexts/PageTitleContext';
 import iconSvg from '@/assets/icon.svg';
 
 function dongSlugFromPath(pathname: string): string | undefined {
-  const match = pathname.match(/^\/dong\/([^/]+)/);
+  const match = pathname.match(/^\/adong\/([^/]+)/);
   return match?.[1];
 }
 
 type AuthVariant = 'auth-login' | 'auth-register' | 'default';
 
-/** Contextual title shown after the nav tabs (e.g. "동네 비교", dong name). */
+/** Contextual title shown after the nav tabs (e.g. "동네 비교", adong name). */
 type ContextualTitle =
   | { kind: 'none' }
   | { kind: 'static'; label: string }
@@ -39,12 +39,12 @@ function specForPath(pathname: string): RouteSpec {
     return { showNav: true, contextualTitle: { kind: 'static', label: '동네 비교' }, authVariant: 'default' };
   if (pathname === '/mypage')
     return { showNav: true, contextualTitle: { kind: 'mypage' }, authVariant: 'default' };
-  if (pathname.startsWith('/dong/'))
+  if (pathname.startsWith('/adong/'))
     return { showNav: true, contextualTitle: { kind: 'dongDetail' }, authVariant: 'default' };
   return { showNav: true, contextualTitle: { kind: 'none' }, authVariant: 'default' };
 }
 
-/** Renders the contextual title text (dong name, page label, etc.). */
+/** Renders the contextual title text (adong name, page label, etc.). */
 function ContextualTitleText({
   spec,
   publishedTitle,

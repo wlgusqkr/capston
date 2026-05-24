@@ -1,5 +1,13 @@
 # 변경 이력
 
+## 2026-05-20
+- rent_deal 행정동 매핑 회귀 fix — `rent_deal.adong_code` 기준 집계를 활성화하고, `rent_deal_ldong_adong_map` 기준표(467개 법정동, 단일 매핑 334개/NULL 133개)로 기존 NULL 거래 387,572건을 추가 매핑. API 경로는 `/api/adongs/*` 기준으로 정리.
+
+## 2026-05-19
+- 백엔드 모델·DB 스키마 1:1 정합 정비 완료 — apps 폴더 web/service/public_data 3계층 분리, 자취촌 도메인 신규 5개 앱(scoring/subway/bus/univ/library) 추가, Dong/NearestSubway 레거시 모델·테이블 폐기 후 행정동(Adong)+동별 점수 합성으로 14개 API 응답 schema 가능한 유지. 데이터 36개 테이블 모두 적재.
+- 동별 종합 점수 4종(seoul / gu / ldong / adong) 산출 체계 정비 — 부동산(환산월세 절삭평균) + 편의시설(생활·의료·공원 가중합) + 교통(지하철 1km anchor + 버스 면적당 밀도) 3개 점수를 0~100 범위로 정규화하여 합성, 14개 API 응답에 일관 노출.
+- 단계 8-B 후속 작업 예정 — score_rent NULL 70건(거래 부족·절삭평균 산출불가, 현재 0 폴백) fallback 산식 결정 / 환승역 nearest_subway 노선 정보 부분 손실(station_id 컬럼 추가 + 산식 재설계) / rent_deal 행정동 단위 정확 집계(법정동→행정동 매핑 옵션 결정) 3건 백엔드 회귀 처리 필요. 학교별 ranking·도서관 API·미니맵 per-layer scores·AI 채팅 백엔드 연결도 미구현 잔존.
+
 ## 2026-05-18
 - OpenTelemetry 분산 추적 추가 — Tempo로 trace export. 백엔드 응답이 느릴 때 Grafana에서 해당 요청의 SQL/Redis/HTTP 호출까지 한 화면에서 추적 가능
 

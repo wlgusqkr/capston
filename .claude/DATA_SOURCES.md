@@ -1,27 +1,29 @@
 # 자취맵 대시보드 — 데이터 소스 문서
 
-마지막 업데이트: 2026-05-14
+마지막 업데이트: 2026-05-20
 
 이 문서는 대시보드(`/dashboard`)의 모든 위젯이 사용하는 데이터 소스, 계산 방법, 데이터 단위 및 기간을 정리한다.
 목적: (1) 원본 테이블 대조를 통한 데이터 정확성 검증, (2) 계산 로직 이해, (3) 파생 데이터의 잠재적 문제 식별.
+본 문서는 2026-05-20 백엔드 정합 후속 기준. Dong 레거시 모델·테이블은 폐기되고 Adong + current_* score + NearestSubwayAdong/Ldong 합성으로 응답 schema가 보존됨. rent_deal 행정동 집계는 `rent_deal.adong_code`와 `rent_deal_ldong_adong_map` 기준표를 사용함.
 
 ---
 
 ## 목차
 
 1. [헤더](#헤더)
-2. [KPI 행 (Row 1)](#kpi-행-row-1)
-3. [KPI 행 (Row 2)](#kpi-행-row-2)
-4. [섹션 A. 부동산 시세](#섹션-a-부동산-시세)
-5. [섹션 B. 편의시설](#섹션-b-편의시설)
-6. [섹션 C. 교통](#섹션-c-교통)
-7. [섹션 D. 인구·사회](#섹션-d-인구사회)
-8. [섹션 E. 안전·환경·경제](#섹션-e-안전환경경제)
-9. [섹션 F. 인기 차트](#섹션-f-인기-차트)
-10. [섹션 G. 자취생 리뷰](#섹션-g-자취생-리뷰)
-11. [gu_metric 메트릭 카탈로그](#gu_metric-메트릭-카탈로그)
-12. [API 엔드포인트 요약](#api-엔드포인트-요약)
-13. [알려진 문제 및 검증 포인트](#알려진-문제-및-검증-포인트)
+2. [종합 점수 산출 (current_* 4 테이블 — 단계 2K 신설)](#종합-점수-산출-current_-4-테이블--단계-2k-신설)
+3. [KPI 행 (Row 1)](#kpi-행-row-1)
+4. [KPI 행 (Row 2)](#kpi-행-row-2)
+5. [섹션 A. 부동산 시세](#섹션-a-부동산-시세)
+6. [섹션 B. 편의시설](#섹션-b-편의시설)
+7. [섹션 C. 교통](#섹션-c-교통)
+8. [섹션 D. 인구·사회](#섹션-d-인구사회)
+9. [섹션 E. 안전·환경·경제](#섹션-e-안전환경경제)
+10. [섹션 F. 인기 차트](#섹션-f-인기-차트)
+11. [섹션 G. 자취생 리뷰](#섹션-g-자취생-리뷰)
+12. [gu_metric 메트릭 카탈로그](#gu_metric-메트릭-카탈로그)
+13. [API 엔드포인트 요약](#api-엔드포인트-요약)
+14. [알려진 문제 및 검증 포인트](#알려진-문제-및-검증-포인트)
 
 ---
 
@@ -29,8 +31,36 @@
 
 | 위젯 | 데이터 소스 | API/Hook | 계산 방법 | 단위 | 데이터 기간 |
 |---|---|---|---|---|---|
-| **동 셀렉터** | `dong` 테이블 (426개 행정동) | `useDongScores` -> `DongScore[]` | 없음 (목록 조회) | — | 상시 |
+| **동 셀렉터** | `adong` 테이블 (426개 행정동) | `useDongScores` -> `DongScore[]` | 없음 (목록 조회) | — | 상시 |
 | **한 줄 요약** | `adong` + `adong_population` 테이블 | `useDongSummary` | "OO구 OO동 · 면적 X㎢ · 인구 N명" 포맷 | ㎢, 명 | 인구: 월간 갱신 |
+
+---
+
+## 종합 점수 산출 (current_* 4 테이블 — 단계 2K 신설)
+
+`current_seoul` / `current_gu` / `current_ldong` / `current_adong` 4 테이블에 동별·구별·시·법정동·행정동 단위 점수 3종(rent / amenity / transit)을 0~100 범위로 저장. `useDongScores` / `useDongSummary` 응답의 composite score는 본 테이블 기반.
+
+### score_rent (DECISIONS O-1)
+
+| 항목 | 내용 |
+|---|---|
+| **DB 테이블** | `rent_deal` 최근 1년 → `current_*.score_rent` |
+| **계산 공식** | `(monthly_rent + deposit * 0.005) / area_m2` 산출 후 상하 5% 절삭평균. 정규화 `clamp(0, 100, (p95 - x) / (p95 - mn) * 100)` (단위별 동적 anchor) |
+| **NULL 정책** | seoul 단일 단위 NULL + 거래 0 단위(60) + 거래 2건 케이스(7) + adong 단위(2) = 총 70건 NULL. 프론트 응답 시 0 폴백 (DP_DB DECISIONS 1A). |
+
+### score_amenity (DECISIONS O-2)
+
+| 항목 | 내용 |
+|---|---|
+| **DB 테이블** | `amenity` + `amenity_adong/ldong` + `park` → `current_*.score_amenity` |
+| **계산 공식** | 생활(0.609) + 의료(0.108) + 공원(0.283) 가중합. 생활·의료 = `log1p(density)` 산출 후 p95 anchor 정규화. 공원 = 면적비 자연 0~1. 한국주거학회 2025 활용한 가중치. |
+
+### score_transit (DECISIONS O-3)
+
+| 항목 | 내용 |
+|---|---|
+| **DB 테이블** | `nearest_subway_adong/ldong` + `bus_stop` → `current_*.score_transit` |
+| **계산 공식** | 지하철 1km absolute anchor `(1000 - d_m) / 1000` 가중 0.6 + 버스 `log1p(density)` p95 anchor 가중 0.4. |
 
 ---
 
@@ -87,7 +117,7 @@
 | 항목 | 내용 |
 |---|---|
 | **DB 테이블** | `rent_deal` (최근 365일) |
-| **API 엔드포인트** | `GET /api/dongs/:slug/derived-indices` |
+| **API 엔드포인트** | `GET /api/adongs/:slug/derived-indices` |
 | **Hook** | `useDongDerivedIndices` (staleTime 30분) |
 | **계산 공식** | `(0.5 * 비아파트 비율 + 0.3 * 소형면적 비율 + 0.2 * 월세 계약 건수 정규화) * 100` |
 | **단위** | 점 (0~100) |
@@ -116,7 +146,7 @@
 | 항목 | 내용 |
 |---|---|
 | **DB 테이블** | `rent_deal` + `adong_population` |
-| **API 엔드포인트** | `GET /api/dongs/:slug/derived-indices` (동일 endpoint) |
+| **API 엔드포인트** | `GET /api/adongs/:slug/derived-indices` (동일 endpoint) |
 | **계산 공식** | `12개월 전체 계약 건수 / AdongPopulation 최신 인구 * 1000` |
 | **단위** | 회/천명 |
 | **예외 처리** | 인구 0 또는 null이면 score, rank, percentile 모두 null -> "데이터 부족" 표시 |
@@ -131,8 +161,8 @@
 | 주택 유형 분포 | `rent_deal` | `DongDetail.real_estate.type_avg` | housing_type별 최근 6개월 거래 건수 | 건 | 최근 6개월 |
 | 면적 x 환산월세 산점도 | `rent_deal` | `DongDetail.real_estate.scatter` | 건별 area_m2 vs converted_rent | ㎡, 만원 | 최근 6개월 |
 | 보증금 대역별 평균 월세 | `rent_deal` | `DongDetail.real_estate.deposit_band_avg` | 5개 구간별 평균 월세 | 만원 | 최근 6개월 |
-| 지가 변동률 | `gu_metric` LAND_PRICE_CHANGE_RATE | `GET /api/dongs/:slug/gu-metrics` | 구 원본 + 25구 평균 비교 | % | 월간 (~2026-03) |
-| 주택 수 | `gu_metric` HOUSING_COUNT | `GET /api/dongs/:slug/gu-metrics` | 구 원본 + 25구 평균 비교 | 호 | 연간 (~2024-01) |
+| 지가 변동률 | `gu_metric` LAND_PRICE_CHANGE_RATE | `GET /api/adongs/:slug/gu-metrics` | 구 원본 + 25구 평균 비교 | % | 월간 (~2026-03) |
+| 주택 수 | `gu_metric` HOUSING_COUNT | `GET /api/adongs/:slug/gu-metrics` | 구 원본 + 25구 평균 비교 | 호 | 연간 (~2024-01) |
 
 **보증금 구간:** 0~500만 / 500~1000만 / 1000~2000만 / 2000~3000만 / 3000만+
 
@@ -144,8 +174,10 @@
 |---|---|---|---|---|
 | 카테고리별 편의시설 | `store` + `business_category` + `ksci_category` | `DongDetail.amenities` | 8개 카테고리별 점포 수 | 편의점/카페/마트/음식점/병원약국/세탁소/올리브영/스터디카페 |
 | 필수시설 충분도 | 위와 동일 | `DongDetail.amenities` | 인구 1만명당 -> 서울 백분위 | <50 부족 / 50~75 보통 / >=75 충분 |
-| 대형 공원 | `park` + `park_adong` | `GET /api/dongs/:slug/parks` | 면적 desc, ST_DistanceSphere 거리 | 캐시 5분, 프론트 id dedupe |
-| 도서관 | — | — | — | placeholder, DB 모델 미존재 |
+| 대형 공원 | `park` + `park_adong` | `GET /api/adongs/:slug/parks` | 면적 desc, ST_DistanceSphere 거리 | 캐시 5분, 프론트 id dedupe |
+| 도서관 | `library` + `library_hours` | `DongDetail.libraries` (API 신설 후) | 공공·작은 색 구분, 평일 운영시간 | 단계 2N 신설. 현재 frontend는 placeholder 유지, library API endpoint 단계 8 후속 |
+
+**amenity 도메인 (단계 2J 신설)**: 17 카테고리 amenity 마스터 테이블 + `amenity_adong` / `amenity_ldong` N:M join. `store` 기반 편의시설 카운트와 별개로 `apps.public_data.amenity` 통합 카운트 API 활용 가능. 현재 대시보드는 `store` 직접 join으로 카테고리별 카운트 산출 + `current_*.score_amenity` 계산에 amenity_adong/ldong join 활용.
 
 ---
 
@@ -153,12 +185,17 @@
 
 | 위젯 | DB 테이블 | API | 계산 방법 | 비고 |
 |---|---|---|---|---|
-| 지하철 TOP 3 | `nearest_subway` | `DongDetail` | 사전계산 rank 1~3, 도보=distance_m/70 | |
+| 지하철 TOP 3 | `nearest_subway_adong` | `DongDetail` | 사전계산 rank 1~3, 도보=distance_m/70 | 단계 7G: `nearest_subway` 폐기, adong/ldong 단위로 분리 |
 | 버스 정류장/노선 | `bus_stop` | `DongDetail` | FK count, route=stop*3 추정 | 노선 데이터 부재 |
 | 1인당 차량 등록 | `gu_metric` | `gu-metrics` | VEHICLE_REGISTERED / POP_RESIDENT | 구 단위 |
 | 지하철 혼잡도 | `subway_congestion` | `transit-congestion` | TOP3역 day_type별 hour 평균 | 캐시 5분 |
-| 버스 혼잡도 | `bus_congestion` | `transit-congestion` | 동 내 정류장 60일, DOW 분리 | BusStop FK 주의 |
+| 버스 혼잡도 | `bus_congestion` | `transit-congestion` | 동 내 정류장 60일, DOW 분리 | BusStop.adong FK (행정동) |
 | 동 성격 추정 | 혼잡도 파생 | `transit-congestion` personality | 임계값 기반 분류 | 오분류 가능 |
+
+**nearest_subway_adong/ldong 산출 (단계 2L + DECISIONS O-4):**
+- (adong/ldong, station_name) MIN(ST_Distance(geography, geography)) dedup → ROW_NUMBER OVER (PARTITION BY 단위 ORDER BY dist, name) → WHERE r <= 3.
+- 결과: adong=1,278 (426×3) / ldong=1,401 (467×3). 환승역 중복 0.
+- station_name dict last-wins 패턴 — 같은 station_name 다중 line(환승역) 케이스에서 line 1건만 노출 (T-3④ 정당 예외, 단계 8-B에서 station_id 컬럼 추가 + 산식 재설계로 해소 예정).
 
 **지하철 혼잡도 집계 규칙:**
 - direction(상선/하선/내선/외선), express_yn(일반/급행) 전부 합산 평균
@@ -216,7 +253,7 @@
 | 위젯 | 데이터 소스 | 계산 방법 | 비고 |
 |---|---|---|---|
 | 서울 자취 TOP 10 | `useDongScores` | composite score desc -> 상위 10 | 현재 동 하이라이트 |
-| 학교별 TOP 5 | `useDongScores` (폴백) | 종합 점수 폴백 | ranking API 미구현 |
+| 학교별 TOP 5 | `univ` + `univ_adong/ldong` (`useDongScores` 폴백) | 종합 점수 폴백 | 단계 2M 신설. univ 도메인 ranking API 단계 8 후속 |
 | 인근 비슷한 동 | `DongDetail.similar_dongs` | 코사인 유사도 상위 3 | 카드 3장 |
 
 ---
@@ -329,14 +366,16 @@
 
 ### 대시보드 전용 엔드포인트
 
+> 단계 7G(2026-05-19) 이후 view 산출 위치는 SLGI/backend/apps/ 트리 참조. `apps.realestate` → `apps.public_data.rent_deal`, `apps.transit` → `apps.public_data.{subway,bus}`로 이동. 응답 dict key set은 100% 보존.
+
 | 엔드포인트 | 용도 | 캐시 TTL | Hook |
 |---|---|---|---|
-| `GET /api/dongs/:slug/population` | 인구 시계열 | 10분 | `useDongPopulation` |
-| `GET /api/dongs/:slug/gu-metrics` | 구 지표 35종 최신값 | 5분 | `useDongGuMetrics` |
-| `GET /api/dongs/:slug/gu-metrics/series?codes=A,B&years=10` | 구 지표 시계열 | 5분 | `useDongGuMetricsSeries` |
-| `GET /api/dongs/:slug/derived-indices` | 자취촌 지수 + 계약 활발도 | 5시간 | `useDongDerivedIndices` |
-| `GET /api/dongs/:slug/transit-congestion` | 혼잡도 + 동 성격 추정 | 5분 | `useDongTransitCongestion` |
-| `GET /api/dongs/:slug/parks` | 대형 공원 목록 | 5분 | `useDongParks` |
+| `GET /api/adongs/:slug/population` | 인구 시계열 | 10분 | `useDongPopulation` |
+| `GET /api/adongs/:slug/gu-metrics` | 구 지표 35종 최신값 | 5분 | `useDongGuMetrics` |
+| `GET /api/adongs/:slug/gu-metrics/series?codes=A,B&years=10` | 구 지표 시계열 | 5분 | `useDongGuMetricsSeries` |
+| `GET /api/adongs/:slug/derived-indices` | 자취촌 지수 + 계약 활발도 | 5시간 | `useDongDerivedIndices` (view: `apps.public_data.rent_deal.views.AdongDerivedIndicesView`, 단계 7G 후 위치) |
+| `GET /api/adongs/:slug/transit-congestion` | 혼잡도 + 동 성격 추정 | 5분 | `useDongTransitCongestion` (view: `apps.public_data.subway.views` + `apps.public_data.bus.views`, 단계 7G 후 위치) |
+| `GET /api/adongs/:slug/parks` | 대형 공원 목록 | 5분 | `useDongParks` (view: `apps.public_data.park.views`, 단계 7G 후 위치) |
 
 ### 미구현 엔드포인트
 
@@ -367,14 +406,19 @@
 
 | 테이블 | FK 필드 | 주의점 |
 |---|---|---|
-| `RentDeal` | `dong` | `Dong.id`(int) FK |
-| `AdongPopulation` | `dong` | to_field=code -> dong_id에 code 문자열이 들어감 |
-| `BusStop` | `dong` | to_field=code -> 반드시 `BusStop.objects.filter(dong__id=dong.id)` 조인 |
+| `RentDeal` | `ldong`, `adong` | `ldong`은 원천 법정동, `adong`은 확정 가능한 행정동만 저장. `rent_deal_ldong_adong_map`에서 단일 행정동 법정동만 자동 매핑하고, 다중 행정동 법정동은 row-level 위치 증거 없으면 NULL 유지. |
+| `AdongPopulation` | `adong` | `Adong.adong_code` FK (행정동) |
+| `BusStop` | `adong` | `Adong.adong_code` FK. 행정동 단위 조회는 `BusStop.objects.filter(adong__adong_code=adong.adong_code)` |
 
 ### 삭제 예정 위젯
 
 - 고령 인구 비율 (대학생 타겟과 관련도 낮음)
 - 1인당 녹지
+
+### 단계 변경 이력
+
+- 2026-05-20: `rent_deal.adong_code` + `rent_deal_ldong_adong_map` 적용. 법정동 467개 중 단일 매핑 334개/다중 NULL 133개, 기존 NULL 거래 387,572건 추가 매핑. API 표면은 `/api/adongs/*` 기준.
+- 2026-05-19: Dong 레거시 완전 폐기 + Adong/NearestSubwayAdong/current_* score 합성으로 14 endpoint 응답 schema 보존. 산식·단위·기간은 본 문서 기존 항목과 동일.
 
 ---
 
@@ -388,8 +432,8 @@
 | `gu_metric` | 안전 게이지, 지가 변동률, 주택 수, 청년 비율, 평균 연령, 고령 비율, 안전 레이더, 교통사고, 교통문화지수, GRDP, 녹지, 화재, 차량 등록 |
 | `store` + `business_category` + `ksci_category` | 편의시설, 충분도 |
 | `park` + `park_adong` | 대형 공원 |
-| `nearest_subway` | 지하철 TOP 3 |
+| `nearest_subway_adong` / `nearest_subway_ldong` | 지하철 TOP 3 |
 | `subway_congestion` | 지하철 혼잡도, 동 성격 추정 |
 | `bus_stop` | 버스 정류장/노선 |
 | `bus_congestion` | 버스 혼잡도, 동 성격 추정 (subway 없을 때) |
-| `dong` (DongScore) | 동 셀렉터, TOP 10, 학교별 TOP 5 |
+| `adong` + `current_adong` (DongScore 합성) | 동 셀렉터, TOP 10, 학교별 TOP 5 |
