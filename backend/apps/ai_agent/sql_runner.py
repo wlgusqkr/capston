@@ -18,6 +18,7 @@ from .db import (
     get_store_codes_text,
 )
 from .prompts import SQL_GENERATION_PROMPT
+from .sql_guard import validate_read_only_sql
 
 
 def run_text_to_sql(
@@ -122,6 +123,7 @@ def _run_single_sql(
         print(f"\n[SQL {label}시도 {attempt}/{max_retry}]\n{sql}")
 
         try:
+            sql = validate_read_only_sql(sql)
             result = db.run(sql)
             elapsed = round(time.time() - t, 2)
             # 결과가 너무 길면 자르기

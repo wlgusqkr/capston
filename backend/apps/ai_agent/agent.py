@@ -26,6 +26,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from .db import get_db, get_llm, get_schema_context, get_config, get_stage_model, get_store_codes_text
 from .schemas import ClassificationOutput, SelectionOutput, InfoOutput
 from .sql_runner import run_text_to_sql
+from .sql_guard import validate_read_only_sql
 from .prompts import CLASSIFICATION_PROMPT, SELECTION_PROMPT, INFO_ANSWER_PROMPT
 
 
@@ -147,15 +148,16 @@ def run_agent(question: str) -> dict:
         if selection.additional_sql:
             print(f"\n[보강 쿼리]\n{selection.additional_sql}")
             try:
+                additional_sql = validate_read_only_sql(selection.additional_sql)
                 db = get_db()
-                extra = db.run(selection.additional_sql)
+                extra = db.run(additional_sql)
                 print(f"[보강 결과] {extra[:200] if extra else '비어있음'}")
 
                 if extra and extra.strip() not in ("", "[]"):
                     enriched = (
                         f"{sql_result['result']}"
                         f"\n\n[보강 데이터 — 비교 기준]\n"
-                        f"SQL: {selection.additional_sql}\n"
+                        f"SQL: {additional_sql}\n"
                         f"결과: {extra}\n"
                         f"※ 한줄평, data_summary, visualization_data에 반드시 반영하세요"
                     )
