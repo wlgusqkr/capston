@@ -1,17 +1,22 @@
-// AiSidePanel — slide-in AI chat shell (Phase 0 mock).
+// AiSidePanel — slide-in AI chat shell.
 //
 // Fixed position, slides from the right. ESC to close.
-// Mock behavior: echoes user message + canned AI reply after 500ms.
 
 import { useCallback, useRef, useState } from 'react';
+import axios from 'axios';
 
 import { useAiPanel } from '@/contexts/AiPanelContext';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { postAgentQuery } from '@/lib/api';
+import type { AgentQueryResponse } from '@/types/api';
 
 interface Message {
   id: number;
   role: 'ai' | 'user';
   text: string;
+  data?: AgentQueryResponse;
+  isError?: boolean;
+  isLoading?: boolean;
 }
 
 const WELCOME_MESSAGE: Message = {
@@ -26,6 +31,7 @@ export default function AiSidePanel() {
   const { isOpen, close, toggle } = useAiPanel();
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [input, setInput] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEscapeKey(close, isOpen);
@@ -37,26 +43,51 @@ export default function AiSidePanel() {
     }, 50);
   }, []);
 
-  const handleSend = useCallback(() => {
+  const handleSend = useCallback(async () => {
     const text = input.trim();
-    if (!text) return;
+    if (!text || isSending) return;
 
     const userMsg: Message = { id: nextId++, role: 'user', text };
-    setMessages((prev) => [...prev, userMsg]);
+    const pendingId = nextId++;
+    const pendingMsg: Message = {
+      id: pendingId,
+      role: 'ai',
+      text: '답변을 준비 중이에요.',
+      isLoading: true,
+    };
+    setMessages((prev) => [...prev, userMsg, pendingMsg]);
     setInput('');
+    setIsSending(true);
     scrollToBottom();
 
-    // Mock AI reply after 500ms
-    setTimeout(() => {
-      const aiMsg: Message = {
-        id: nextId++,
-        role: 'ai',
-        text: '아직 AI 기능을 준비 중이에요. 곧 답변 드릴게요!',
-      };
-      setMessages((prev) => [...prev, aiMsg]);
+    try {
+      const data = await postAgentQuery(text);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === pendingId
+            ? { id: pendingId, role: 'ai', text: data.answer, data }
+            : msg,
+        ),
+      );
+    } catch (err) {
+      const message = getAgentErrorMessage(err);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === pendingId
+            ? {
+                id: pendingId,
+                role: 'ai',
+                text: `답변을 불러오지 못했습니다. ${message}`,
+                isError: true,
+              }
+            : msg,
+        ),
+      );
+    } finally {
+      setIsSending(false);
       scrollToBottom();
-    }, 500);
-  }, [input, scrollToBottom]);
+    }
+  }, [input, isSending, scrollToBottom]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -107,20 +138,30 @@ export default function AiSidePanel() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
+      <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3" aria-live="polite">
         {messages.map((msg) => (
           <div
             key={msg.id}
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[80%] px-4 py-2.5 rounded-card text-caption leading-relaxed ${
+              className={`max-w-[80%] px-4 py-2.5 rounded-card text-caption leading-relaxed whitespace-pre-wrap break-words ${
                 msg.role === 'user'
                   ? 'bg-primary text-surface'
-                  : 'bg-surface-alt text-text'
+                  : msg.isError
+                    ? 'bg-danger-soft text-danger'
+                    : 'bg-surface-alt text-text'
               }`}
+              role={msg.isError ? 'alert' : msg.isLoading ? 'status' : undefined}
             >
+              {msg.isLoading && (
+                <span
+                  className="inline-block w-3 h-3 mr-2 rounded-full border-2 border-current border-r-transparent align-[-2px] [animation:ui-button-spin_700ms_linear_infinite]"
+                  aria-hidden="true"
+                />
+              )}
               {msg.text}
+              {msg.data ? <AgentResultSummary data={msg.data} /> : null}
             </div>
           </div>
         ))}
@@ -135,33 +176,118 @@ export default function AiSidePanel() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
+            disabled={isSending}
             placeholder="메시지를 입력하세요..."
-            className="flex-1 h-10 bg-surface-alt border border-border rounded-pill px-4 text-caption text-text placeholder:text-text-subtle outline-none transition-colors duration-200 focus:border-focus-ring"
+            className="flex-1 h-10 bg-surface-alt border border-border rounded-pill px-4 text-caption text-text placeholder:text-text-subtle outline-none transition-colors duration-200 focus:border-focus-ring disabled:cursor-not-allowed disabled:opacity-70"
           />
           <button
             onClick={handleSend}
-            disabled={!input.trim()}
+            disabled={!input.trim() || isSending}
             className="w-10 h-10 flex items-center justify-center rounded-full bg-primary text-surface shrink-0 transition-colors duration-200 hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed"
             aria-label="메시지 보내기"
+            aria-busy={isSending || undefined}
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              aria-hidden="true"
-            >
-              <path
-                d="M14 2L7 9M14 2l-4.5 12-2-5.5L2 6.5 14 2z"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+            {isSending ? (
+              <span
+                className="w-4 h-4 rounded-full border-2 border-current border-r-transparent [animation:ui-button-spin_700ms_linear_infinite]"
+                aria-hidden="true"
               />
-            </svg>
+            ) : (
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M14 2L7 9M14 2l-4.5 12-2-5.5L2 6.5 14 2z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
           </button>
         </div>
       </div>
     </aside>
   );
+}
+
+function AgentResultSummary({ data }: { data: AgentQueryResponse }) {
+  if (data.neighborhoods.length === 0 && data.visualizations.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3 flex flex-col gap-2 border-t border-divider pt-3">
+      {data.neighborhoods.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          {data.neighborhoods.map((item) => (
+            <div
+              key={`${item.rank}-${item.gu_name}-${item.ldong_name}`}
+              className="rounded-sm bg-surface px-3 py-2"
+            >
+              <div className="font-semibold text-text">
+                {item.rank}. {item.gu_name} {item.ldong_name}
+              </div>
+              <div className="mt-1 text-text-muted">{item.one_liner}</div>
+              <div className="mt-1 text-text-subtle">{item.data_summary}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      {data.visualizations.map((viz, idx) => (
+        <div key={`${viz.title}-${idx}`} className="rounded-sm bg-surface px-3 py-2">
+          <div className="font-semibold text-text">{viz.title}</div>
+          <div className="mt-1 flex flex-col gap-1 text-text-muted">
+            {viz.data.slice(0, 4).map((datum) => (
+              <div key={datum.label} className="flex justify-between gap-3">
+                <span className="truncate">{datum.label}</span>
+                <span className="shrink-0 tabular">
+                  {datum.value != null
+                    ? `${datum.value}${viz.unit ? ` ${viz.unit}` : ''}`
+                    : formatColumns(datum.columns)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function formatColumns(columns: AgentQueryResponse['visualizations'][number]['data'][number]['columns']) {
+  if (!columns) return '';
+  return Object.entries(columns)
+    .slice(0, 2)
+    .map(([key, value]) => `${key}: ${value ?? '-'}`)
+    .join(' · ');
+}
+
+function getAgentErrorMessage(err: unknown) {
+  if (axios.isAxiosError(err)) {
+    const data = err.response?.data as
+      | { error?: unknown; detail?: unknown }
+      | undefined;
+
+    if (typeof data?.error === 'string' && data.error.length > 0) {
+      return data.error;
+    }
+    if (typeof data?.detail === 'string' && data.detail.length > 0) {
+      return data.detail;
+    }
+    if (err.response?.status === undefined || err.response.status === 0) {
+      return '백엔드 연결을 확인해주세요.';
+    }
+  }
+
+  if (err instanceof Error && err.message.length > 0) {
+    return err.message;
+  }
+
+  return '잠시 후 다시 시도해주세요.';
 }

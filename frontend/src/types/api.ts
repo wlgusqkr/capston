@@ -910,3 +910,40 @@ export const KERNEL_SCHOOL_OPTIONS = [
   '서울시립대',
 ] as const;
 export type KernelSchool = (typeof KERNEL_SCHOOL_OPTIONS)[number];
+
+// -------- AI Agent (POST /api/agent/query) --------------------------------
+
+export interface AgentQueryRequest {
+  question: string;
+}
+
+export interface AgentNeighborhood {
+  rank: number;
+  ldong_name: string;
+  gu_name: string;
+  one_liner: string;
+  data_summary: string;
+}
+
+export interface AgentVisualizationDatum {
+  label: string;
+  value?: number;
+  is_baseline?: boolean;
+  columns?: Record<string, string | number | boolean | null>;
+}
+
+export interface AgentVisualization {
+  type: 'bar' | 'line' | 'table' | 'none' | string;
+  title: string;
+  unit: string;
+  data: AgentVisualizationDatum[];
+}
+
+export interface AgentQueryResponse {
+  answer: string;
+  query_type: 'recommendation' | 'info' | 'none' | string;
+  route: 'db' | 'direct' | 'blocked' | string;
+  neighborhoods: AgentNeighborhood[];
+  visualizations: AgentVisualization[];
+  elapsed_sec: number;
+}
