@@ -23,11 +23,14 @@ DB 스키마 변경 없음 — SELECT 전용. 신규 마이그레이션 없음.
 
 from __future__ import annotations
 
+import logging
 from datetime import timedelta
+from time import perf_counter
 from typing import Optional
 
 from django.core.cache import cache
 from django.db import connection
+
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.exceptions import NotFound
@@ -35,12 +38,17 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.public_data.bus.models import (  # noqa: F401  (BusCongestion is queried via raw SQL only)
+    BusCongestion,
+    BusStop,
+)
+
 # sub-plan 7G-B2 (결정 4A): NearestSubway(legacy) → NearestSubwayAdong 표면 치환.
 # regions.Adong + Gu join. adong.code(=adong_code) ?? lock ??.
 from apps.public_data.regions.models import Adong
 from apps.public_data.subway.models import NearestSubwayAdong
-from apps.public_data.bus.models import BusCongestion, BusStop  # noqa: F401  (BusCongestion is queried via raw SQL only)
 
+logger = logging.getLogger(__name__)
 
 # 가까운 역 N개 (NearestSubway 사전계산은 rank 1~3) — TOP 3 사용.
 NEAREST_SUBWAY_N = 3
@@ -61,10 +69,14 @@ SUBWAY_DAY_KEYS = ("평일", "토요일", "일요일")
 BUS_PATTERN_KEYS = ("평일", "주말")
 
 # Personality 임계값 — SPEC §4.5.
-RATIO_MORNING_TO_MIDDAY = 1.5    # 출퇴근 피크 강
-RATIO_EVENING_TO_MIDDAY = 1.3    # 저녁 피크 강
+RATIO_MORNING_TO_MIDDAY = 1.5  # 출퇴근 피크 강
+RATIO_EVENING_TO_MIDDAY = 1.3  # 저녁 피크 강
 RATIO_MIDDAY_TO_MORNING_HIGH = 0.8  # 낮 고른 분포
-RATIO_WEEKEND_TO_WEEKDAY = 1.2   # 주말 피크 강
+RATIO_WEEKEND_TO_WEEKDAY = 1.2  # 주말 피크 강
+
+
+def _elapsed_ms(started_at: float) -> float:
+    return (perf_counter() - started_at) * 1000
 
 
 def _dong_header(adong: Adong) -> dict:
@@ -82,10 +94,7 @@ def _empty_hours() -> list[dict]:
 
 def _fill_hours(rows: dict[int, float]) -> list[dict]:
     """{hour: avg} → 24슬롯 배열. 데이터 없는 시간은 None."""
-    return [
-        {"hour": h, "congestion": round(rows[h], 4) if h in rows else None}
-        for h in range(24)
-    ]
+    return [{"hour": h, "congestion": round(rows[h], 4) if h in rows else None} for h in range(24)]
 
 
 def _avg_over_hours(points: list[dict], start: int, end_inclusive: int) -> Optional[float]:
@@ -128,16 +137,13 @@ def _collect_subway(adong: Adong) -> dict:
     from apps.public_data.subway.models import SubwayStation
 
     ns_rows = list(
-        NearestSubwayAdong.objects.filter(adong=adong)
-        .order_by("rank")[:NEAREST_SUBWAY_N]
+        NearestSubwayAdong.objects.filter(adong=adong).order_by("rank")[:NEAREST_SUBWAY_N]
     )
     station_names = [ns.station_name for ns in ns_rows]
     # station_name → SubwayStation row 매핑 (line/id 회수).
     station_by_name: dict[str, SubwayStation] = {
         s.name: s
-        for s in SubwayStation.objects.filter(name__in=station_names).only(
-            "id", "name", "line"
-        )
+        for s in SubwayStation.objects.filter(name__in=station_names).only("id", "name", "line")
     }
     stations_meta = []
     station_ids: list[str] = []
@@ -202,9 +208,7 @@ def _collect_bus(adong: Adong) -> dict:
 
     sub-plan 7G-B2: adong.code → adong.adong_code 직접 매칭 (값 동일).
     """
-    bus_stop_ids = list(
-        BusStop.objects.filter(adong=adong).values_list("id", flat=True)
-    )
+    bus_stop_ids = list(BusStop.objects.filter(adong=adong).values_list("id", flat=True))
     stop_count = len(bus_stop_ids)
     by_pattern: dict[str, list[dict]] = {k: _empty_hours() for k in BUS_PATTERN_KEYS}
 
@@ -215,7 +219,9 @@ def _collect_bus(adong: Adong) -> dict:
     # 데이터를 다 비울 수 있다 — BRIN 인덱스를 위해 BusCongestion 의 MAX(date) 를
     # 기준으로 cutoff 잡는다. 데이터 실시간 적재로 바뀌면 자연스럽게 따라옴.
     with connection.cursor() as cur:
-        cur.execute("SELECT MAX(date) FROM bus_congestion WHERE bus_stop_id = ANY(%s)", [bus_stop_ids])
+        cur.execute(
+            "SELECT MAX(date) FROM bus_congestion WHERE bus_stop_id = ANY(%s)", [bus_stop_ids]
+        )
         max_date_row = cur.fetchone()
         max_date = max_date_row[0] if max_date_row else None
 
@@ -287,13 +293,15 @@ def _personality(subway: dict, bus: dict) -> dict:
         for h in range(24):
             vals = [
                 p["congestion"]
-                for p in (sat[h:h + 1] + sun[h:h + 1])
+                for p in (sat[h : h + 1] + sun[h : h + 1])
                 if p and p["congestion"] is not None
             ]
-            merged.append({
-                "hour": h,
-                "congestion": (sum(vals) / len(vals)) if vals else None,
-            })
+            merged.append(
+                {
+                    "hour": h,
+                    "congestion": (sum(vals) / len(vals)) if vals else None,
+                }
+            )
         weekend_points = merged
         source = "subway"
     else:
@@ -428,16 +436,28 @@ class AdongTransitCongestionView(APIView):
     """
 
     def get(self, request: Request, slug: str) -> Response:
+        started_at = perf_counter()
+        logger.info("api.adongs.transit_congestion.start slug=%s", slug)
         # regions.Adong + Gu join.
         try:
             adong = Adong.objects.select_related("gu").get(slug=slug)
         except Adong.DoesNotExist as exc:
+            logger.warning("api.adongs.transit_congestion.not_found slug=%s", slug)
             raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
 
         cache_key = f"dong_transit_congestion:v1:{slug}"
         cached = cache.get(cache_key)
         if cached is not None:
+            logger.info(
+                "api.adongs.transit_congestion.cache_hit slug=%s cache=hit "
+                "subway_station_count=%s bus_stop_count=%s elapsed_ms=%.1f",
+                slug,
+                len(cached.get("subway", {}).get("stations", [])),
+                cached.get("bus", {}).get("stop_count"),
+                _elapsed_ms(started_at),
+            )
             return Response(cached, status=status.HTTP_200_OK)
+        logger.info("api.adongs.transit_congestion.cache_miss slug=%s cache=miss", slug)
 
         subway = _collect_subway(adong)
         bus = _collect_bus(adong)
@@ -451,4 +471,13 @@ class AdongTransitCongestionView(APIView):
         }
 
         cache.set(cache_key, data, timeout=300)  # 5분
+        logger.info(
+            "api.adongs.transit_congestion.finish slug=%s status=200 "
+            "subway_station_count=%s bus_stop_count=%s personality=%s elapsed_ms=%.1f",
+            slug,
+            len(subway["stations"]),
+            bus["stop_count"],
+            personality["label"],
+            _elapsed_ms(started_at),
+        )
         return Response(data, status=status.HTTP_200_OK)

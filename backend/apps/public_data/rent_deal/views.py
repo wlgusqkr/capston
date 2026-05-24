@@ -34,12 +34,15 @@ sub-plan 4.5B 정합:
 
 from __future__ import annotations
 
+import logging
 from datetime import date, datetime, timedelta
+from time import perf_counter
 from typing import Optional
 
 from django.contrib.gis.geos import Polygon
 from django.core.cache import cache
 from django.db.models import Count, Q
+
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
@@ -48,17 +51,19 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.public_data.populations.models import AdongPopulation
+
 # sub-plan 7G-B2 (?? 6A): regions.Adong ?? ?? + null fallback ???.
 # Adong.adong_code를 직접 사용하여 adong.id → adong.code 매핑 우회.
 from apps.public_data.regions.models import Adong
-from apps.public_data.populations.models import AdongPopulation
-
 from apps.public_data.rent_deal.models import (
     DEAL_TYPE_TO_HOUSING_TYPE,
     RentDeal,
 )
 
 from .serializers import RentDealPinSerializer
+
+logger = logging.getLogger(__name__)
 
 # ---- 상수 ----
 DEFAULT_LIMIT = 200
@@ -74,6 +79,10 @@ ALLOWED_DEAL_TYPES = {"apt", "officetel", "villa", "dagagu", "danok", "all"}
 CACHE_TTL_SECONDS = 300
 
 
+def _elapsed_ms(started_at: float) -> float:
+    return (perf_counter() - started_at) * 1000
+
+
 def _parse_bbox(raw: Optional[str]) -> tuple[float, float, float, float]:
     """
     `bbox=lng1,lat1,lng2,lat2` 파싱.
@@ -83,9 +92,7 @@ def _parse_bbox(raw: Optional[str]) -> tuple[float, float, float, float]:
 
     parts = [p.strip() for p in raw.split(",")]
     if len(parts) != 4:
-        raise ValidationError(
-            {"bbox": "bbox는 lng1,lat1,lng2,lat2 4개 값이어야 합니다."}
-        )
+        raise ValidationError({"bbox": "bbox는 lng1,lat1,lng2,lat2 4개 값이어야 합니다."})
 
     try:
         lng1, lat1, lng2, lat2 = (float(p) for p in parts)
@@ -93,9 +100,7 @@ def _parse_bbox(raw: Optional[str]) -> tuple[float, float, float, float]:
         raise ValidationError({"bbox": "bbox 좌표는 숫자여야 합니다."}) from exc
 
     if lng1 >= lng2 or lat1 >= lat2:
-        raise ValidationError(
-            {"bbox": "SW(lng1,lat1)가 NE(lng2,lat2)보다 작아야 합니다."}
-        )
+        raise ValidationError({"bbox": "SW(lng1,lat1)가 NE(lng2,lat2)보다 작아야 합니다."})
 
     if not (124.0 <= lng1 <= 132.0 and 124.0 <= lng2 <= 132.0):
         raise ValidationError({"bbox": "경도(lng)는 124~132 범위여야 합니다 (서울 권역)."})
@@ -112,9 +117,7 @@ def _parse_date(raw: Optional[str], key: str) -> Optional[date]:
     try:
         return datetime.strptime(raw, "%Y-%m-%d").date()
     except ValueError as exc:
-        raise ValidationError(
-            {key: f"{key} 파라미터는 YYYY-MM-DD 형식이어야 합니다."}
-        ) from exc
+        raise ValidationError({key: f"{key} 파라미터는 YYYY-MM-DD 형식이어야 합니다."}) from exc
 
 
 def _parse_limit(raw: Optional[str]) -> int:
@@ -136,9 +139,7 @@ def _parse_deal_type(raw: Optional[str]) -> str:
         return "all"
     if raw not in ALLOWED_DEAL_TYPES:
         allowed = ", ".join(sorted(ALLOWED_DEAL_TYPES))
-        raise ValidationError(
-            {"deal_type": f"deal_type은 다음 중 하나여야 합니다: {allowed}."}
-        )
+        raise ValidationError({"deal_type": f"deal_type은 다음 중 하나여야 합니다: {allowed}."})
     return raw
 
 
@@ -157,8 +158,7 @@ def _parse_deal_type(raw: Optional[str]) -> str:
             location=OpenApiParameter.QUERY,
             required=True,
             description=(
-                "lng1,lat1,lng2,lat2 (SW + NE 코너, WGS84). "
-                "예: `126.95,37.55,127.00,37.58`."
+                "lng1,lat1,lng2,lat2 (SW + NE 코너, WGS84). " "예: `126.95,37.55,127.00,37.58`."
             ),
         ),
         OpenApiParameter(
@@ -218,12 +218,24 @@ class TransactionsBboxView(APIView):
     pagination_class = None
 
     def get(self, request: Request) -> Response:
+        started_at = perf_counter()
         # ---- 파라미터 파싱 ----
         lng1, lat1, lng2, lat2 = _parse_bbox(request.query_params.get("bbox"))
         deal_type = _parse_deal_type(request.query_params.get("deal_type"))
         date_from = _parse_date(request.query_params.get("from"), "from")
         date_to = _parse_date(request.query_params.get("to"), "to")
         limit = _parse_limit(request.query_params.get("limit"))
+        logger.info(
+            "api.transactions.bbox.start bbox=%s,%s,%s,%s deal_type=%s from=%s to=%s limit=%s",
+            lng1,
+            lat1,
+            lng2,
+            lat2,
+            deal_type,
+            date_from,
+            date_to,
+            limit,
+        )
 
         # ---- 캐시 키 ----
         cache_key = (
@@ -233,15 +245,24 @@ class TransactionsBboxView(APIView):
         )
         cached = cache.get(cache_key)
         if cached is not None:
+            logger.info(
+                "api.transactions.bbox.cache_hit cache=hit deal_type=%s limit=%s item_count=%s elapsed_ms=%.1f",
+                deal_type,
+                limit,
+                len(cached.get("items", [])),
+                _elapsed_ms(started_at),
+            )
             return Response(cached, status=status.HTTP_200_OK)
+        logger.info(
+            "api.transactions.bbox.cache_miss cache=miss deal_type=%s limit=%s", deal_type, limit
+        )
 
         # ---- 쿼리 ----
         bbox_poly = Polygon.from_bbox((lng1, lat1, lng2, lat2))
         bbox_poly.srid = 4326
 
-        qs = (
-            RentDeal.objects.select_related("ldong", "ldong__gu")
-            .filter(location__isnull=False, location__within=bbox_poly)
+        qs = RentDeal.objects.select_related("ldong", "ldong__gu").filter(
+            location__isnull=False, location__within=bbox_poly
         )
         if deal_type != "all":
             # 응답 영문 enum (lock 1) → 한글 raw로 변환해서 DB 필터.
@@ -275,6 +296,14 @@ class TransactionsBboxView(APIView):
         }
 
         cache.set(cache_key, payload, timeout=CACHE_TTL_SECONDS)
+        logger.info(
+            "api.transactions.bbox.finish status=200 deal_type=%s item_count=%s total=%s has_more=%s elapsed_ms=%.1f",
+            deal_type,
+            len(payload["items"]),
+            total,
+            has_more,
+            _elapsed_ms(started_at),
+        )
         return Response(payload, status=status.HTTP_200_OK)
 
 
@@ -338,8 +367,7 @@ def _compute_all_dongs_derived(today: date) -> dict[str, dict]:
     # 4) 최신 인구 per 행정동 (DISTINCT ON adong_id).
     # sub-plan 7G-B2 (결정 6A): adong_code 직접 키. Adong.id 매핑 단계 제거.
     pop_rows = list(
-        AdongPopulation.objects
-        .order_by("adong_id", "-date")
+        AdongPopulation.objects.order_by("adong_id", "-date")
         .distinct("adong_id")
         .values("adong_id", "total_population")
     )
@@ -377,12 +405,8 @@ def _compute_all_dongs_derived(today: date) -> dict[str, dict]:
 
     sorted_scores = sorted(score_by_adong_code.items(), key=lambda item: item[1], reverse=True)
     rank_by_score = {adong_code: idx + 1 for idx, (adong_code, _) in enumerate(sorted_scores)}
-    sorted_activity = sorted(
-        activity_by_adong_code.items(), key=lambda item: item[1], reverse=True
-    )
-    rank_by_activity = {
-        adong_code: idx + 1 for idx, (adong_code, _) in enumerate(sorted_activity)
-    }
+    sorted_activity = sorted(activity_by_adong_code.items(), key=lambda item: item[1], reverse=True)
+    rank_by_activity = {adong_code: idx + 1 for idx, (adong_code, _) in enumerate(sorted_activity)}
 
     scored_count = len(sorted_scores)
     activity_count = len(sorted_activity)
@@ -462,24 +486,36 @@ class AdongDerivedIndicesView(APIView):
     """
 
     def get(self, request: Request, slug: str) -> Response:
+        started_at = perf_counter()
+        logger.info("api.adongs.derived_indices.start slug=%s", slug)
         today = date.today()
         cache_key = f"derived_indices_all_dongs:{DERIVED_CACHE_VERSION}:{today.isoformat()}"
 
         all_indices = cache.get(cache_key)
         if all_indices is None:
+            logger.info("api.adongs.derived_indices.cache_miss slug=%s cache=miss", slug)
             all_indices = _compute_all_dongs_derived(today)
             cache.set(cache_key, all_indices, timeout=DERIVED_CACHE_TTL_SECONDS)
+        else:
+            logger.info("api.adongs.derived_indices.cache_hit slug=%s cache=hit", slug)
 
         payload = all_indices.get(slug)
         if payload is None:
             # slug? ???? ?? ????? 404.
             if not Adong.objects.filter(slug=slug).exists():
+                logger.warning("api.adongs.derived_indices.not_found slug=%s", slug)
                 raise NotFound({"detail": "동을 찾을 수 없습니다."})
             cache.delete(cache_key)
             all_indices = _compute_all_dongs_derived(today)
             cache.set(cache_key, all_indices, timeout=DERIVED_CACHE_TTL_SECONDS)
             payload = all_indices.get(slug)
             if payload is None:
+                logger.warning("api.adongs.derived_indices.not_found_after_rebuild slug=%s", slug)
                 raise NotFound({"detail": "동을 찾을 수 없습니다."})
 
+        logger.info(
+            "api.adongs.derived_indices.finish slug=%s status=200 elapsed_ms=%.1f",
+            slug,
+            _elapsed_ms(started_at),
+        )
         return Response(payload, status=status.HTTP_200_OK)

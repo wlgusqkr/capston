@@ -17,12 +17,21 @@ Django REST Framework API 엔드포인트 (views.py)
 =============================================================================
 """
 
+import logging
+from time import perf_counter
+
+from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework import status
 
 from .agent import run_agent
+
+logger = logging.getLogger(__name__)
+
+
+def _elapsed_ms(started_at: float) -> float:
+    return (perf_counter() - started_at) * 1000
 
 
 @api_view(["POST"])
@@ -94,15 +103,31 @@ def agent_query(request):
         "elapsed_sec": 3.4
       }
     """
+    started_at = perf_counter()
     question = request.data.get("question", "").strip()
+    logger.info(
+        "api.agent.query.start question=%r question_len=%s",
+        question,
+        len(question),
+    )
 
     if not question:
+        logger.warning(
+            "api.agent.query.empty_question status=400 elapsed_ms=%.1f",
+            _elapsed_ms(started_at),
+        )
         return Response(
             {"error": "질문을 입력해주세요."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
     if len(question) > 500:
+        logger.warning(
+            "api.agent.query.too_long status=400 question=%r question_len=%s elapsed_ms=%.1f",
+            question,
+            len(question),
+            _elapsed_ms(started_at),
+        )
         return Response(
             {"error": "질문이 너무 깁니다. 500자 이하로 입력해주세요."},
             status=status.HTTP_400_BAD_REQUEST,
@@ -110,6 +135,13 @@ def agent_query(request):
 
     try:
         result = run_agent(question)
+        logger.info(
+            "api.agent.query.finish status=200 route=%s query_type=%s question=%r elapsed_ms=%.1f",
+            result.get("route", "direct"),
+            result.get("query_type", "none"),
+            question,
+            _elapsed_ms(started_at),
+        )
 
         # info 타입은 visualization 단수로 반환되므로 visualizations 배열로 통일
         visualizations = result.get("visualizations", [])
@@ -118,16 +150,24 @@ def agent_query(request):
             if viz and viz.get("type", "none") != "none":
                 visualizations = [viz]
 
-        return Response({
-            "answer": result.get("answer", ""),
-            "query_type": result.get("query_type", "none"),
-            "route": result.get("route", "direct"),
-            "neighborhoods": result.get("neighborhoods", []),
-            "visualizations": visualizations,
-            "elapsed_sec": result.get("elapsed_sec", 0),
-        })
+        return Response(
+            {
+                "answer": result.get("answer", ""),
+                "query_type": result.get("query_type", "none"),
+                "route": result.get("route", "direct"),
+                "neighborhoods": result.get("neighborhoods", []),
+                "visualizations": visualizations,
+                "elapsed_sec": result.get("elapsed_sec", 0),
+            }
+        )
 
     except Exception as e:
+        logger.exception(
+            "api.agent.query.failed status=500 question=%r question_len=%s elapsed_ms=%.1f",
+            question,
+            len(question),
+            _elapsed_ms(started_at),
+        )
         return Response(
             {"error": f"Agent 실행 중 오류가 발생했습니다: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
