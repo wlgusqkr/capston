@@ -330,51 +330,105 @@ function LineVisualization({ viz }: { viz: AgentVisualization }) {
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = max - min || 1;
-  const width = 300;
-  const height = 96;
+  const width = 320;
+  const height = 128;
+  const padding = { top: 18, right: 18, bottom: 26, left: 18 };
   const points = rows.map((datum, idx) => {
-    const x = 14 + (idx / (rows.length - 1)) * (width - 28);
-    const y = 12 + ((max - (datum.value ?? 0)) / range) * (height - 28);
+    const x = padding.left + (idx / (rows.length - 1)) * (width - padding.left - padding.right);
+    const y = padding.top + ((max - (datum.value ?? 0)) / range) * (height - padding.top - padding.bottom);
     return { x, y, datum };
   });
-  const pointString = points.map((point) => `${point.x},${point.y}`).join(' ');
+  const firstPoint = points[0]!;
+  const lastPoint = points[points.length - 1]!;
+  const linePath = buildSmoothPath(points);
+  const areaPath = `${linePath} L ${lastPoint.x},${height - padding.bottom} L ${firstPoint.x},${height - padding.bottom} Z`;
+  const gradientId = `agent-line-${hashText(`${viz.title}-${rows.length}-${rows[0]?.label}-${rows[rows.length - 1]?.label}`)}`;
+  const highlightedPoints = getHighlightedLinePoints(points);
 
   return (
     <div className="mt-2 min-w-0">
-      <div className="h-28 rounded-sm bg-surface-alt px-1 py-2">
+      <div className="h-36 overflow-hidden rounded-sm bg-surface-alt px-2 py-2">
         <svg viewBox={`0 0 ${width} ${height}`} className="h-full w-full" role="img" aria-label={viz.title}>
-          <polyline
-            points={pointString}
+          <defs>
+            <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="var(--color-primary)" stopOpacity="0.24" />
+              <stop offset="100%" stopColor="var(--color-primary)" stopOpacity="0.02" />
+            </linearGradient>
+          </defs>
+          {[0.25, 0.5, 0.75].map((ratio) => (
+            <line
+              key={ratio}
+              x1={padding.left}
+              x2={width - padding.right}
+              y1={padding.top + ratio * (height - padding.top - padding.bottom)}
+              y2={padding.top + ratio * (height - padding.top - padding.bottom)}
+              stroke="var(--color-divider)"
+              strokeDasharray="4 6"
+              strokeWidth="1"
+            />
+          ))}
+          <path d={areaPath} fill={`url(#${gradientId})`} />
+          <path
+            d={linePath}
             fill="none"
-            stroke="currentColor"
-            strokeWidth="3"
+            stroke="var(--color-primary)"
+            strokeOpacity="0.16"
+            strokeWidth="9"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="text-primary"
           />
-          {points.map((point) => (
+          <path
+            d={linePath}
+            fill="none"
+            stroke="var(--color-primary)"
+            strokeWidth="3.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {highlightedPoints.map((point) => (
             <circle
-              key={`${point.datum.label}-${point.x}`}
+              key={`${point.datum.label}-${point.x}-${point.y}`}
               cx={point.x}
               cy={point.y}
-              r="3.5"
-              className="fill-surface stroke-primary"
-              strokeWidth="2"
+              r="4"
+              fill="var(--color-surface)"
+              stroke="var(--color-primary)"
+              strokeWidth="2.5"
             />
           ))}
         </svg>
       </div>
-      <div className="mt-1 flex min-w-0 justify-between gap-2 text-[10px] text-text-subtle">
-        <span className="min-w-0 truncate" title={rows[0]?.label}>
-          {compactText(rows[0]?.label ?? '', 16)}
-        </span>
-        <span className="shrink-0 tabular text-text-muted">
-          {formatValue(values[values.length - 1], viz.unit)}
-        </span>
-        <span className="min-w-0 truncate text-right" title={rows[rows.length - 1]?.label}>
-          {compactText(rows[rows.length - 1]?.label ?? '', 16)}
-        </span>
+      <div className="mt-2 grid min-w-0 grid-cols-[1fr_auto_1fr] items-center gap-2 text-[10px] text-text-subtle">
+        <LineEndpoint label={rows[0]?.label ?? ''} value={values[0] ?? 0} unit={viz.unit} align="left" />
+        <span className="h-px w-5 bg-divider" aria-hidden="true" />
+        <LineEndpoint
+          label={rows[rows.length - 1]?.label ?? ''}
+          value={values[values.length - 1] ?? 0}
+          unit={viz.unit}
+          align="right"
+        />
       </div>
+    </div>
+  );
+}
+
+function LineEndpoint({
+  label,
+  value,
+  unit,
+  align,
+}: {
+  label: string;
+  value: number;
+  unit: string;
+  align: 'left' | 'right';
+}) {
+  return (
+    <div className={`min-w-0 ${align === 'right' ? 'text-right' : ''}`}>
+      <div className="truncate text-text-subtle" title={label}>
+        {compactText(label, 14)}
+      </div>
+      <div className="tabular font-semibold text-text">{formatValue(value, unit)}</div>
     </div>
   );
 }
@@ -463,6 +517,53 @@ function compactText(text: string, maxLength: number) {
   const headLength = Math.ceil((maxLength - 3) * 0.65);
   const tailLength = maxLength - 3 - headLength;
   return `${text.slice(0, headLength)}...${text.slice(-tailLength)}`;
+}
+
+type LinePoint = {
+  x: number;
+  y: number;
+  datum: AgentVisualization['data'][number];
+};
+
+function buildSmoothPath(points: LinePoint[]) {
+  const first = points[0];
+  if (!first) return '';
+
+  return points.slice(1).reduce((path, point, idx) => {
+    const prev = points[idx];
+    if (!prev) return path;
+
+    const controlDistance = (point.x - prev.x) * 0.45;
+    return [
+      path,
+      `C ${prev.x + controlDistance},${prev.y}`,
+      `${point.x - controlDistance},${point.y}`,
+      `${point.x},${point.y}`,
+    ].join(' ');
+  }, `M ${first.x},${first.y}`);
+}
+
+function getHighlightedLinePoints(points: LinePoint[]) {
+  const first = points[0];
+  const last = points[points.length - 1];
+  if (!first || !last) return [];
+
+  const maxPoint = points.reduce((best, point) =>
+    (point.datum.value ?? 0) > (best.datum.value ?? 0) ? point : best,
+  first);
+
+  return [first, maxPoint, last].filter(
+    (point, idx, arr) => arr.findIndex((candidate) => candidate.x === point.x && candidate.y === point.y) === idx,
+  );
+}
+
+function hashText(text: string) {
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    hash = (hash << 5) - hash + text.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(36);
 }
 
 function getAgentErrorMessage(err: unknown) {
