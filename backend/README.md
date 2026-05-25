@@ -28,7 +28,6 @@ cp .env.example .env
 
 # 5) 마이그레이션 + 더미 시드
 .venv/bin/python manage.py migrate
-.venv/bin/python manage.py seed_dummy_dongs
 
 # 6) 개발 서버
 .venv/bin/python manage.py runserver
@@ -77,17 +76,14 @@ backend/
 └── .env.example
 ```
 
-## 더미 데이터 (5개 동)
+## 데이터 업데이트
 
-`seed_dummy_dongs`가 만드는 데이터. 가중치 변화의 효과를 시연하기 위한 분포:
+실제 공공데이터와 서비스 파생 데이터는 업데이트 스크립트로 갱신합니다.
 
-| slug | 이름 | rent | amenity | transit |
-|---|---|---:|---:|---:|
-| pildong | 중구 필동 | 35 | 55 | **90** |
-| hoegidong | 동대문구 회기동 | **80** | 75 | 60 |
-| seogyodong | 마포구 서교동 | 30 | **92** | 78 |
-| yeoksamdong | 강남구 역삼동 | 15 | 80 | 85 |
-| jamsildong | 송파구 잠실동 | 60 | 78 | 75 |
+```bash
+cd backend
+.venv/bin/python scripts/update/update_all.py --write
+```
 
 ## GDAL 트러블슈팅 (macOS)
 
@@ -106,5 +102,5 @@ Linux에서는 보통 비워둬도 됩니다.
 - 6단계: `/api/dongs/:slug/detail`
 - 7단계: `/api/preference/{pairs,submit}` (scipy.optimize)
 - 8단계: `/api/compare`
-- 9단계: 카카오 로그인 (django-allauth 활성화)
-- 10단계: 실제 데이터 적재 (`load_dongs` 명령으로 GeoJSON 적재)
+- 9단계: 카카오 로그인은 현재 비활성화 유지
+- 실제 데이터 갱신: `scripts/update/update_all.py --write`

@@ -6,7 +6,7 @@
 
 - **모드**: 프론트엔드 + 디자인 집중. 백엔드/데이터는 기본 휴면이나, 2026-05-20 EC2에서 rent_deal 행정동 매핑 회귀 fix가 적용됨. 새 백엔드/API 변경은 계속 사용자 보고 후 진행.
 - **완료**: 디자인 시스템 일부, 메인 지도(`/`), 동네 패널, 동네 상세, 동네 비교, 마이페이지. 백엔드는 Dong 레거시 제거 후 `/api/adongs/*` 기준으로 정리, `rent_deal.adong_code`와 `rent_deal_ldong_adong_map` 기준표 적용 완료.
-- **다음**: 대시보드 화면(`/dashboard`) 신규 개발. **`.claude/SPEC.md`가 최신 기획서.** 남은 백엔드 후속은 `scripts/scoring/compute_scores.py`, `scripts/update/*` 레거시 재작성과 의심 location 정책 결정.
+- **다음**: 대시보드 화면(`/dashboard`) 신규 개발. **`.claude/SPEC.md`가 최신 기획서.** 백엔드 데이터 갱신은 `backend/scripts/update/update_all.py` 흐름을 기준으로 관리.
 - **CSS 방식**: Tailwind v4 + 디자인 토큰 매핑. 현재 미적용이며 `design-system-keeper`가 Phase 0에서 셋업.
 
 새 세션 시작 시 읽는 순서: `.claude/SPEC.md` → `.claude/STATE.md` → 본 파일.

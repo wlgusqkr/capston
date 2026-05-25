@@ -130,7 +130,7 @@ class AmenityAdong(models.Model):
     )
     adong = models.ForeignKey(
         "regions.Adong",
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         db_column="adong_code",
         related_name="amenity_links",
     )
@@ -160,7 +160,7 @@ class AmenityLdong(models.Model):
     )
     ldong = models.ForeignKey(
         "regions.Ldong",
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         db_column="ldong_code",
         related_name="amenity_links",
     )

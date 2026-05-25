@@ -374,7 +374,7 @@ class PreferenceSubmitView(APIView):
             )
 
         # (won_features, lost_features) 튜플 리스트.
-        # rent feature 는 adong.score_rent 사용 — score_rent 는 compute_scores 가
+        # rent feature 는 adong.score_rent 사용 — score_rent 는 service scoring updater 가
         # 환산월세(보증금×0.005 + 월세, apps.public_data.rent_deal.utils.convert_to_monthly)
         # 분포의 백분위로 산출하므로 이미 환산 기반이다. 따라서 학습 로직은
         # raw 월세가 아닌 환산월세 차이를 비교한다 (rent metric 환산 통일).

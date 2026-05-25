@@ -34,7 +34,7 @@ capston/
 │   │   ├── neighborhoods/    Dong 모델 + scores/summary/detail/compare API
 │   │   ├── preference/       선호 학습 (scipy 가중치 추정) + UserPreference
 │   │   └── users/            인증 + Favorite + 마이페이지 API
-│   ├── scripts/              공공데이터 수집 골격 (10단계, 키 필요)
+│   ├── scripts/              공공데이터/서비스 데이터 업데이트 스크립트
 │   └── config/settings/      base / local / production
 ├── frontend/
 │   └── src/
@@ -72,7 +72,6 @@ uv venv --python 3.12
 VIRTUAL_ENV="$(pwd)/.venv" uv pip install -e .
 cp .env.example .env
 .venv/bin/python manage.py migrate
-.venv/bin/python manage.py seed_dummy_dongs
 .venv/bin/python manage.py runserver
 ```
 
@@ -144,9 +143,8 @@ GET    /api/users/me/reviews              # 빈 리스트 (Review 미구현)
 
 ## 알려진 한계 (10단계 작업 대상)
 
-- **5개 더미 동만**: 실 행정동 GeoJSON 미적재. `python manage.py load_dongs <geojson>`으로 적재 가능.
-- **부동산/편의시설/교통/리뷰는 모두 더미**: 점수 기반 결정적 합리화. 실 데이터는 `backend/scripts/` 골격을 참고해 공공 API 키 발급 후 적재.
-- **공공 API 키 미설정**: 국토교통부, 소상공인진흥공단, 서울 열린 데이터, VWorld. `backend/scripts/README.md`에 발급 절차 정리.
+- **공공데이터 업데이트**: `backend/scripts/update/update_all.py --write`로 원천 데이터와 서비스 파생 데이터를 순서대로 갱신.
+- **공공 API 키 필요**: 국토교통부, 소상공인시장진흥공단, 서울 열린데이터광장, VWorld. 키 이름은 `backend/.env.example` 참고.
 - **카카오 로그인 미사용**: 명시적 결정. `django-allauth`는 의존성에만 남아 있고 활성화하지 않음.
 - **3D 시각화 미구현**: SPEC 우선순위 10번 (시간 남으면).
 
