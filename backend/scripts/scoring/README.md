@@ -21,6 +21,23 @@
 
 `composite_score(w_rent, w_amenity, w_transit)` = 가중 합 (0~100 스케일).
 
+## 현행 보정 스크립트
+
+`recompute_current_adong_transit.py` 는 기존 API/테이블 구조를 유지한 채
+`current_adong.score_transit` 만 재계산한다.
+
+- 지하철: `Adong.location` 중심점에서 가장 가까운 `subway_station.location` 까지의
+  거리, 1km anchor, 60% 가중.
+- 버스: `bus_stop` 행정동별 정류장 수 / `Adong.area_m2` 밀도, `log1p(density)` p95
+  anchor, 40% 가중.
+- 기본은 dry-run 이며 `--apply` 를 붙일 때만 `current_adong` 을 갱신한다.
+
+```bash
+python scripts/scoring/recompute_current_adong_transit.py --slug 강북구-우이동
+python scripts/scoring/recompute_current_adong_transit.py
+python scripts/scoring/recompute_current_adong_transit.py --apply
+```
+
 ## 입력 lock
 
 - 단계 7(점수 재계산) plan 진입 시 산식 lock + 구현 채움.
