@@ -17,21 +17,20 @@ Django REST Framework API 엔드포인트 (views.py)
 =============================================================================
 """
 
-import logging
-from time import perf_counter
+import uuid
+from threading import Lock
 
-from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework import status
 
 from .agent import run_agent
 
-logger = logging.getLogger(__name__)
-
-
-def _elapsed_ms(started_at: float) -> float:
-    return (perf_counter() - started_at) * 1000
+# 대화 히스토리 인메모리 저장소 (서버 재시작 시 초기화됨)
+_conversation_store: dict = {}
+_store_lock = Lock()
+MAX_HISTORY = 10  # 대화당 최대 저장 턴 수
 
 
 @api_view(["POST"])
@@ -103,45 +102,30 @@ def agent_query(request):
         "elapsed_sec": 3.4
       }
     """
-    started_at = perf_counter()
     question = request.data.get("question", "").strip()
-    logger.info(
-        "api.agent.query.start question=%r question_len=%s",
-        question,
-        len(question),
-    )
+    conversation_id = request.data.get("conversation_id", "").strip()
 
     if not question:
-        logger.warning(
-            "api.agent.query.empty_question status=400 elapsed_ms=%.1f",
-            _elapsed_ms(started_at),
-        )
         return Response(
             {"error": "질문을 입력해주세요."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
     if len(question) > 500:
-        logger.warning(
-            "api.agent.query.too_long status=400 question=%r question_len=%s elapsed_ms=%.1f",
-            question,
-            len(question),
-            _elapsed_ms(started_at),
-        )
         return Response(
             {"error": "질문이 너무 깁니다. 500자 이하로 입력해주세요."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    # 대화 ID가 없으면 새로 생성
+    if not conversation_id:
+        conversation_id = str(uuid.uuid4())
+
+    with _store_lock:
+        history = list(_conversation_store.get(conversation_id, []))
+
     try:
-        result = run_agent(question)
-        logger.info(
-            "api.agent.query.finish status=200 route=%s query_type=%s question=%r elapsed_ms=%.1f",
-            result.get("route", "direct"),
-            result.get("query_type", "none"),
-            question,
-            _elapsed_ms(started_at),
-        )
+        result = run_agent(question, history=history)
 
         # info 타입은 visualization 단수로 반환되므로 visualizations 배열로 통일
         visualizations = result.get("visualizations", [])
@@ -150,25 +134,43 @@ def agent_query(request):
             if viz and viz.get("type", "none") != "none":
                 visualizations = [viz]
 
-        return Response(
-            {
-                "answer": result.get("answer", ""),
-                "query_type": result.get("query_type", "none"),
-                "route": result.get("route", "direct"),
-                "neighborhoods": result.get("neighborhoods", []),
-                "visualizations": visualizations,
-                "elapsed_sec": result.get("elapsed_sec", 0),
-            }
-        )
+        # 대화 히스토리에 이번 턴 저장
+        new_entry = {
+            "question": question,
+            "answer": result.get("answer", ""),
+            "neighborhoods": result.get("neighborhoods", []),
+        }
+        with _store_lock:
+            updated = list(_conversation_store.get(conversation_id, []))
+            updated.append(new_entry)
+            _conversation_store[conversation_id] = updated[-MAX_HISTORY:]
+
+        return Response({
+            "conversation_id": conversation_id,
+            "answer": result.get("answer", ""),
+            "query_type": result.get("query_type", "none"),
+            "route": result.get("route", "direct"),
+            "neighborhoods": result.get("neighborhoods", []),
+            "visualizations": visualizations,
+            "elapsed_sec": result.get("elapsed_sec", 0),
+        })
 
     except Exception as e:
-        logger.exception(
-            "api.agent.query.failed status=500 question=%r question_len=%s elapsed_ms=%.1f",
-            question,
-            len(question),
-            _elapsed_ms(started_at),
-        )
         return Response(
             {"error": f"Agent 실행 중 오류가 발생했습니다: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
+
+@api_view(["DELETE"])
+@permission_classes([AllowAny])
+def clear_conversation(request, conversation_id: str):
+    """
+    DELETE /api/agent/conversation/<conversation_id>
+    해당 대화의 히스토리를 초기화합니다.
+    """
+    with _store_lock:
+        existed = conversation_id in _conversation_store
+        _conversation_store.pop(conversation_id, None)
+
+    return Response({"cleared": existed, "conversation_id": conversation_id})
