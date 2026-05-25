@@ -38,6 +38,21 @@ python scripts/scoring/recompute_current_adong_transit.py
 python scripts/scoring/recompute_current_adong_transit.py --apply
 ```
 
+`recompute_current_adong_amenity.py` 는 같은 방식으로
+`current_adong.score_amenity` 만 재계산한다.
+
+- 생활: 편의점/마트/음식점/카페/스터디카페/세탁소/올리브영 밀도,
+  `log1p(density)` p95 anchor, 60.9% 가중.
+- 의료: 병원/약국 밀도, `log1p(density)` p95 anchor, 10.8% 가중.
+- 공원: `park_adong`으로 매핑된 공원과 행정동 경계의 실제 교차 면적 / 행정동
+  면적, 28.3% 가중.
+
+```bash
+python scripts/scoring/recompute_current_adong_amenity.py --slug 강북구-우이동
+python scripts/scoring/recompute_current_adong_amenity.py
+python scripts/scoring/recompute_current_adong_amenity.py --apply
+```
+
 ## 입력 lock
 
 - 단계 7(점수 재계산) plan 진입 시 산식 lock + 구현 채움.
