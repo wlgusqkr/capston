@@ -13,10 +13,13 @@
 
 from __future__ import annotations
 
+import logging
 from itertools import combinations
+from time import perf_counter
 
 from django.db.models import F, FloatField, Value
 from django.db.models.functions import Coalesce
+
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
@@ -25,14 +28,15 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.service.neighborhoods.compare_dummy import compute_rent_converted_avgs
-from apps.service.neighborhoods.detail_dummy import NEAREST_STATIONS_FALLBACK
 # sub-plan 7G-B2: Adong → Adong + CurrentAdong join 치환.
 # 결정 1A: current_adong 미존재 또는 score_rent NULL → 0 fallback.
 from apps.public_data.regions.models import Adong
+from apps.service.neighborhoods.compare_dummy import compute_rent_converted_avgs
+from apps.service.neighborhoods.detail_dummy import NEAREST_STATIONS_FALLBACK
 
 from .optimizer import estimate_weights, to_integer_percent
 
+logger = logging.getLogger(__name__)
 
 # 기본 가중치 (SPEC 6.1 — 첫 진입 시 33/33/34)
 DEFAULT_WEIGHTS = {"rent": 33 / 100, "amenity": 33 / 100, "transit": 34 / 100}
@@ -43,6 +47,10 @@ AMENITY_LABEL_KO: dict[str, str] = {
     "normal": "보통",
     "lacking": "부족",
 }
+
+
+def _elapsed_ms(started_at: float) -> float:
+    return (perf_counter() - started_at) * 1000
 
 
 # ---------------------------------------------------------------------------
@@ -205,6 +213,7 @@ class PreferencePairsView(APIView):
     pagination_class = None
 
     def get(self, request: Request) -> Response:
+        started_at = perf_counter()
         # count 파라미터 (기본 5, 1~20 범위)
         raw = request.query_params.get("count", "5")
         try:
@@ -213,6 +222,7 @@ class PreferencePairsView(APIView):
             raise ValidationError({"count": "정수여야 합니다."}) from exc
         if not 1 <= count <= 20:
             raise ValidationError({"count": "1~20 범위여야 합니다."})
+        logger.info("api.preference.pairs.start count=%s", count)
 
         # sub-plan 7G-B2: Adong + CurrentAdong join + annotate score_*.
         # 결정 1A: current_adong 미존재/score NULL → 0.
@@ -236,9 +246,11 @@ class PreferencePairsView(APIView):
             )
         )
         if len(adongs) < 2:
-            raise ValidationError(
-                {"detail": "비교할 동이 부족합니다 (최소 2개 필요)."}
+            logger.warning(
+                "api.preference.pairs.not_enough_adongs count=%s",
+                len(adongs),
             )
+            raise ValidationError({"detail": "비교할 동이 부족합니다 (최소 2개 필요)."})
 
         pair_dongs = _select_pairs(adongs, count)
 
@@ -263,6 +275,12 @@ class PreferencePairsView(APIView):
             }
             for left, right in pair_dongs
         ]
+        logger.info(
+            "api.preference.pairs.finish status=200 pair_count=%s unique_adong_count=%s elapsed_ms=%.1f",
+            len(pairs),
+            len(unique_dongs),
+            _elapsed_ms(started_at),
+        )
         return Response({"pairs": pairs}, status=status.HTTP_200_OK)
 
 
@@ -292,54 +310,48 @@ class PreferenceSubmitView(APIView):
     """
 
     def post(self, request: Request) -> Response:
+        started_at = perf_counter()
         data = request.data
         if not isinstance(data, dict):
             raise ValidationError({"detail": "JSON 객체여야 합니다."})
 
         comparisons_raw = data.get("comparisons")
         if not isinstance(comparisons_raw, list):
-            raise ValidationError(
-                {"comparisons": "리스트여야 합니다."}
-            )
+            raise ValidationError({"comparisons": "리스트여야 합니다."})
         if len(comparisons_raw) == 0:
-            raise ValidationError(
-                {"comparisons": "최소 1개 이상의 비교가 필요합니다."}
-            )
+            raise ValidationError({"comparisons": "최소 1개 이상의 비교가 필요합니다."})
         # 잠금장치: 너무 많은 비교는 거부 (남용 방지 / 응답 시간 보호)
         if len(comparisons_raw) > 50:
-            raise ValidationError(
-                {"comparisons": "비교는 최대 50개까지만 처리할 수 있습니다."}
+            logger.warning(
+                "api.preference.submit.too_many_comparisons status=400 count=%s",
+                len(comparisons_raw),
             )
+            raise ValidationError({"comparisons": "비교는 최대 50개까지만 처리할 수 있습니다."})
 
         # 슬러그 수집 + 형식 검증
         slugs_needed: set[str] = set()
         validated: list[tuple[str, str]] = []
         for i, c in enumerate(comparisons_raw):
             if not isinstance(c, dict):
-                raise ValidationError(
-                    {"comparisons": f"{i}번 항목이 객체가 아닙니다."}
-                )
+                raise ValidationError({"comparisons": f"{i}번 항목이 객체가 아닙니다."})
             won = c.get("won")
             lost = c.get("lost")
             if not isinstance(won, str) or not isinstance(lost, str):
                 raise ValidationError(
-                    {
-                        "comparisons": (
-                            f"{i}번 항목의 won/lost는 문자열 슬러그여야 합니다."
-                        )
-                    }
+                    {"comparisons": (f"{i}번 항목의 won/lost는 문자열 슬러그여야 합니다.")}
                 )
             if won == lost:
                 raise ValidationError(
-                    {
-                        "comparisons": (
-                            f"{i}번 항목의 won과 lost가 같은 슬러그입니다 ('{won}')."
-                        )
-                    }
+                    {"comparisons": (f"{i}번 항목의 won과 lost가 같은 슬러그입니다 ('{won}').")}
                 )
             validated.append((won, lost))
             slugs_needed.add(won)
             slugs_needed.add(lost)
+        logger.info(
+            "api.preference.submit.start comparison_count=%s slug_count=%s",
+            len(validated),
+            len(slugs_needed),
+        )
 
         # 슬러그 → Adong 일괄 조회 (N+1 방지). sub-plan 7G-B2.
         # CurrentAdong join + Coalesce annotate. 결정 1A: NULL → 0.
@@ -365,12 +377,12 @@ class PreferenceSubmitView(APIView):
         }
         missing = sorted(slugs_needed - set(dong_map.keys()))
         if missing:
+            logger.warning(
+                "api.preference.submit.missing_slugs status=400 missing=%s",
+                missing,
+            )
             raise ValidationError(
-                {
-                    "comparisons": (
-                        f"존재하지 않는 동 슬러그: {', '.join(missing)}"
-                    )
-                }
+                {"comparisons": (f"존재하지 않는 동 슬러그: {', '.join(missing)}")}
             )
 
         # (won_features, lost_features) 튜플 리스트.
@@ -378,9 +390,7 @@ class PreferenceSubmitView(APIView):
         # 환산월세(보증금×0.005 + 월세, apps.public_data.rent_deal.utils.convert_to_monthly)
         # 분포의 백분위로 산출하므로 이미 환산 기반이다. 따라서 학습 로직은
         # raw 월세가 아닌 환산월세 차이를 비교한다 (rent metric 환산 통일).
-        comparisons: list[
-            tuple[tuple[float, float, float], tuple[float, float, float]]
-        ] = []
+        comparisons: list[tuple[tuple[float, float, float], tuple[float, float, float]]] = []
         for won_slug, lost_slug in validated:
             won = dong_map[won_slug]
             lost = dong_map[lost_slug]
@@ -393,6 +403,12 @@ class PreferenceSubmitView(APIView):
 
         weights = estimate_weights(comparisons)
         percent = to_integer_percent(weights)
+        logger.info(
+            "api.preference.submit.finish status=200 comparison_count=%s weights=%s elapsed_ms=%.1f",
+            len(comparisons),
+            percent,
+            _elapsed_ms(started_at),
+        )
         return Response(
             {
                 "w_rent": percent["rent"],

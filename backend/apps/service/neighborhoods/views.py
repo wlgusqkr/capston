@@ -18,6 +18,10 @@ Adong 관련 뷰.
 
 from __future__ import annotations
 
+import logging
+from datetime import date
+from time import perf_counter
+
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
@@ -25,8 +29,6 @@ from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from datetime import date
 
 from .adong_surface import build_adong_qs, wrap
 from .compare_dummy import build_compare_row, compute_rent_converted_avgs
@@ -40,6 +42,8 @@ from .serializers import (
     KernelScoreRequestSerializer,
 )
 
+logger = logging.getLogger(__name__)
+
 # 비교 가능한 최대 동 수 (SPEC 6.4)
 COMPARE_MAX_SLUGS = 3
 
@@ -50,6 +54,10 @@ DEFAULT_W_TRANSIT = 34
 
 # 합계 허용 오차 (반올림 누적 대비)
 WEIGHT_SUM_TOLERANCE = 1
+
+
+def _elapsed_ms(started_at: float) -> float:
+    return (perf_counter() - started_at) * 1000
 
 
 def _parse_weight(request: Request, key: str, default: int) -> int:
@@ -82,12 +90,7 @@ def _parse_and_validate_weights(request: Request) -> dict[str, float]:
     total = w_rent + w_amenity + w_transit
     if abs(total - 100) > WEIGHT_SUM_TOLERANCE:
         raise ValidationError(
-            {
-                "weights": (
-                    f"가중치 합이 100이어야 합니다 (현재 {total}). "
-                    "허용 오차는 ±1입니다."
-                )
-            }
+            {"weights": (f"가중치 합이 100이어야 합니다 (현재 {total}). " "허용 오차는 ±1입니다.")}
         )
 
     return {
@@ -144,18 +147,23 @@ class AdongScoresView(APIView):
     pagination_class = None  # 426개 정도라 한 번에 반환 (SPEC 14.3 클라이언트 캐시)
 
     def get(self, request: Request) -> Response:
+        started_at = perf_counter()
         weights = _parse_and_validate_weights(request)
+        logger.info("api.adongs.scores.start weights=%s", weights)
 
         # 425개 정도라 단일 쿼리 + 메모리 정렬. 인덱스/공간 쿼리 불필요.
         # 7G-B1: Adong + current_score(LEFT) + Gu 합성. score_rent NULL→0 (결정 1A).
         adongs = build_adong_qs()
         wrapped = [wrap(a) for a in adongs]
-        serialized = AdongScoreSerializer(
-            wrapped, many=True, context={"weights": weights}
-        ).data
+        serialized = AdongScoreSerializer(wrapped, many=True, context={"weights": weights}).data
         # score 내림차순 정렬 (SPEC 6.1: 사용자가 "어디가 좋은가"를 보기 편함)
         serialized.sort(key=lambda d: d["score"], reverse=True)
 
+        logger.info(
+            "api.adongs.scores.finish status=200 count=%s elapsed_ms=%.1f",
+            len(serialized),
+            _elapsed_ms(started_at),
+        )
         return Response(serialized, status=status.HTTP_200_OK)
 
 
@@ -175,7 +183,9 @@ class AdongSummaryView(APIView):
     """
 
     def get(self, request: Request, slug: str) -> Response:
+        started_at = perf_counter()
         weights = _parse_and_validate_weights(request)
+        logger.info("api.adongs.summary.start slug=%s weights=%s", slug, weights)
 
         # 7G-B1: Adong + current_score 조회. DoesNotExist는 Adong 쪽으로 위임.
         from apps.public_data.regions.models import Adong  # noqa: WPS433
@@ -183,10 +193,16 @@ class AdongSummaryView(APIView):
         try:
             adong = build_adong_qs().get(slug=slug)
         except Adong.DoesNotExist as exc:
+            logger.warning("api.adongs.summary.not_found slug=%s", slug)
             raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
 
         adong = wrap(adong)
         data = AdongSummarySerializer(adong, context={"weights": weights}).data
+        logger.info(
+            "api.adongs.summary.finish slug=%s status=200 elapsed_ms=%.1f",
+            slug,
+            _elapsed_ms(started_at),
+        )
         return Response(data, status=status.HTTP_200_OK)
 
 
@@ -211,7 +227,9 @@ class AdongDetailView(APIView):
     """
 
     def get(self, request: Request, slug: str) -> Response:
+        started_at = perf_counter()
         weights = _parse_and_validate_weights(request)
+        logger.info("api.adongs.detail.start slug=%s weights=%s", slug, weights)
 
         # 7G-B1: Adong + current_score 조회. 비슷한 동네 계산은 detail builder가 별도 조회.
         from apps.public_data.regions.models import Adong  # noqa: WPS433
@@ -219,10 +237,16 @@ class AdongDetailView(APIView):
         try:
             adong = build_adong_qs().get(slug=slug)
         except Adong.DoesNotExist as exc:
+            logger.warning("api.adongs.detail.not_found slug=%s", slug)
             raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
 
         adong = wrap(adong)
         data = AdongDetailSerializer(adong, context={"weights": weights}).data
+        logger.info(
+            "api.adongs.detail.finish slug=%s status=200 elapsed_ms=%.1f",
+            slug,
+            _elapsed_ms(started_at),
+        )
         return Response(data, status=status.HTTP_200_OK)
 
 
@@ -259,6 +283,7 @@ class CompareView(APIView):
     """
 
     def get(self, request: Request) -> Response:
+        started_at = perf_counter()
         weights = _parse_and_validate_weights(request)
 
         # ---- slugs 파싱 ----
@@ -270,6 +295,7 @@ class CompareView(APIView):
             raise ValidationError(
                 {"slugs": f"최대 {COMPARE_MAX_SLUGS}개 동네까지 비교할 수 있습니다."}
             )
+        logger.info("api.compare.start slugs=%s weights=%s", slugs, weights)
 
         # ---- 한 번의 쿼리로 fetch 후 dict 룩업 ----
         # 입력 슬러그 순서 그대로 응답하기 위해 dict로 매핑.
@@ -279,6 +305,7 @@ class CompareView(APIView):
 
         missing = [s for s in slugs if s not in by_slug]
         if missing:
+            logger.warning("api.compare.not_found missing=%s requested=%s", missing, slugs)
             raise NotFound({"detail": f"찾을 수 없는 동네: {', '.join(missing)}"})
 
         # 환산월세 평균을 한 번에 사전 계산 (N+1 회피).
@@ -303,13 +330,16 @@ class CompareView(APIView):
             "w_transit": int(round(weights["transit"] * 100)),
         }
 
-        return Response(
-            {
-                "weights": applied_weights,
-                "adongs": AdongCompareItemSerializer(rows, many=True).data,
-            },
-            status=status.HTTP_200_OK,
+        payload = {
+            "weights": applied_weights,
+            "adongs": AdongCompareItemSerializer(rows, many=True).data,
+        }
+        logger.info(
+            "api.compare.finish status=200 count=%s elapsed_ms=%.1f",
+            len(payload["adongs"]),
+            _elapsed_ms(started_at),
         )
+        return Response(payload, status=status.HTTP_200_OK)
 
 
 @extend_schema(
@@ -351,15 +381,26 @@ class KernelScoreView(APIView):
     """
 
     def post(self, request: Request) -> Response:
+        started_at = perf_counter()
         ser = KernelScoreRequestSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         data = ser.validated_data
+        logger.info(
+            "api.score.point.start lat=%s lng=%s school_present=%s",
+            data["lat"],
+            data["lng"],
+            bool(data.get("school")),
+        )
 
         result = compute_point_score(
             lat=data["lat"],
             lng=data["lng"],
             weights=data["weights"],
             school=data.get("school") or None,
+        )
+        logger.info(
+            "api.score.point.finish status=200 elapsed_ms=%.1f",
+            _elapsed_ms(started_at),
         )
         return Response(result, status=status.HTTP_200_OK)
 
@@ -467,16 +508,30 @@ class AdongExploreView(APIView):
     """GET /api/adongs/<slug>/explore?<filters>"""
 
     def get(self, request: Request, slug: str) -> Response:
+        started_at = perf_counter()
+        logger.info(
+            "api.adongs.explore.start slug=%s page=%s page_size=%s sort=%s",
+            slug,
+            request.query_params.get("page"),
+            request.query_params.get("page_size"),
+            request.query_params.get("sort"),
+        )
         # 7G-B1: Adong + current_score 합성. explore는 adong.code/gu(string)만 사용 (B2 확인 영역).
         from apps.public_data.regions.models import Adong  # noqa: WPS433
 
         try:
             adong = build_adong_qs().get(slug=slug)
         except Adong.DoesNotExist as exc:
+            logger.warning("api.adongs.explore.not_found slug=%s", slug)
             raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
 
         adong = wrap(adong)
         data = build_explore_response(adong, request, today=date.today())
+        logger.info(
+            "api.adongs.explore.finish slug=%s status=200 elapsed_ms=%.1f",
+            slug,
+            _elapsed_ms(started_at),
+        )
         return Response(data, status=status.HTTP_200_OK)
 
 
@@ -486,9 +541,9 @@ class AdongExploreView(APIView):
 
 from django.core.cache import cache
 
+from apps.public_data.metrics.models import GuMetric, Metric, SeoulMetric
 from apps.public_data.populations.models import AdongPopulation
 from apps.public_data.regions.models import Gu
-from apps.public_data.metrics.models import GuMetric, Metric, SeoulMetric
 
 
 def _get_dong_or_404(slug: str):
@@ -501,6 +556,7 @@ def _get_dong_or_404(slug: str):
     try:
         adong = build_adong_qs().get(slug=slug)
     except Adong.DoesNotExist as exc:
+        logger.warning("api.adongs.lookup.not_found slug=%s", slug)
         raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
     return wrap(adong)
 
@@ -531,19 +587,31 @@ class AdongPopulationView(APIView):
     """
 
     def get(self, request: Request, slug: str) -> Response:
+        started_at = perf_counter()
+        logger.info("api.adongs.population.start slug=%s", slug)
         adong = _get_dong_or_404(slug)
 
         cache_key = f"dong_population:{adong.code}"
         cached = cache.get(cache_key)
         if cached is not None:
+            logger.info(
+                "api.adongs.population.cache_hit slug=%s cache=hit elapsed_ms=%.1f",
+                slug,
+                _elapsed_ms(started_at),
+            )
             return Response(cached, status=status.HTTP_200_OK)
+        logger.info("api.adongs.population.cache_miss slug=%s cache=miss", slug)
 
         rows = (
-            AdongPopulation.objects
-            .filter(adong=adong.code)
+            AdongPopulation.objects.filter(adong=adong.code)
             .order_by("date")
-            .values("date", "total_population", "household_count",
-                    "male_population", "female_population")
+            .values(
+                "date",
+                "total_population",
+                "household_count",
+                "male_population",
+                "female_population",
+            )
         )
         trend = [
             {
@@ -565,6 +633,12 @@ class AdongPopulationView(APIView):
         }
 
         cache.set(cache_key, data, timeout=600)  # 10분 TTL
+        logger.info(
+            "api.adongs.population.finish slug=%s status=200 count=%s elapsed_ms=%.1f",
+            slug,
+            len(trend),
+            _elapsed_ms(started_at),
+        )
         return Response(data, status=status.HTTP_200_OK)
 
 
@@ -621,11 +695,14 @@ class AdongGuMetricsView(APIView):
     """
 
     def get(self, request: Request, slug: str) -> Response:
+        started_at = perf_counter()
+        logger.info("api.adongs.gu_metrics.start slug=%s", slug)
         adong = _get_dong_or_404(slug)
 
         # Adong.gu는 CharField (예: "중구"). Gu.name도 동일 값.
         gu = Gu.objects.filter(name=adong.gu).first()
         if gu is None:
+            logger.warning("api.adongs.gu_metrics.gu_not_found slug=%s gu=%s", slug, adong.gu)
             raise NotFound({"detail": f"구를 찾을 수 없습니다: {adong.gu}"})
 
         # v2: 응답 모양 변경 (rank_in_seoul/gu_count/gu_avg 추가)
@@ -634,19 +711,26 @@ class AdongGuMetricsView(APIView):
         if cached is not None:
             # cached 데이터에 adong 헤더만 교체 (같은 구의 다른 동에서도 재사용)
             result = {**cached, "adong": _dong_header(adong)}
+            logger.info(
+                "api.adongs.gu_metrics.cache_hit slug=%s gu_code=%s cache=hit elapsed_ms=%.1f",
+                slug,
+                gu.gu_code,
+                _elapsed_ms(started_at),
+            )
             return Response(result, status=status.HTTP_200_OK)
+        logger.info(
+            "api.adongs.gu_metrics.cache_miss slug=%s gu_code=%s cache=miss",
+            slug,
+            gu.gu_code,
+        )
 
         # 메트릭 메타 사전 로드 (35행)
-        metric_meta = {
-            m.metric_code: m
-            for m in Metric.objects.all()
-        }
+        metric_meta = {m.metric_code: m for m in Metric.objects.all()}
 
         # (gu, metric_code)별 최신 1행씩 — PostgreSQL DISTINCT ON.
         # ORDER BY metric_code, -date 가 DISTINCT ON 컬럼과 정확히 매칭되어야 한다.
         gu_rows = list(
-            GuMetric.objects
-            .filter(gu=gu)
+            GuMetric.objects.filter(gu=gu)
             .order_by("metric_id", "-date")
             .distinct("metric_id")
             .values("metric_id", "date", "value")
@@ -655,11 +739,7 @@ class AdongGuMetricsView(APIView):
         # 본 구의 (metric_code, date) 쌍을 모아서, 같은 (metric_code, date)에 대해
         # 25개 구의 값을 한 번에 fetch → rank/gu_avg 계산.
         # date가 None인 행은 비교 무의미하므로 제외.
-        pairs = [
-            (r["metric_id"], r["date"])
-            for r in gu_rows
-            if r["date"] is not None
-        ]
+        pairs = [(r["metric_id"], r["date"]) for r in gu_rows if r["date"] is not None]
 
         # 25개 구 × ~35 metric ≒ 875행 정도. 단일 쿼리로 처리.
         # metric_id, date IN 조합 — PostgreSQL은 IN 튜플도 지원하지만 ORM 표현이
@@ -668,10 +748,8 @@ class AdongGuMetricsView(APIView):
         if pairs:
             metric_ids = sorted({mid for mid, _d in pairs})
             dates = sorted({d for _mid, d in pairs})
-            all_rows = (
-                GuMetric.objects
-                .filter(metric_id__in=metric_ids, date__in=dates)
-                .values("metric_id", "date", "gu_id", "value")
+            all_rows = GuMetric.objects.filter(metric_id__in=metric_ids, date__in=dates).values(
+                "metric_id", "date", "gu_id", "value"
             )
             # peers[(metric_id, date)] = [(gu_id, value_float_or_None), ...]
             peers: dict[tuple, list] = {}
@@ -700,9 +778,7 @@ class AdongGuMetricsView(APIView):
                     gu_avg = sum(non_null_values) / gu_count
                 if v_float is not None and non_null_values:
                     # 값이 큰 순으로 1위. 동률은 동일 rank 부여 (1, 2, 2, 4 식).
-                    rank_in_seoul = 1 + sum(
-                        1 for x in non_null_values if x > v_float
-                    )
+                    rank_in_seoul = 1 + sum(1 for x in non_null_values if x > v_float)
 
             metrics_dict[mc] = {
                 "value": v_float,
@@ -717,8 +793,7 @@ class AdongGuMetricsView(APIView):
 
         # SeoulMetric — metric_code별 최신 1행씩 (서울시 전체 합/대표값. 의미 주의)
         seoul_rows = (
-            SeoulMetric.objects
-            .order_by("metric_id", "-date")
+            SeoulMetric.objects.order_by("metric_id", "-date")
             .distinct("metric_id")
             .values("metric_id", "date", "value")
         )
@@ -738,6 +813,13 @@ class AdongGuMetricsView(APIView):
         cache.set(cache_key, cacheable, timeout=300)  # 5분 TTL
 
         data = {**cacheable, "adong": _dong_header(adong)}
+        logger.info(
+            "api.adongs.gu_metrics.finish slug=%s gu_code=%s status=200 metric_count=%s elapsed_ms=%.1f",
+            slug,
+            gu.gu_code,
+            len(metrics_dict),
+            _elapsed_ms(started_at),
+        )
         return Response(data, status=status.HTTP_200_OK)
 
 
@@ -870,11 +952,23 @@ class AdongGuMetricsSeriesView(APIView):
     """
 
     def get(self, request: Request, slug: str) -> Response:
+        started_at = perf_counter()
         adong = _get_dong_or_404(slug)
         codes, years = _parse_series_params(request)
+        logger.info(
+            "api.adongs.gu_metrics_series.start slug=%s codes=%s years=%s",
+            slug,
+            codes,
+            years,
+        )
 
         gu = Gu.objects.filter(name=adong.gu).first()
         if gu is None:
+            logger.warning(
+                "api.adongs.gu_metrics_series.gu_not_found slug=%s gu=%s",
+                slug,
+                adong.gu,
+            )
             raise NotFound({"detail": f"구를 찾을 수 없습니다: {adong.gu}"})
 
         # 캐시 키: (구, codes, years) 단위. codes는 정렬해서 키 안정화.
@@ -884,22 +978,29 @@ class AdongGuMetricsSeriesView(APIView):
         cached = cache.get(cache_key)
         if cached is not None:
             result = {**cached, "adong": _dong_header(adong)}
+            logger.info(
+                "api.adongs.gu_metrics_series.cache_hit slug=%s gu_code=%s cache=hit elapsed_ms=%.1f",
+                slug,
+                gu.gu_code,
+                _elapsed_ms(started_at),
+            )
             return Response(result, status=status.HTTP_200_OK)
+        logger.info(
+            "api.adongs.gu_metrics_series.cache_miss slug=%s gu_code=%s cache=miss",
+            slug,
+            gu.gu_code,
+        )
 
         # cutoff: 오늘 기준 N년 전 1월 1일 (연 단위 적재 metric에서도 경계 포함)
         today = date.today()
         cutoff = date(today.year - years, 1, 1)
 
         # 메트릭 메타 사전 로드 (요청 codes 한정)
-        metric_meta = {
-            m.metric_code: m
-            for m in Metric.objects.filter(metric_code__in=codes)
-        }
+        metric_meta = {m.metric_code: m for m in Metric.objects.filter(metric_code__in=codes)}
 
         # 본 구의 시계열 — (metric_code, date) 오름차순
         gu_rows = (
-            GuMetric.objects
-            .filter(gu=gu, metric_id__in=codes, date__gte=cutoff)
+            GuMetric.objects.filter(gu=gu, metric_id__in=codes, date__gte=cutoff)
             .order_by("metric_id", "date")
             .values("metric_id", "date", "value")
         )
@@ -920,17 +1021,17 @@ class AdongGuMetricsSeriesView(APIView):
             if entry is None:
                 # 요청 codes에 없는 결과는 무시 (이론상 안 옴)
                 continue
-            entry["points"].append({
-                "date": str(row["date"]) if row["date"] is not None else None,
-                "value": float(row["value"]) if row["value"] is not None else None,
-            })
+            entry["points"].append(
+                {
+                    "date": str(row["date"]) if row["date"] is not None else None,
+                    "value": float(row["value"]) if row["value"] is not None else None,
+                }
+            )
 
         # 25개 구 전체 시계열 (gu_avg_series + current_rank 계산용).
         # 25 구 × 코드 수 × 연 단위 ~10년 ≒ 수천 행. 단일 쿼리.
-        all_rows = (
-            GuMetric.objects
-            .filter(metric_id__in=codes, date__gte=cutoff)
-            .values("metric_id", "date", "gu_id", "value")
+        all_rows = GuMetric.objects.filter(metric_id__in=codes, date__gte=cutoff).values(
+            "metric_id", "date", "gu_id", "value"
         )
         # bucket[code][date] = [value, ...]  (null 제외)
         # bucket_with_gu[code][date] = {gu_id: value}  (null 제외, rank 산출용)
@@ -955,10 +1056,12 @@ class AdongGuMetricsSeriesView(APIView):
                 vals = by_date[d]
                 if not vals:
                     continue
-                gu_avg_series[code]["points"].append({
-                    "date": str(d),
-                    "value": sum(vals) / len(vals),
-                })
+                gu_avg_series[code]["points"].append(
+                    {
+                        "date": str(d),
+                        "value": sum(vals) / len(vals),
+                    }
+                )
 
         # current_rank — 본 구의 가장 최신 point 기준
         for code in codes:
@@ -991,8 +1094,7 @@ class AdongGuMetricsSeriesView(APIView):
 
         # 서울 시계열 — SeoulMetric raw (서울시 전체 합/대표값).
         seoul_rows = (
-            SeoulMetric.objects
-            .filter(metric_id__in=codes, date__gte=cutoff)
+            SeoulMetric.objects.filter(metric_id__in=codes, date__gte=cutoff)
             .order_by("metric_id", "date")
             .values("metric_id", "date", "value")
         )
@@ -1002,10 +1104,12 @@ class AdongGuMetricsSeriesView(APIView):
             entry = seoul_series.get(code)
             if entry is None:
                 continue
-            entry["points"].append({
-                "date": str(row["date"]) if row["date"] is not None else None,
-                "value": float(row["value"]) if row["value"] is not None else None,
-            })
+            entry["points"].append(
+                {
+                    "date": str(row["date"]) if row["date"] is not None else None,
+                    "value": float(row["value"]) if row["value"] is not None else None,
+                }
+            )
 
         cacheable = {
             "gu_code": gu.gu_code,
@@ -1017,4 +1121,11 @@ class AdongGuMetricsSeriesView(APIView):
         cache.set(cache_key, cacheable, timeout=300)  # 5분 TTL
 
         data = {**cacheable, "adong": _dong_header(adong)}
+        logger.info(
+            "api.adongs.gu_metrics_series.finish slug=%s gu_code=%s status=200 codes=%s elapsed_ms=%.1f",
+            slug,
+            gu.gu_code,
+            len(codes),
+            _elapsed_ms(started_at),
+        )
         return Response(data, status=status.HTTP_200_OK)
