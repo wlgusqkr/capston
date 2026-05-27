@@ -26,10 +26,14 @@ CSRF 면제(@method_decorator(csrf_exempt)). 세션 쿠키만으로 인증 식�
 
 from __future__ import annotations
 
+import logging
+from time import perf_counter
+
 from django.contrib.auth import authenticate, login, logout
 from django.db import IntegrityError, transaction
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
+
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
@@ -54,6 +58,7 @@ class CsrfExemptSessionAuthentication(SessionAuthentication):
     def enforce_csrf(self, request):  # type: ignore[no-untyped-def]
         return  # 무시
 
+
 from apps.public_data.regions.models import Adong
 from apps.service.preference.models import UserPreference
 
@@ -69,6 +74,12 @@ from .serializers import (
     preference_to_floats,
     preference_to_int_percent,
 )
+
+logger = logging.getLogger(__name__)
+
+
+def _elapsed_ms(started_at: float) -> float:
+    return (perf_counter() - started_at) * 1000
 
 
 # ---------------------------------------------------------------------------
@@ -99,20 +110,20 @@ class _AuthRequiredMixin:
         try:
             self.initial(drf_request, *args, **kwargs)
             if not drf_request.user.is_authenticated:
+                logger.warning(
+                    "api.auth.required.unauthorized status=401 path=%s",
+                    request.path,
+                )
                 response = Response(
                     {"detail": self.UNAUTH_DETAIL},
                     status=status.HTTP_401_UNAUTHORIZED,
                 )
             else:
-                handler = getattr(
-                    self, request.method.lower(), self.http_method_not_allowed
-                )
+                handler = getattr(self, request.method.lower(), self.http_method_not_allowed)
                 response = handler(drf_request, *args, **kwargs)
         except Exception as exc:
             response = self.handle_exception(exc)
-        self.response = self.finalize_response(
-            drf_request, response, *args, **kwargs
-        )
+        self.response = self.finalize_response(drf_request, response, *args, **kwargs)
         return self.response
 
 
@@ -136,22 +147,37 @@ class RegisterView(APIView):
     permission_classes: list = []
 
     def post(self, request: Request) -> Response:
+        started_at = perf_counter()
         serializer = RegisterSerializer(data=request.data)
         if not serializer.is_valid():
             errors = serializer.errors
             # username 중복은 409로 승격
             username_errs = errors.get("username") or []
             if any(
-                "이미 사용" in str(m) or "already exists" in str(m).lower()
-                for m in username_errs
+                "이미 사용" in str(m) or "already exists" in str(m).lower() for m in username_errs
             ):
+                logger.warning(
+                    "api.auth.register.duplicate_username status=409 elapsed_ms=%.1f",
+                    _elapsed_ms(started_at),
+                )
                 return Response(
                     {"username": "이미 사용 중인 username입니다."},
                     status=status.HTTP_409_CONFLICT,
                 )
+            logger.warning(
+                "api.auth.register.invalid_payload status=400 fields=%s elapsed_ms=%.1f",
+                sorted(errors.keys()),
+                _elapsed_ms(started_at),
+            )
             return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
         data = serializer.validated_data
+        logger.info(
+            "api.auth.register.start username_present=%s school_present=%s year_present=%s",
+            bool(data.get("username")),
+            bool(data.get("school")),
+            data.get("year") is not None,
+        )
         try:
             with transaction.atomic():
                 user = User.objects.create_user(
@@ -163,6 +189,10 @@ class RegisterView(APIView):
                 user.nickname = data.get("nickname", "") or ""
                 user.save(update_fields=["school", "year", "nickname"])
         except IntegrityError:
+            logger.warning(
+                "api.auth.register.duplicate_username status=409 elapsed_ms=%.1f",
+                _elapsed_ms(started_at),
+            )
             return Response(
                 {"username": "이미 사용 중인 username입니다."},
                 status=status.HTTP_409_CONFLICT,
@@ -170,6 +200,11 @@ class RegisterView(APIView):
 
         # 가입 후 자동 로그인 (세션 쿠키 발급)
         login(request, user)
+        logger.info(
+            "api.auth.register.success status=201 user_id=%s elapsed_ms=%.1f",
+            user.id,
+            _elapsed_ms(started_at),
+        )
         return Response(
             MeSerializer(user).data,
             status=status.HTTP_201_CREATED,
@@ -195,22 +230,37 @@ class LoginView(APIView):
     permission_classes: list = []
 
     def post(self, request: Request) -> Response:
+        started_at = perf_counter()
         serializer = LoginSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(
-                serializer.errors, status=status.HTTP_400_BAD_REQUEST
+            logger.warning(
+                "api.auth.login.invalid_payload status=400 fields=%s elapsed_ms=%.1f",
+                sorted(serializer.errors.keys()),
+                _elapsed_ms(started_at),
             )
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         username = serializer.validated_data["username"]
         password = serializer.validated_data["password"]
+        logger.info("api.auth.login.start username_present=%s", bool(username))
 
         user = authenticate(request, username=username, password=password)
         if user is None or not user.is_active:
+            logger.warning(
+                "api.auth.login.failed status=401 username_present=%s elapsed_ms=%.1f",
+                bool(username),
+                _elapsed_ms(started_at),
+            )
             return Response(
                 {"detail": "아이디 또는 비밀번호가 올바르지 않습니다."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
         login(request, user)
+        logger.info(
+            "api.auth.login.success status=200 user_id=%s elapsed_ms=%.1f",
+            user.id,
+            _elapsed_ms(started_at),
+        )
         return Response(
             MeSerializer(user).data,
             status=status.HTTP_200_OK,
@@ -233,7 +283,14 @@ class LogoutView(APIView):
     permission_classes: list = []
 
     def post(self, request: Request) -> Response:
+        started_at = perf_counter()
+        user_id = getattr(request.user, "id", None) or "anonymous"
         logout(request)
+        logger.info(
+            "api.auth.logout.success status=200 user_id=%s elapsed_ms=%.1f",
+            user_id,
+            _elapsed_ms(started_at),
+        )
         return Response({"detail": "로그아웃 되었습니다."}, status=status.HTTP_200_OK)
 
 
@@ -251,17 +308,26 @@ class MeView(_AuthRequiredMixin, APIView):
     """
 
     def get(self, request: Request) -> Response:
-        return Response(
-            MeSerializer(request.user).data,
-            status=status.HTTP_200_OK,
+        started_at = perf_counter()
+        data = MeSerializer(request.user).data
+        logger.info(
+            "api.users.me.get.finish status=200 user_id=%s elapsed_ms=%.1f",
+            request.user.id,
+            _elapsed_ms(started_at),
         )
+        return Response(data, status=status.HTTP_200_OK)
 
     def patch(self, request: Request) -> Response:
-        serializer = MePatchSerializer(
-            request.user, data=request.data, partial=True
-        )
+        started_at = perf_counter()
+        serializer = MePatchSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        logger.info(
+            "api.users.me.patch.finish status=200 user_id=%s fields=%s elapsed_ms=%.1f",
+            request.user.id,
+            sorted(serializer.validated_data.keys()),
+            _elapsed_ms(started_at),
+        )
         # MeSerializer로 통일된 형태 응답
         return Response(
             MeSerializer(request.user).data,
@@ -285,13 +351,21 @@ class PreferenceView(_AuthRequiredMixin, GenericAPIView):
     serializer_class = PreferenceWriteSerializer
 
     def get(self, request: Request) -> Response:
+        started_at = perf_counter()
         pref = getattr(request.user, "preference", None)
+        logger.info(
+            "api.users.preference.get.finish status=200 user_id=%s has_preference=%s elapsed_ms=%.1f",
+            request.user.id,
+            pref is not None,
+            _elapsed_ms(started_at),
+        )
         return Response(
             preference_to_int_percent(pref),
             status=status.HTTP_200_OK,
         )
 
     def put(self, request: Request) -> Response:
+        started_at = perf_counter()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         floats = serializer.to_floats()
@@ -302,6 +376,12 @@ class PreferenceView(_AuthRequiredMixin, GenericAPIView):
                 "w_amenity": floats["w_amenity"],
                 "w_transit": floats["w_transit"],
             },
+        )
+        logger.info(
+            "api.users.preference.put.finish status=200 user_id=%s weights=%s elapsed_ms=%.1f",
+            request.user.id,
+            preference_to_int_percent(pref),
+            _elapsed_ms(started_at),
         )
         return Response(
             preference_to_int_percent(pref),
@@ -331,20 +411,32 @@ class FavoritesView(_AuthRequiredMixin, APIView):
         # sub-plan 7G-B2 (F1-A): adong → adong 치환.
         # score는 CurrentAdong join(`adong__current_score`)으로 합성.
         # 결정 1A: current_adong 미존재 또는 score_rent NULL → 0 fallback (serializer 측에서 처리).
-        favs = (
-            Favorite.objects.filter(user=request.user)
-            .select_related("adong", "adong__gu", "adong__current_score")
+        started_at = perf_counter()
+        favs = Favorite.objects.filter(user=request.user).select_related(
+            "adong", "adong__gu", "adong__current_score"
         )
         weights = self._user_weights(request)
         items = [build_favorite_item(f, weights) for f in favs]
+        logger.info(
+            "api.users.favorites.get.finish status=200 user_id=%s count=%s elapsed_ms=%.1f",
+            request.user.id,
+            len(items),
+            _elapsed_ms(started_at),
+        )
         return Response(
             FavoriteItemSerializer(items, many=True).data,
             status=status.HTTP_200_OK,
         )
 
     def post(self, request: Request) -> Response:
+        started_at = perf_counter()
         slug = (request.data or {}).get("slug")
         if not isinstance(slug, str) or not slug.strip():
+            logger.warning(
+                "api.users.favorites.post.invalid_slug status=400 user_id=%s elapsed_ms=%.1f",
+                request.user.id,
+                _elapsed_ms(started_at),
+            )
             return Response(
                 {"slug": "slug 문자열이 필요합니다."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -355,6 +447,12 @@ class FavoritesView(_AuthRequiredMixin, APIView):
         try:
             adong = Adong.objects.select_related("gu", "current_score").get(slug=slug)
         except Adong.DoesNotExist:
+            logger.warning(
+                "api.users.favorites.post.not_found status=404 user_id=%s slug=%s elapsed_ms=%.1f",
+                request.user.id,
+                slug,
+                _elapsed_ms(started_at),
+            )
             return Response(
                 {"detail": f"찾을 수 없는 동네: {slug}"},
                 status=status.HTTP_404_NOT_FOUND,
@@ -364,12 +462,24 @@ class FavoritesView(_AuthRequiredMixin, APIView):
             with transaction.atomic():
                 fav = Favorite.objects.create(user=request.user, adong=adong)
         except IntegrityError:
+            logger.warning(
+                "api.users.favorites.post.duplicate status=409 user_id=%s slug=%s elapsed_ms=%.1f",
+                request.user.id,
+                slug,
+                _elapsed_ms(started_at),
+            )
             return Response(
                 {"detail": "이미 찜한 동네입니다."},
                 status=status.HTTP_409_CONFLICT,
             )
 
         weights = self._user_weights(request)
+        logger.info(
+            "api.users.favorites.post.success status=201 user_id=%s slug=%s elapsed_ms=%.1f",
+            request.user.id,
+            slug,
+            _elapsed_ms(started_at),
+        )
         return Response(
             FavoriteItemSerializer(build_favorite_item(fav, weights)).data,
             status=status.HTTP_201_CREATED,
@@ -387,12 +497,23 @@ class FavoriteDetailView(_AuthRequiredMixin, APIView):
     """DELETE /api/users/me/favorites/<slug> — 찜 해제. 204 또는 404."""
 
     def delete(self, request: Request, slug: str) -> Response:
+        started_at = perf_counter()
         # sub-plan 7G-B2 (F1-A): dong__slug → adong__slug.
-        deleted, _ = Favorite.objects.filter(
-            user=request.user, adong__slug=slug
-        ).delete()
+        deleted, _ = Favorite.objects.filter(user=request.user, adong__slug=slug).delete()
         if deleted == 0:
+            logger.warning(
+                "api.users.favorites.delete.not_found status=404 user_id=%s slug=%s elapsed_ms=%.1f",
+                request.user.id,
+                slug,
+                _elapsed_ms(started_at),
+            )
             raise NotFound({"detail": f"찜 목록에 없는 동네: {slug}"})
+        logger.info(
+            "api.users.favorites.delete.success status=204 user_id=%s slug=%s elapsed_ms=%.1f",
+            request.user.id,
+            slug,
+            _elapsed_ms(started_at),
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -412,4 +533,10 @@ class MyReviewsView(_AuthRequiredMixin, APIView):
     """
 
     def get(self, request: Request) -> Response:
+        started_at = perf_counter()
+        logger.info(
+            "api.users.reviews.get.finish status=200 user_id=%s count=0 elapsed_ms=%.1f",
+            request.user.id,
+            _elapsed_ms(started_at),
+        )
         return Response([], status=status.HTTP_200_OK)

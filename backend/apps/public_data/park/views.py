@@ -11,9 +11,13 @@ DB 스키마 변경 없음 — SELECT 전용.
 
 from __future__ import annotations
 
+import logging
+from time import perf_counter
+
 from django.core.cache import cache
 from django.db.models import F
 from django.db.models.expressions import RawSQL
+
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.exceptions import NotFound
@@ -25,6 +29,12 @@ from rest_framework.views import APIView
 from apps.public_data.regions.models import Adong
 
 from .models import ParkAdong
+
+logger = logging.getLogger(__name__)
+
+
+def _elapsed_ms(started_at: float) -> float:
+    return (perf_counter() - started_at) * 1000
 
 
 def _dong_header(adong: Adong) -> dict:
@@ -75,16 +85,26 @@ class AdongParksView(APIView):
     """
 
     def get(self, request: Request, slug: str) -> Response:
+        started_at = perf_counter()
+        logger.info("api.adongs.parks.start slug=%s", slug)
         # adong.location? ??? ?? ??? ????.
         try:
             adong = Adong.objects.select_related("gu").get(slug=slug)
         except Adong.DoesNotExist as exc:
+            logger.warning("api.adongs.parks.not_found slug=%s", slug)
             raise NotFound({"detail": "동을 찾을 수 없습니다."}) from exc
 
         cache_key = f"dong_parks:v1:{slug}"
         cached = cache.get(cache_key)
         if cached is not None:
+            logger.info(
+                "api.adongs.parks.cache_hit slug=%s cache=hit count=%s elapsed_ms=%.1f",
+                slug,
+                cached.get("count"),
+                _elapsed_ms(started_at),
+            )
             return Response(cached, status=status.HTTP_200_OK)
+        logger.info("api.adongs.parks.cache_miss slug=%s cache=miss", slug)
 
         # park_adong 매핑 → park join.
         # 거리 계산: ST_DistanceSphere 는 4326 그대로 받아서 m 단위 좌표 거리 산출
@@ -95,14 +115,13 @@ class AdongParksView(APIView):
         # 안에서 평가되므로 join 별칭을 직접 참조한다.
         # adong.location? ??? ?? ??? ????.
         distance_sql = (
-            'ST_DistanceSphere('
+            "ST_DistanceSphere("
             '  "park"."location", '
-            '  (SELECT location FROM adong WHERE adong.adong_code = %s)'
-            ')'
+            "  (SELECT location FROM adong WHERE adong.adong_code = %s)"
+            ")"
         )
         qs = (
-            ParkAdong.objects
-            .filter(adong=adong.adong_code)
+            ParkAdong.objects.filter(adong=adong.adong_code)
             .select_related("park")
             .annotate(
                 distance_m=RawSQL(distance_sql, (adong.adong_code,)),
@@ -128,15 +147,17 @@ class AdongParksView(APIView):
             dist = row["distance_m"]
             dist_f = float(dist) if dist is not None else None
 
-            parks.append({
-                "id": row["park__id"],
-                "name": row["park__name"],
-                "category": row["park__category"] or "",
-                "area_m2": area_f,
-                "lat": lat,
-                "lng": lng,
-                "distance_m": dist_f,
-            })
+            parks.append(
+                {
+                    "id": row["park__id"],
+                    "name": row["park__name"],
+                    "category": row["park__category"] or "",
+                    "area_m2": area_f,
+                    "lat": lat,
+                    "lng": lng,
+                    "distance_m": dist_f,
+                }
+            )
 
         data = {
             "adong": _dong_header(adong),
@@ -145,4 +166,10 @@ class AdongParksView(APIView):
         }
 
         cache.set(cache_key, data, timeout=300)  # 5분 TTL
+        logger.info(
+            "api.adongs.parks.finish slug=%s status=200 count=%s elapsed_ms=%.1f",
+            slug,
+            len(parks),
+            _elapsed_ms(started_at),
+        )
         return Response(data, status=status.HTTP_200_OK)
