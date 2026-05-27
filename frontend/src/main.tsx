@@ -25,6 +25,9 @@ if (!rootEl) {
   throw new Error('Root element #root not found in index.html');
 }
 
+const showReactQueryDevtools =
+  import.meta.env.DEV && window.location.pathname !== '/presentation';
+
 createRoot(rootEl).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
@@ -35,7 +38,7 @@ createRoot(rootEl).render(
           <App />
         </BrowserRouter>
       </AuthProvider>
-      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+      {showReactQueryDevtools && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   </StrictMode>
 );

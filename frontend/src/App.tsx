@@ -15,7 +15,7 @@
 // AiPanelProvider wraps AppContent + AiSidePanel so that the main content
 // area can shift left when the AI panel opens (margin-right transition).
 import { lazy, Suspense } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, useLocation } from 'react-router-dom';
 
 import AiSidePanel from './components/Layout/AiSidePanel';
 import TopNav from './components/Layout/TopNav';
@@ -29,12 +29,20 @@ import Login from './routes/Login';
 import MainMap from './routes/MainMap';
 import MyPage from './routes/MyPage';
 import NotFound from './routes/NotFound';
+import Presentation from './routes/Presentation';
 import Register from './routes/Register';
 
 const Dashboard = lazy(() => import('./routes/Dashboard'));
 
 function AppContent() {
   const { isOpen } = useAiPanel();
+  const location = useLocation();
+  const isPresentation = location.pathname === '/presentation';
+
+  if (isPresentation) {
+    return <Presentation />;
+  }
+
   return (
     <div
       className={`transition-[margin] duration-300 ease-out ${isOpen ? 'mr-[400px]' : ''}`}
@@ -72,11 +80,14 @@ function AppContent() {
 }
 
 export default function App() {
+  const location = useLocation();
+  const isPresentation = location.pathname === '/presentation';
+
   return (
     <PageTitleProvider>
       <AiPanelProvider>
         <AppContent />
-        <AiSidePanel />
+        {!isPresentation && <AiSidePanel />}
       </AiPanelProvider>
     </PageTitleProvider>
   );
