@@ -7,7 +7,7 @@ schema.dbml 정합 (sub-plan 4.5B):
 - PK: BigAutoField → CharField(max_length=60). 'id varchar(60)' (예: '11010100A260514001').
 - 컬럼 정합:
   - housing_type: NOT NULL varchar(20) (5종 한글 raw).
-  - ldong_code: NOT NULL FK → regions.Ldong (db_column='ldong_code').
+  - ldong_code: nullable FK → regions.Ldong (db_column='ldong_code').
   - adong FK 제거 (schema.dbml에 없음).
   - contract_date (date, NOT NULL) ← 기존 deal_date 이름 변경.
   - construction_year (smallint) ← 기존 build_year 이름 변경.
@@ -75,19 +75,21 @@ class RentDeal(models.Model):
         help_text="아파트, 연립다세대, 다가구, 단독, 오피스텔 (5종)",
     )
 
-    # 법정동 FK. schema.dbml NOT NULL.
+    # 법정동 FK. regions snapshot 교체 시 임시 NULL 허용.
     ldong = models.ForeignKey(
         "regions.Ldong",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="rent_deals",
         db_column="ldong_code",
-        help_text="법정동 (NOT NULL, schema.dbml line 162).",
+        help_text="법정동. regions snapshot 교체 시 NULL 허용.",
     )
 
     # 행정동 FK. 법정동과 행정동은 N:M일 수 있으므로 확실한 공간 매핑만 채운다.
     adong = models.ForeignKey(
         "regions.Adong",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         related_name="rent_deals",
         db_column="adong_code",
         null=True,
@@ -180,7 +182,7 @@ class RentDealLdongAdongMap(models.Model):
 
     ldong = models.OneToOneField(
         "regions.Ldong",
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         primary_key=True,
         related_name="rent_deal_adong_map",
         db_column="ldong_code",
@@ -188,7 +190,7 @@ class RentDealLdongAdongMap(models.Model):
     )
     adong = models.ForeignKey(
         "regions.Adong",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="rent_deal_ldong_maps",

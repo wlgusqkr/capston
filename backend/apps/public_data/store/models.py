@@ -112,20 +112,24 @@ class Store(models.Model):
         help_text="한국표준산업분류 (API 응답 결측 시 NULL 허용).",
     )
 
-    # 행정동/법정동 — schema.dbml NOT NULL. legacy dong FK(neighborhoods.Dong) 제거.
+    # 행정동/법정동. regions snapshot 교체 시 임시 NULL 허용 후 updater가 다시 채운다.
     adong = models.ForeignKey(
         "regions.Adong",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="stores",
         db_column="adong_code",
-        help_text="행정동 (schema.dbml NOT NULL).",
+        help_text="행정동. regions snapshot 교체 시 NULL 허용.",
     )
     ldong = models.ForeignKey(
         "regions.Ldong",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="stores",
         db_column="ldong_code",
-        help_text="법정동 (schema.dbml NOT NULL).",
+        help_text="법정동. regions snapshot 교체 시 NULL 허용.",
     )
 
     address = models.CharField(max_length=255, help_text="주소 (NOT NULL)")

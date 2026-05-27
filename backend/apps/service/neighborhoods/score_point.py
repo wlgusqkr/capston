@@ -24,7 +24,7 @@
 
 4. **Transit 점수**:
    - 가장 가까운 지하철역 → 거리 → walk_min (`distance_m / 80`).
-   - subway closeness = max(0, 1 - dist_m/1000). (compute_scores.py 와 동일 공식).
+   - subway closeness = max(0, 1 - dist_m/1000). (service scoring updater 와 동일 공식).
    - bus density = min(1, log1p(bus_count) / log1p(50)).
    - score = 0.6 * subway + 0.4 * bus → *100.
 
@@ -67,7 +67,7 @@ COMMUTE_SPEED_KM_PER_H = 22.0  # 지하철 + 환승 + 도보 평균 (학부 데�
 # nearest 시설 1개씩 + radius_counts 키.
 PRIMARY_CATEGORIES = ("convenience", "cafe", "hospital", "park", "mart", "pharmacy")
 
-# 카테고리별 가중치 — compute_scores.py 와 동일 (handoff 20260503-phase0a-step4-scores.md).
+# 카테고리별 가중치 — service scoring updater 와 동일 (handoff 20260503-phase0a-step4-scores.md).
 # 동 단위 점수와 동일 시그널 가중을 사용하여 "동 평균과 같은 의미" 의 raw 값을 만든다.
 CATEGORY_WEIGHTS = {
     "convenience": 0.20,
@@ -164,7 +164,7 @@ def amenity_score_from_kernel(kernel: dict[str, dict[str, float]]) -> float:
     """
     카테고리별 raw → 가중합 → 0~100 스케일.
 
-    raw_total = Σ w_c * log1p(score_c)  (compute_scores.py 와 동일 log1p 패턴).
+    raw_total = Σ w_c * log1p(score_c)  (service scoring updater 와 동일 log1p 패턴).
     raw_total 자체가 제한된 0~몇 사이 값이라 단순 곱+클램프로 0~100 매핑.
 
     스케일 캘리브레이션:
@@ -238,7 +238,7 @@ def compute_transit(
         )
         bus_count = int(cur.fetchone()[0])
 
-    # 점수 계산 — compute_scores.py 와 동일 공식 (Step 4 handoff).
+    # 점수 계산 — service scoring updater 와 동일 공식 (Step 4 handoff).
     if math.isinf(sub_dist):
         subway_signal = 0.0
         nearest = None

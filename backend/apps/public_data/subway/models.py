@@ -39,21 +39,25 @@ class SubwayStation(models.Model):
     )
     name = models.CharField(max_length=100, help_text="역명 (예: '충무로')")
     line = models.CharField(max_length=20, help_text="노선 (예: '3호선')")
-    # 행정동 FK (NOT NULL). schema.dbml line 221.
+    # 행정동 FK. regions snapshot 교체 시 임시 NULL 허용 후 updater가 다시 채운다.
     adong = models.ForeignKey(
         "regions.Adong",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="subway_stations",
         db_column="adong_code",
-        help_text="행정동 (schema.dbml NOT NULL).",
+        help_text="행정동. regions snapshot 교체 시 NULL 허용.",
     )
-    # 법정동 FK (NOT NULL). schema.dbml line 220.
+    # 법정동 FK. regions snapshot 교체 시 임시 NULL 허용 후 updater가 다시 채운다.
     ldong = models.ForeignKey(
         "regions.Ldong",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="subway_stations",
         db_column="ldong_code",
-        help_text="법정동 (schema.dbml NOT NULL, M-1 lock).",
+        help_text="법정동. regions snapshot 교체 시 NULL 허용.",
     )
     location = gis_models.PointField(srid=4326, help_text="역 위치 (WGS84). GiST 인덱스.")
 

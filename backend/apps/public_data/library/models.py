@@ -96,14 +96,18 @@ class Library(models.Model):
     )
     ldong = models.ForeignKey(
         "regions.Ldong",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         db_column="ldong_code",
         related_name="libraries",
         help_text="ST_Within(location, ldong.boundary). 다중 매칭 시 면적 최소",
     )
     adong = models.ForeignKey(
         "regions.Adong",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         db_column="adong_code",
         related_name="libraries",
         help_text="ST_Within(location, adong.boundary). 다중 매칭 시 면적 최소",

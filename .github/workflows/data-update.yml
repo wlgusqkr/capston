@@ -1,0 +1,26 @@
+name: Data Update
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 00:00 KST
+    - cron: "0 15 * * *"
+
+concurrency:
+  group: data-update-homeserver
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: [self-hosted, homeserver]
+    timeout-minutes: 370
+
+    env:
+      SLGI_DIR: /Users/parkparkjihyeon/homeserver/services/slgi
+
+    steps:
+      - name: Run data update
+        run: |
+          cd "$SLGI_DIR"
+          docker compose exec -T backend \
+            python scripts/update/update_all.py --write --max-hours 6

@@ -36,7 +36,7 @@ from .serializers import SINGLE_HOUSEHOLD_PCT_FALLBACK
 TRANSIT_MIN_FALLBACK = 10
 
 # 환산월세 평균 산출 시 거래량 임계치 (SPEC 14.2: <3건 동은 단독 평균 미신뢰).
-# compute_scores._collect_rent_metrics 와 동일한 임계.
+# service scoring updater 의 rent metric 계산과 동일한 임계.
 RENT_MIN_DEALS_FOR_DIRECT_AVG = 3
 
 

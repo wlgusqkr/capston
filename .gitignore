@@ -96,6 +96,7 @@ pgdata/
 # --- Project-specific large data ---
 backend/data/raw/
 backend/data/cache/
+backend/apps/public_data/.state/
 *.geojson.bak
 .gstack/
 .gstack-design-audit/
