@@ -21,8 +21,10 @@ import AiSidePanel from './components/Layout/AiSidePanel';
 import TopNav from './components/Layout/TopNav';
 import { AiPanelProvider, useAiPanel } from './contexts/AiPanelContext';
 import { PageTitleProvider } from './contexts/PageTitleContext';
+import CartesianPresentation from './routes/CartesianPresentation';
 import Compare from './routes/Compare';
 import CobaltPresentation from './routes/CobaltPresentation';
+import CreativePresentation from './routes/CreativePresentation';
 import DesignSystem from './routes/DesignSystem';
 import AdongDetail from './routes/AdongDetail';
 import AdongExplore from './routes/AdongExplore';
@@ -40,6 +42,8 @@ function AppContent() {
   const location = useLocation();
   const isPresentation = location.pathname === '/presentation';
   const isCobaltPresentation = location.pathname === '/presentation-cobalt';
+  const isCreativePresentation = location.pathname === '/presentation-creative';
+  const isCartesianPresentation = location.pathname === '/presentation-cartesian';
 
   if (isPresentation) {
     return <Presentation />;
@@ -47,6 +51,14 @@ function AppContent() {
 
   if (isCobaltPresentation) {
     return <CobaltPresentation />;
+  }
+
+  if (isCreativePresentation) {
+    return <CreativePresentation />;
+  }
+
+  if (isCartesianPresentation) {
+    return <CartesianPresentation />;
   }
 
   return (
@@ -89,7 +101,9 @@ export default function App() {
   const location = useLocation();
   const isPresentation =
     location.pathname === '/presentation' ||
-    location.pathname === '/presentation-cobalt';
+    location.pathname === '/presentation-cobalt' ||
+    location.pathname === '/presentation-creative' ||
+    location.pathname === '/presentation-cartesian';
 
   return (
     <PageTitleProvider>

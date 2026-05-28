@@ -28,11 +28,15 @@ if (!rootEl) {
 const showReactQueryDevtools =
   import.meta.env.DEV &&
   window.location.pathname !== '/presentation' &&
-  window.location.pathname !== '/presentation-cobalt';
+  window.location.pathname !== '/presentation-cobalt' &&
+  window.location.pathname !== '/presentation-creative' &&
+  window.location.pathname !== '/presentation-cartesian';
 
 const isPresentationPath =
   window.location.pathname === '/presentation' ||
-  window.location.pathname === '/presentation-cobalt';
+  window.location.pathname === '/presentation-cobalt' ||
+  window.location.pathname === '/presentation-creative' ||
+  window.location.pathname === '/presentation-cartesian';
 
 const routedApp = (
   <BrowserRouter
