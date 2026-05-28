@@ -22,6 +22,7 @@ import TopNav from './components/Layout/TopNav';
 import { AiPanelProvider, useAiPanel } from './contexts/AiPanelContext';
 import { PageTitleProvider } from './contexts/PageTitleContext';
 import Compare from './routes/Compare';
+import CobaltPresentation from './routes/CobaltPresentation';
 import DesignSystem from './routes/DesignSystem';
 import AdongDetail from './routes/AdongDetail';
 import AdongExplore from './routes/AdongExplore';
@@ -38,9 +39,14 @@ function AppContent() {
   const { isOpen } = useAiPanel();
   const location = useLocation();
   const isPresentation = location.pathname === '/presentation';
+  const isCobaltPresentation = location.pathname === '/presentation-cobalt';
 
   if (isPresentation) {
     return <Presentation />;
+  }
+
+  if (isCobaltPresentation) {
+    return <CobaltPresentation />;
   }
 
   return (
@@ -81,7 +87,9 @@ function AppContent() {
 
 export default function App() {
   const location = useLocation();
-  const isPresentation = location.pathname === '/presentation';
+  const isPresentation =
+    location.pathname === '/presentation' ||
+    location.pathname === '/presentation-cobalt';
 
   return (
     <PageTitleProvider>

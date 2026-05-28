@@ -26,18 +26,26 @@ if (!rootEl) {
 }
 
 const showReactQueryDevtools =
-  import.meta.env.DEV && window.location.pathname !== '/presentation';
+  import.meta.env.DEV &&
+  window.location.pathname !== '/presentation' &&
+  window.location.pathname !== '/presentation-cobalt';
+
+const isPresentationPath =
+  window.location.pathname === '/presentation' ||
+  window.location.pathname === '/presentation-cobalt';
+
+const routedApp = (
+  <BrowserRouter
+    future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+  >
+    <App />
+  </BrowserRouter>
+);
 
 createRoot(rootEl).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BrowserRouter
-          future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-        >
-          <App />
-        </BrowserRouter>
-      </AuthProvider>
+      {isPresentationPath ? routedApp : <AuthProvider>{routedApp}</AuthProvider>}
       {showReactQueryDevtools && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   </StrictMode>
