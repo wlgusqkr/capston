@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="48 48 1104 664" role="img" aria-label="법정동 행정동 좌표 공간 매핑 구조">
+  <rect width="1200" height="760" fill="#ffffff"/>
+  <rect x="56" y="54" width="1088" height="652" rx="28" fill="#ffffff" stroke="#d9d9dd"/>
+  <text x="90" y="114" font-family="Inter, Arial, sans-serif" font-size="18" fill="#ff7759">SPATIAL JOIN</text>
+  <text x="90" y="164" font-family="Inter, Arial, sans-serif" font-size="38" fill="#17171c">서로 다른 공간 기준을 하나로 정렬</text>
+
+  <g font-family="Inter, Arial, sans-serif">
+    <rect x="92" y="244" width="252" height="170" rx="20" fill="#f7f6f2" stroke="#d9d9dd"/>
+    <text x="126" y="292" font-size="24" fill="#17171c">실거래</text>
+    <text x="126" y="330" font-size="17" fill="#75758a">법정동 코드</text>
+    <text x="126" y="360" font-size="17" fill="#75758a">거래일 / 보증금 / 월세</text>
+
+    <rect x="474" y="244" width="252" height="170" rx="20" fill="#003c33"/>
+    <text x="508" y="292" font-size="24" fill="#ffffff">행정동 경계</text>
+    <text x="508" y="330" font-size="17" fill="#ffffff" opacity=".72">서비스 분석 단위</text>
+    <text x="508" y="360" font-size="17" fill="#ffffff" opacity=".72">지도 색상 기준</text>
+
+    <rect x="856" y="244" width="252" height="170" rx="20" fill="#f7f6f2" stroke="#d9d9dd"/>
+    <text x="890" y="292" font-size="24" fill="#17171c">생활시설</text>
+    <text x="890" y="330" font-size="17" fill="#75758a">위도 / 경도</text>
+    <text x="890" y="360" font-size="17" fill="#75758a">거리 기반 영향도</text>
+  </g>
+
+  <g stroke="#ff7759" stroke-width="3" fill="none">
+    <path d="M356 330h86"/>
+    <path d="M430 316l18 14-18 14"/>
+    <path d="M844 330h-86"/>
+    <path d="M770 316l-18 14 18 14"/>
+  </g>
+
+  <rect x="170" y="486" width="860" height="112" rx="24" fill="#fff0eb" stroke="#ffad9b"/>
+  <text x="214" y="532" font-family="Inter, Arial, sans-serif" font-size="18" fill="#ff7759">SERVICE UNIT</text>
+  <text x="214" y="570" font-family="Inter, Arial, sans-serif" font-size="28" fill="#17171c">행정동별 비용, 생활시설, 교통 점수로 재집계</text>
+  <circle cx="940" cy="542" r="26" fill="#003c33"/>
+  <circle cx="984" cy="542" r="26" fill="#5d9c75"/>
+  <circle cx="896" cy="542" r="26" fill="#b8dcc3"/>
+</svg>

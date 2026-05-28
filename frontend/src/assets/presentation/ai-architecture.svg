@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="48 48 1104 664" role="img" aria-label="AI 질의 응답 구조도">
+  <rect width="1200" height="760" fill="#071829"/>
+  <rect x="58" y="58" width="1084" height="644" rx="30" fill="#0b1d31" stroke="#ffffff" stroke-opacity=".14"/>
+  <text x="92" y="118" font-family="Inter, Arial, sans-serif" font-size="18" fill="#ffad9b">AI QUERY ARCHITECTURE</text>
+  <text x="92" y="166" font-family="Inter, Arial, sans-serif" font-size="38" fill="#ffffff">질문을 안전한 데이터 조회로 변환</text>
+
+  <g font-family="Inter, Arial, sans-serif">
+    <rect x="92" y="258" width="190" height="118" rx="18" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".18"/>
+    <text x="122" y="300" font-size="20" fill="#ffffff">사용자 질문</text>
+    <text x="122" y="334" font-size="15" fill="#ffffff" opacity=".64">자연어 입력</text>
+
+    <rect x="354" y="258" width="190" height="118" rx="18" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".18"/>
+    <text x="384" y="300" font-size="20" fill="#ffffff">의도 분류</text>
+    <text x="384" y="334" font-size="15" fill="#ffffff" opacity=".64">추천 / 조회 / 비교</text>
+
+    <rect x="616" y="258" width="190" height="118" rx="18" fill="#ff7759"/>
+    <text x="646" y="300" font-size="20" fill="#17171c">읽기 전용 SQL</text>
+    <text x="646" y="334" font-size="15" fill="#17171c" opacity=".72">schema context 기반</text>
+
+    <rect x="878" y="258" width="190" height="118" rx="18" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".18"/>
+    <text x="908" y="300" font-size="20" fill="#ffffff">검증 후 실행</text>
+    <text x="908" y="334" font-size="15" fill="#ffffff" opacity=".64">위험 쿼리 차단</text>
+  </g>
+
+  <g stroke="#ffad9b" stroke-width="2.5" fill="none">
+    <path d="M298 317h40"/>
+    <path d="M330 306l14 11-14 11"/>
+    <path d="M560 317h40"/>
+    <path d="M592 306l14 11-14 11"/>
+    <path d="M822 317h40"/>
+    <path d="M854 306l14 11-14 11"/>
+  </g>
+
+  <rect x="178" y="474" width="844" height="126" rx="22" fill="#ffffff" fill-opacity=".06" stroke="#ffffff" stroke-opacity=".14"/>
+  <text x="220" y="520" font-family="Inter, Arial, sans-serif" font-size="18" fill="#ffad9b">RESPONSE</text>
+  <text x="220" y="560" font-family="Inter, Arial, sans-serif" font-size="28" fill="#ffffff">추천 근거, 표, 막대/선 차트로 답변 반환</text>
+  <rect x="790" y="516" width="170" height="46" rx="12" fill="#ffffff" fill-opacity=".10"/>
+  <rect x="812" y="544" width="20" height="18" rx="4" fill="#ff7759"/>
+  <rect x="842" y="532" width="20" height="30" rx="4" fill="#ffad9b"/>
+  <rect x="872" y="524" width="20" height="38" rx="4" fill="#ffffff" fill-opacity=".72"/>
+  <rect x="902" y="538" width="20" height="24" rx="4" fill="#5d9c75"/>
+</svg>

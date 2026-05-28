@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+
+import aiArchitectureImage from '@/assets/presentation/ai-architecture.svg';
+import dashboardScrollImage from '@/assets/presentation/dashboard-scroll-1100.png';
+import dataPipelineImage from '@/assets/presentation/data-pipeline.svg';
+import mainMapRealImage from '@/assets/presentation/main-map-real.png';
+import operationPipelineImage from '@/assets/presentation/operation-pipeline.svg';
+import spatialMappingImage from '@/assets/presentation/spatial-mapping.svg';
 
 type SlideTone = 'light' | 'dark' | 'stone';
 type SlideLayout =
@@ -22,6 +29,13 @@ interface Slide {
   photo?: {
     label: string;
     hint?: string;
+    src?: string;
+    alt?: string;
+    fit?: 'cover' | 'contain';
+    position?: string;
+    scroll?: boolean;
+    scrollDuration?: number;
+    scrollFrameHeight?: string;
   };
 }
 
@@ -32,7 +46,13 @@ const slides: Slide[] = [
     lead: '매물을 보기 전에, 나에게 맞는 동네를 먼저 찾는 서비스',
     layout: 'cover',
     visual: <CoverVisual />,
-    photo: { label: '서비스 대표 화면', hint: '메인 지도 또는 발표용 합성 이미지' },
+    photo: {
+      label: '서비스 대표 화면',
+      hint: '원격 DB 기준 실제 메인 지도 화면',
+      src: mainMapRealImage,
+      alt: '조건 필터와 행정동별 거래량 분포를 보여주는 자취맵 화면',
+      fit: 'contain',
+    },
   },
   {
     eyebrow: 'Problem',
@@ -65,8 +85,12 @@ const slides: Slide[] = [
       '코드, 좌표, 경계, 시간 단위가 다른 데이터를 하나의 분석 흐름으로 정리',
       '누락과 API 제한을 고려한 자동 갱신 구조 구성',
     ],
-    visual: <DataBoardVisual />,
-    photo: { label: '데이터 출처 이미지', hint: '공공데이터 포털/원천 데이터 캡처' },
+    visual: (
+      <AssetVisual
+        src={dataPipelineImage}
+        alt="공공데이터를 수집, 정제, 공간 결합, 사전 집계하는 파이프라인"
+      />
+    ),
   },
   {
     eyebrow: 'Research 01',
@@ -90,8 +114,12 @@ const slides: Slide[] = [
       '좌표가 있는 시설 데이터는 경계 기반으로 동네에 매핑',
       '동네 평균 분석과 특정 위치 분석을 동시에 지원',
     ],
-    visual: <SpatialVisual />,
-    photo: { label: '지도/경계 캡처', hint: '행정동 경계가 보이는 화면' },
+    visual: (
+      <AssetVisual
+        src={spatialMappingImage}
+        alt="법정동, 행정동, 좌표 데이터를 행정동 기준으로 정렬하는 공간 매핑 구조"
+      />
+    ),
   },
   {
     eyebrow: 'Research 03',
@@ -115,7 +143,13 @@ const slides: Slide[] = [
       '조건을 만족한 실거래 수를 행정동별로 집계',
       '거래량 쏠림은 log scale로 완화',
     ],
-    photo: { label: '매칭 지도 스크린샷', hint: '실제 서비스 화면을 넣기 좋은 자리' },
+    photo: {
+      label: '매칭 지도 화면',
+      hint: '조건 필터와 거래량 분포를 함께 확인',
+      src: mainMapRealImage,
+      alt: '실제 원격 DB 데이터가 표시된 조건 매칭 지도 화면',
+      fit: 'contain',
+    },
   },
   {
     eyebrow: 'Service 02',
@@ -128,7 +162,16 @@ const slides: Slide[] = [
       '학교 기준 통학 가능성과 주변 편의 신호 제공',
     ],
     visual: <KernelVisual />,
-    photo: { label: '매물 위치 예시', hint: '좌표 선택 화면 또는 지도 캡처' },
+    photo: {
+      label: '동네 대시보드 화면',
+      hint: '원격 DB 기준 실제 지표와 차트',
+      src: dashboardScrollImage,
+      alt: '실제 원격 DB 데이터가 표시된 오류2동 대시보드 화면',
+      fit: 'contain',
+      scroll: true,
+      scrollDuration: 20,
+      scrollFrameHeight: '290px',
+    },
   },
   {
     eyebrow: 'Personalization',
@@ -154,8 +197,12 @@ const slides: Slide[] = [
       '읽기 전용 SQL 생성과 검증',
       '추천, 정보 조회, 표/막대/선 시각화 응답',
     ],
-    visual: <AgentVisual />,
-    photo: { label: 'AI 패널 캡처', hint: '실제 채팅 결과 화면' },
+    visual: (
+      <AssetVisual
+        src={aiArchitectureImage}
+        alt="사용자 질문을 의도 분류, 읽기 전용 SQL, 검증, 답변으로 연결하는 AI 구조도"
+      />
+    ),
   },
   {
     eyebrow: 'Demo Flow',
@@ -194,8 +241,12 @@ const slides: Slide[] = [
       'GitHub Actions로 매일 데이터 업데이트 실행',
       'lock, 상태 JSON, rate limit 감지로 운영 안정성 확보',
     ],
-    visual: <OperationVisual />,
-    photo: { label: '업데이트 로그', hint: 'GitHub Actions 또는 JSON 상태 화면' },
+    visual: (
+      <AssetVisual
+        src={operationPipelineImage}
+        alt="GitHub Actions 기반 데이터 수집, 재계산, 저장, 관찰 파이프라인"
+      />
+    ),
   },
   {
     eyebrow: 'Conclusion',
@@ -266,6 +317,7 @@ export default function Presentation() {
 
   return (
     <main className="h-screen w-screen overflow-hidden bg-white font-sans" aria-label="최종 발표 슬라이드">
+      <AutoScrollStyles />
       <div className="absolute left-0 top-0 z-20 h-1 bg-[#ff7759] transition-[width] duration-300" style={{ width: `${progress}%` }} />
 
       <div className="flex h-full transition-transform duration-500 ease-out" style={{ transform: `translateX(-${index * 100}vw)` }}>
@@ -322,11 +374,14 @@ function initialSlideIndex() {
 function SlideBody({ slide }: { slide: Slide }) {
   if (slide.layout === 'cover') {
     return (
-      <div className="grid flex-1 items-center gap-10 lg:grid-cols-[minmax(0,0.92fr)_minmax(420px,0.78fr)]">
+      <div className="grid flex-1 items-center gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(520px,0.9fr)]">
         <HeroCopy slide={slide} size="hero" />
-        <div className="hidden lg:grid lg:gap-5">
-          {slide.visual}
-          {slide.photo && <PhotoSlot {...slide.photo} />}
+        <div className="hidden lg:block">
+          {slide.photo ? (
+            <PhotoSlot {...slide.photo} className="aspect-[16/10] min-h-[360px]" />
+          ) : (
+            slide.visual
+          )}
         </div>
       </div>
     );
@@ -354,9 +409,15 @@ function SlideBody({ slide }: { slide: Slide }) {
           <HeroCopy slide={slide} compact />
           <PointList points={slide.points} tone={slide.tone} compact />
         </div>
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div
+          className={`grid gap-5 ${
+            slide.photo
+              ? 'lg:grid-cols-[minmax(0,0.72fr)_minmax(500px,0.76fr)]'
+              : 'lg:grid-cols-[minmax(0,1fr)_360px]'
+          }`}
+        >
           {slide.visual}
-          {slide.photo && <PhotoSlot {...slide.photo} />}
+          {slide.photo && <PhotoSlot {...slide.photo} className="h-[290px]" />}
         </div>
       </div>
     );
@@ -511,10 +572,68 @@ function SlideHeader({ current, total, tone }: { current: number; total: number;
   );
 }
 
-function PhotoSlot({ label, hint, tall = false }: { label: string; hint?: string; tall?: boolean }) {
+function PhotoSlot({
+  label,
+  hint,
+  src,
+  alt,
+  fit = 'cover',
+  position = 'center',
+  scroll = false,
+  scrollDuration = 18,
+  scrollFrameHeight = '290px',
+  className = '',
+  tall = false,
+}: {
+  label: string;
+  hint?: string;
+  src?: string;
+  alt?: string;
+  fit?: 'cover' | 'contain';
+  position?: string;
+  scroll?: boolean;
+  scrollDuration?: number;
+  scrollFrameHeight?: string;
+  className?: string;
+  tall?: boolean;
+}) {
+  const sizeClass = className || (tall ? 'min-h-[420px]' : 'min-h-[180px]');
+
+  if (src) {
+    return (
+      <figure
+        className={`relative overflow-hidden rounded-[22px] border border-[#d9d9dd] bg-white ${sizeClass}`}
+      >
+        {scroll ? (
+          <div className="absolute inset-0 overflow-hidden bg-white">
+            <img
+              src={src}
+              alt={alt ?? label}
+              className="w-full max-w-none"
+              style={{
+                '--scroll-frame-height': scrollFrameHeight,
+                animation: `presentationAutoScroll ${scrollDuration}s ease-in-out infinite alternate`,
+              } as CSSProperties}
+            />
+          </div>
+        ) : (
+          <img
+            src={src}
+            alt={alt ?? label}
+            className={`absolute inset-0 h-full w-full ${fit === 'contain' ? 'object-contain' : 'object-cover'}`}
+            style={{ objectPosition: position }}
+          />
+        )}
+        <figcaption className="absolute bottom-4 left-4 rounded-full border border-[#d9d9dd] bg-white/92 px-4 py-2 text-[13px] leading-none text-[#17171c] shadow-sm">
+          {label}
+        </figcaption>
+      </figure>
+    );
+  }
+
   return (
     <div
-      className={`group relative flex ${tall ? 'min-h-[420px]' : 'min-h-[180px]'} items-center justify-center overflow-hidden rounded-[22px] border border-dashed border-[#b9b9c2] bg-white/70 text-center`}
+      className={`group relative flex ${sizeClass} items-center justify-center overflow-hidden rounded-[22px] border border-dashed border-[#b9b9c2] bg-white/70 text-center`}
     >
       <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(0,60,51,0.05)_25%,transparent_25%,transparent_50%,rgba(0,60,51,0.05)_50%,rgba(0,60,51,0.05)_75%,transparent_75%,transparent)] bg-[length:28px_28px]" />
       <div className="relative px-8">
@@ -524,6 +643,39 @@ function PhotoSlot({ label, hint, tall = false }: { label: string; hint?: string
         <div className="text-[22px] leading-[1.2] text-[#17171c]">{label}</div>
         {hint && <div className="mt-3 text-[14px] leading-[1.45] text-[#75758a]">{hint}</div>}
       </div>
+    </div>
+  );
+}
+
+function AutoScrollStyles() {
+  return (
+    <style>
+      {`
+        @keyframes presentationAutoScroll {
+          0%, 16% {
+            transform: translateY(0);
+          }
+          84%, 100% {
+            transform: translateY(calc(-100% + var(--scroll-frame-height, 290px)));
+          }
+        }
+      `}
+    </style>
+  );
+}
+
+function AssetVisual({
+  src,
+  alt,
+  className = 'h-[430px]',
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+}) {
+  return (
+    <div className={`relative overflow-hidden rounded-[22px] border border-[#d9d9dd] bg-white ${className}`}>
+      <img src={src} alt={alt} className="absolute inset-0 h-full w-full object-fill" />
     </div>
   );
 }
@@ -623,22 +775,6 @@ function ThesisVisual() {
   );
 }
 
-function DataBoardVisual() {
-  const groups = ['전월세 실거래', '행정구역 경계', '상권/생활시설', '지하철/버스', '공원/도서관', '인구/지역 지표'];
-  return (
-    <Panel className="min-h-[430px]">
-      <div className="grid h-full grid-cols-2 gap-3">
-        {groups.map((group, index) => (
-          <div key={group} className="flex items-center justify-between rounded-[16px] border border-[#d9d9dd] bg-white px-5 py-4">
-            <span className="text-[17px]">{group}</span>
-            <span className="font-mono text-[13px] text-[#93939f]">{String(index + 1).padStart(2, '0')}</span>
-          </div>
-        ))}
-      </div>
-    </Panel>
-  );
-}
-
 function RentVisual() {
   return (
     <Panel className="min-h-[350px] bg-[#eeece7]">
@@ -665,35 +801,6 @@ function InfoBlank({ label, hint }: { label: string; hint: string }) {
       <div className="mt-2 text-[13px] text-[#75758a]">{hint}</div>
     </div>
   );
-}
-
-function SpatialVisual() {
-  return (
-    <Panel className="min-h-[330px]">
-      <div className="flex h-full items-center justify-center">
-        <div className="grid w-full grid-cols-[1fr_56px_1fr_56px_1fr] items-center gap-2">
-          <MappingNode title="법정동" body="실거래" />
-          <Connector />
-          <MappingNode title="행정동" body="서비스" />
-          <Connector />
-          <MappingNode title="좌표" body="시설/위치" />
-        </div>
-      </div>
-    </Panel>
-  );
-}
-
-function MappingNode({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="rounded-[22px] border border-[#d9d9dd] bg-white p-6 text-center">
-      <div className="text-[28px] leading-none">{title}</div>
-      <div className="mt-4 text-[14px] text-[#75758a]">{body}</div>
-    </div>
-  );
-}
-
-function Connector() {
-  return <div className="h-px bg-[#003c33]" aria-hidden="true" />;
 }
 
 function ScoreVisual() {
@@ -730,10 +837,10 @@ function ScoreCard({ label, value, color, desc }: { label: string; value: number
 
 function KernelVisual() {
   return (
-    <Panel className="min-h-[350px] bg-white">
-      <div className="relative h-[330px] overflow-hidden rounded-[22px] bg-[#f7f6f2]">
+    <Panel className="min-h-[280px] bg-white !p-6">
+      <div className="relative h-[240px] overflow-hidden rounded-[22px] bg-[#f7f6f2]">
         <div className="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#ff7759]" />
-        {[110, 210, 330].map((size) => (
+        {[86, 158, 246].map((size) => (
           <div
             key={size}
             className="absolute left-1/2 top-1/2 rounded-full border border-[#003c33]/20"
@@ -792,30 +899,6 @@ function MiniWeight({ label, value }: { label: string; value: number }) {
   );
 }
 
-function AgentVisual() {
-  return (
-    <Panel dark className="min-h-[420px]">
-      <div className="flex h-full flex-col gap-4">
-        <div className="rounded-[16px] border border-white/12 bg-white/7 p-5">
-          <div className="text-[13px] text-white/56">User</div>
-          <div className="mt-2 text-[20px] leading-[1.35]">월세 60 이하에 카페랑 약국 많은 동네 추천해줘</div>
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          {['분류', '조회', '답변'].map((label) => (
-            <div key={label} className="rounded-[14px] border border-white/12 bg-white/7 p-4 text-center text-[14px] text-white/80">
-              {label}
-            </div>
-          ))}
-        </div>
-        <div className="mt-auto rounded-[16px] bg-white p-5 text-[#17171c]">
-          <div className="text-[13px] text-[#75758a]">Answer</div>
-          <div className="mt-2 text-[20px]">후보 동네 2곳과 비교 근거를 반환</div>
-        </div>
-      </div>
-    </Panel>
-  );
-}
-
 function JourneyVisual() {
   const steps = ['지도', '조건', '상세', '비교', 'AI'];
   return (
@@ -846,20 +929,6 @@ function DifferenceVisual() {
           <div key={title} className="flex flex-col justify-between rounded-[22px] border border-[#d9d9dd] p-6">
             <div className="text-[28px] leading-[1.1]">{title}</div>
             <div className="mt-8 text-[15px] text-[#75758a]">{desc}</div>
-          </div>
-        ))}
-      </div>
-    </Panel>
-  );
-}
-
-function OperationVisual() {
-  return (
-    <Panel className="min-h-[330px]">
-      <div className="grid h-full gap-3">
-        {['public data update', 'amenity rebuild', 'current score recompute', 'state / lock / rate limit'].map((label) => (
-          <div key={label} className="rounded-[16px] border border-[#d9d9dd] bg-white px-6 py-5 font-mono text-[16px] tracking-normal">
-            {label}
           </div>
         ))}
       </div>

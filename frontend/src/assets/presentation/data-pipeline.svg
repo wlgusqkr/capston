@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="48 48 1104 664" role="img" aria-label="공공데이터 수집 정제 집계 파이프라인">
+  <rect width="1200" height="760" fill="#ffffff"/>
+  <rect x="58" y="58" width="1084" height="644" rx="28" fill="#f7f6f2" stroke="#d9d9dd"/>
+  <text x="90" y="116" font-family="Inter, Arial, sans-serif" font-size="18" fill="#ff7759">DATA PIPELINE</text>
+  <text x="90" y="164" font-family="Inter, Arial, sans-serif" font-size="38" fill="#17171c">공공데이터를 동네 지표로 압축</text>
+  <text x="90" y="198" font-family="Inter, Arial, sans-serif" font-size="18" fill="#75758a">서로 다른 기준의 데이터를 행정동 단위로 맞춘 뒤 지도와 차트가 바로 읽을 수 있는 형태로 저장합니다.</text>
+
+  <g font-family="Inter, Arial, sans-serif">
+    <rect x="90" y="286" width="180" height="136" rx="18" fill="#ffffff" stroke="#d9d9dd"/>
+    <text x="116" y="328" font-size="20" fill="#17171c">수집</text>
+    <text x="116" y="364" font-size="15" fill="#75758a">실거래</text>
+    <text x="116" y="390" font-size="15" fill="#75758a">시설 / 교통</text>
+
+    <rect x="342" y="286" width="180" height="136" rx="18" fill="#ffffff" stroke="#d9d9dd"/>
+    <text x="368" y="328" font-size="20" fill="#17171c">정제</text>
+    <text x="368" y="364" font-size="15" fill="#75758a">중복 제거</text>
+    <text x="368" y="390" font-size="15" fill="#75758a">기간 필터</text>
+
+    <rect x="594" y="286" width="180" height="136" rx="18" fill="#003c33"/>
+    <text x="620" y="328" font-size="20" fill="#ffffff">공간 결합</text>
+    <text x="620" y="364" font-size="15" fill="#ffffff" opacity=".72">법정동</text>
+    <text x="620" y="390" font-size="15" fill="#ffffff" opacity=".72">좌표 → 행정동</text>
+
+    <rect x="846" y="286" width="180" height="136" rx="18" fill="#ffffff" stroke="#d9d9dd"/>
+    <text x="872" y="328" font-size="20" fill="#17171c">사전 집계</text>
+    <text x="872" y="364" font-size="15" fill="#75758a">score / count</text>
+    <text x="872" y="390" font-size="15" fill="#75758a">지도용 payload</text>
+  </g>
+
+  <g stroke="#ff7759" stroke-width="2.5" fill="none">
+    <path d="M282 354h44"/>
+    <path d="M322 344l12 10-12 10"/>
+    <path d="M534 354h44"/>
+    <path d="M574 344l12 10-12 10"/>
+    <path d="M786 354h44"/>
+    <path d="M826 344l12 10-12 10"/>
+  </g>
+
+  <rect x="90" y="500" width="936" height="96" rx="18" fill="#17171c"/>
+  <text x="124" y="540" font-family="Inter, Arial, sans-serif" font-size="16" fill="#ffad9b">RESULT</text>
+  <text x="124" y="574" font-family="Inter, Arial, sans-serif" font-size="24" fill="#ffffff">원본 row를 그대로 보여주지 않고, 사용자가 판단할 수 있는 동네 단위 지표로 변환</text>
+</svg>
