@@ -271,30 +271,34 @@ const slides: Slide[] = [
     ],
   },
   {
-    eyebrow: 'DIFFERENTIATION',
-    title: '우리만의 차별점',
-    lead: '사용자 입장에서는 정보를 더 많이 보는 서비스가 아니라, 어디부터 보면 되는지 빠르게 좁혀주는 서비스입니다.',
+    eyebrow: 'MARKET POSITIONING',
+    title: '현재 시장의 빈자리',
+    lead: '동네를 검증하는 서비스는 있습니다. 하지만 자취 초보자의 예산, 실거래, 생활환경, 선호를 한 흐름으로 묶어 후보 동네를 줄이는 서비스는 아직 선명하지 않습니다.',
     kind: 'difference',
     rows: [
       {
-        code: 'D1',
-        title: '매물보다 동네 먼저',
-        body: '방을 하나씩 보기 전에 예산과 생활 기준에 맞는 후보 동네부터 압축',
+        code: '매물 앱',
+        title: '다방 · 직방 · 네이버',
+        body: '방과 매물을 찾고, 시세와 실거래를 확인하는 단계에 강점이 있습니다.',
+        tag: '한계: 어느 동네부터 볼지는 사용자가 직접 판단',
       },
       {
-        code: 'D2',
-        title: '조건에 맞는 실제 거래',
-        body: '평균 월세가 아니라 내 조건에 맞았던 실거래가 어느 동네에 있었는지 확인',
+        code: '아파트 검증',
+        title: '호갱노노',
+        body: '아파트 실거래가, 학군, 상권, 단지 리뷰처럼 아파트 선택 정보를 깊게 제공합니다.',
+        tag: '한계: 자취·원룸·월세 후보 동네 압축과는 초점이 다름',
       },
       {
-        code: 'D3',
-        title: '동네 평균과 위치 체감',
-        body: '행정동 단위 지표와 특정 위치 주변 1km 생활환경을 함께 비교',
+        code: '동네 데이터',
+        title: '동네스코어 · 살고싶은 우리동네',
+        body: '치안, 소음, 교통, 생활편의, 안전 같은 지역 지표를 데이터로 비교합니다.',
+        tag: '한계: 자취 예산과 실제 임대 거래 조건까지 연결되지는 않음',
       },
       {
-        code: 'D4',
-        title: '설명 가능한 선택 흐름',
-        body: '지도, 상세, 비교, AI 질문으로 후보를 좁히는 이유를 계속 확인',
+        code: '우리 서비스',
+        title: '슬기로운 자취생활',
+        body: '월세 조건, 실거래, 생활시설, 교통, 개인 선호를 묶어 매물 보기 전 후보 동네를 압축합니다.',
+        tag: '빈자리: 동네 검증을 자취 의사결정으로 바꾸는 흐름',
       },
     ],
   },
@@ -786,9 +790,13 @@ function DifferenceSlide({ slide }: { slide: Slide }) {
   return (
     <div className="cartesian-content cartesian-difference-layout">
       <div className="cartesian-heading-block">
-        <span className="cartesian-label">Differentiation</span>
+        <span className="cartesian-label">Positioning</span>
         <SlideTitle>{slide.title}</SlideTitle>
         <Lead>{slide.lead}</Lead>
+        <div className="cartesian-position-summary">
+          <span>Market gap</span>
+          <strong>검증할 정보는 많지만, 자취생이 처음 봐야 할 동네를 줄여주는 흐름은 비어 있습니다.</strong>
+        </div>
       </div>
       <DifferenceMatrix rows={slide.rows ?? []} />
     </div>
@@ -903,12 +911,13 @@ function DecisionPipelineVisual() {
 
 function DifferenceMatrix({ rows }: { rows: SlideRow[] }) {
   return (
-    <div className="cartesian-difference-matrix" aria-label="서비스 차별점 4가지">
+    <div className="cartesian-difference-matrix" aria-label="유사 서비스와 슬기로운 자취생활의 포지셔닝 비교">
       {rows.map((row) => (
         <article key={row.code}>
           <span>{row.code}</span>
           <h2>{row.title}</h2>
           <p>{row.body}</p>
+          {row.tag ? <em>{row.tag}</em> : null}
         </article>
       ))}
     </div>
@@ -1992,6 +2001,34 @@ body {
   grid-template-columns: 84px 300px 1fr;
 }
 
+.cartesian-position-summary {
+  margin-top: 18px;
+  padding: 26px 28px;
+  border-top: 1px solid var(--cartesian-ink);
+  border-bottom: 1px solid var(--cartesian-ink);
+}
+
+.cartesian-position-summary span {
+  display: block;
+  color: var(--cartesian-accent);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.cartesian-position-summary strong {
+  display: block;
+  margin-top: 18px;
+  color: var(--cartesian-ink);
+  font-family: var(--cartesian-serif);
+  font-size: 31px;
+  font-weight: 400;
+  line-height: 1.28;
+  letter-spacing: 0;
+}
+
 .cartesian-difference-matrix {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2000,37 +2037,54 @@ body {
 }
 
 .cartesian-difference-matrix article {
-  min-height: 248px;
+  min-height: 270px;
   padding: 28px 30px;
   border: 1px solid var(--cartesian-line);
   background: rgba(255, 255, 255, 0.22);
+}
+
+.cartesian-difference-matrix article:last-child {
+  border-color: var(--cartesian-ink);
+  background: rgba(255, 255, 255, 0.36);
 }
 
 .cartesian-difference-matrix span {
   display: block;
   color: var(--cartesian-accent);
   font-family: var(--cartesian-serif);
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 400;
   line-height: 1;
   letter-spacing: 0;
 }
 
 .cartesian-difference-matrix h2 {
-  margin-top: 30px;
+  margin-top: 24px;
   color: var(--cartesian-ink);
   font-family: var(--cartesian-serif);
-  font-size: 34px;
+  font-size: 30px;
   font-weight: 400;
   line-height: 1.12;
   letter-spacing: 0;
 }
 
 .cartesian-difference-matrix p {
-  margin-top: 20px;
+  margin-top: 18px;
   color: var(--cartesian-text);
-  font-size: 20px;
-  line-height: 1.5;
+  font-size: 19px;
+  line-height: 1.46;
+  letter-spacing: 0;
+}
+
+.cartesian-difference-matrix em {
+  display: block;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--cartesian-line);
+  color: var(--cartesian-accent);
+  font-size: 15px;
+  font-style: normal;
+  line-height: 1.42;
   letter-spacing: 0;
 }
 
