@@ -8,14 +8,12 @@ import {
 } from 'react';
 
 import aiArchitectureImage from '@/assets/presentation/ai-architecture.svg';
-import dashboardScrollImage from '@/assets/presentation/dashboard-scroll-1100.png';
-import dataPipelineImage from '@/assets/presentation/data-pipeline.svg';
-import mainMapRealImage from '@/assets/presentation/main-map-real.png';
 import operationPipelineImage from '@/assets/presentation/operation-pipeline.svg';
 import spatialMappingImage from '@/assets/presentation/spatial-mapping.svg';
 
 type SlideKind =
   | 'cover'
+  | 'toc'
   | 'problem'
   | 'thesis'
   | 'pipeline'
@@ -56,85 +54,282 @@ interface Slide {
   rows?: SlideRow[];
   bullets?: string[];
   image?: SlideImage;
+  note?: string;
+  summary?: {
+    label: string;
+    text: string;
+  };
 }
 
 const slides: Slide[] = [
   {
-    eyebrow: 'FINAL PRESENTATION',
-    title: '슬기로운 자취생활',
-    lead: '매물을 보기 전에, 예산과 생활 기준에 맞는 동네 후보를 먼저 압축하는 자취 의사결정 서비스',
+    eyebrow: 'TEAM 10 PRESENTATION',
+    title: '자취맵',
+    lead: '서울 자취 입문자가 매물을 보기 전에 예산, 이동, 생활 인프라, 안전 기준으로 후보 동네를 먼저 압축하는 공공데이터 기반 동네 탐색 서비스',
     kind: 'cover',
-    image: {
-      src: mainMapRealImage,
-      alt: '조건 필터와 행정동별 거래량 분포를 보여주는 자취맵 메인 지도',
-      label: 'REAL MAP SCREEN',
-    },
+  },
+  {
+    eyebrow: 'AGENDA',
+    title: '발표 목차',
+    lead: '최종 보고서의 과제 목표, 주요 기능, 기술 구조, 기대성과 순서로 발표 흐름을 다시 구성했습니다.',
+    kind: 'toc',
+    rows: [
+      {
+        code: '01',
+        title: '문제와 목표',
+        body: '자취생이 왜 매물보다 동네 선택에서 먼저 막히는지 설명',
+      },
+      {
+        code: '02',
+        title: '서비스 흐름',
+        body: '조건 추천과 지도 탐색으로 후보 동네를 압축하는 과정',
+      },
+      {
+        code: '03',
+        title: '핵심 기능',
+        body: '대시보드, AI 대화, 부동산 도우미로 판단을 보조하는 방식',
+      },
+      {
+        code: '04',
+        title: '관련 서비스 비교',
+        body: '직방, 다방, 네이버 부동산과 자취맵의 차이',
+      },
+      {
+        code: '05',
+        title: '기대성과와 확장',
+        body: '탐색 부담 감소, 데이터 기반 확장성, 향후 고도화 방향',
+      },
+    ],
   },
   {
     eyebrow: 'PROBLEM',
-    title: '동네 선택이 먼저입니다',
-    lead: '자취 초보자는 좋은 방을 찾기 전에 어느 동네부터 봐야 하는지에서 막힙니다.',
+    title: '자취는 동네 선택에서 먼저 막힙니다',
+    lead: '좋은 방을 찾는 일은 단순히 낮은 월세를 고르는 문제가 아니라, 예산 안에서 통학, 생활시설, 의료시설, 안전을 함께 만족하는 지역을 찾는 문제입니다.',
     kind: 'problem',
     rows: [
       {
         code: '01',
         title: '정보가 흩어져 있음',
-        body: '월세, 통학, 생활시설, 교통 정보가 서로 다른 서비스와 데이터셋에 분산됩니다.',
+        body: '전월세 비용, 이동 시간, 편의시설, 병원·약국, 안전 정보가 여러 사이트와 지도 서비스에 나뉘어 있습니다.',
       },
       {
         code: '02',
-        title: '공간 기준이 다름',
-        body: '실거래는 법정동, 탐색은 행정동, 생활시설은 좌표 기준이라 바로 비교하기 어렵습니다.',
+        title: '동네 단위 비교가 어려움',
+        body: '매물, 시설, 교통, 안전 데이터를 사용자가 직접 해석해야 해서 후보 지역을 빠르게 좁히기 어렵습니다.',
       },
       {
         code: '03',
-        title: '평균만으로 부족함',
-        body: '평균 월세만으로는 실제 예산, 면적, 주거 유형, 위치 체감 차이를 설명하기 어렵습니다.',
+        title: '생활 조건이 복합적임',
+        body: '예산, 희망 면적, 통학·통근 시간, 필요한 생활시설, 의료 접근성까지 동시에 고려해야 합니다.',
       },
       {
         code: '04',
-        title: '선호를 말하기 어려움',
-        body: '사용자는 교통과 시설 중 무엇을 더 중요하게 보는지 명확한 가중치로 표현하기 어렵습니다.',
+        title: '기존 서비스의 초점 차이',
+        body: '부동산 서비스는 매물 확인에 강하지만, 매물 검색 이전의 거주 후보지 정리에는 한계가 있습니다.',
       },
     ],
   },
   {
-    eyebrow: 'SERVICE THESIS',
-    title: '동네 후보를 압축합니다',
-    lead: '우리는 매물 추천 이전 단계에서 사용자가 볼 동네 후보를 줄이는 문제를 풀었습니다.',
+    eyebrow: 'PROJECT GOAL',
+    title: '방을 고르기 전에 후보 동네를 좁힙니다',
+    lead: '자취맵의 목표는 여러 생활 조건을 기준으로 사용자가 살펴볼 동네 범위를 합리적으로 줄여주는 것입니다.',
     kind: 'thesis',
     bullets: [
-      '데이터 목록이 아니라 자취 결정을 위한 판단 단위로 재구성',
-      '법정동, 행정동, 좌표 데이터를 하나의 지도 위에서 연결',
-      '동네 평균과 특정 위치 주변 생활환경을 동시에 분석',
+      '조건을 입력해 추천받거나 지도에서 직접 탐색',
+      '행정동·법정동 단위 후보를 담아두고 상세 정보로 검증',
+      'AI 대화와 부동산 도우미로 후보 비교와 계약 전 확인까지 보조',
     ],
   },
   {
-    eyebrow: 'DATA RESEARCH',
-    title: '흩어진 데이터를 묶다',
-    lead: '공공데이터를 가져오는 것보다 어려웠던 일은 서로 다른 기준의 데이터를 비교 가능한 동네 단위로 맞추는 것이었습니다.',
-    kind: 'pipeline',
-    image: {
-      src: dataPipelineImage,
-      alt: '공공데이터 수집, 정제, 공간 결합, 사전 집계 파이프라인',
-      label: 'DATA PIPELINE',
-    },
+    eyebrow: 'SERVICE FLOW',
+    title: '추천과 탐색을 하나의 흐름으로 연결합니다',
+    lead: '서비스 진입은 두 가지지만 목표는 같습니다. 사용자가 후보 동네를 찾고, 검증하고, 실제 매물 검토 단계로 넘어가게 하는 것입니다.',
+    kind: 'demo',
+    rows: [
+      {
+        code: '01',
+        title: '조건 추천',
+        body: '보증금, 월세, 면적, 시설, 목적지, 이동 시간, 우선순위를 입력',
+      },
+      {
+        code: '02',
+        title: '지도 탐색',
+        body: '지역 검색, 위치 이동, 동네 클릭, 히트맵과 시설 필터로 직접 확인',
+      },
+      {
+        code: '03',
+        title: '후보 검증',
+        body: '담아둔 후보의 시세, 교통, 생활 인프라, 안전 지표를 대시보드에서 검토',
+      },
+      {
+        code: '04',
+        title: '매물 검토 보조',
+        body: 'AI 대화와 부동산 도우미로 후보 비교, 가격 적정성, 계약 체크리스트 확인',
+      },
+    ],
   },
   {
-    eyebrow: 'RESEARCH 01',
-    title: '비용 기준',
-    lead: '보증금과 월세를 하나의 환산월세로 바꿔 동네별 비용 부담을 비교했습니다.',
+    eyebrow: 'RECOMMENDATION',
+    title: '조건 추천은 후보 동네를 빠르게 걸러냅니다',
+    lead: '사용자 조건을 구조화해 추천 API로 전달하고, 예산과 이동 가능성, 시설 충족 여부를 기준으로 후보를 정렬합니다.',
     kind: 'formula',
     bullets: [
-      '보증금을 월세 부담으로 환산해 하나의 비용 지표로 통합',
-      '최근 실거래를 기준으로 행정동별 비용 부담 계산',
-      '비용이 낮을수록 전월세 점수가 높아지도록 변환',
+      '보증금과 월세를 환산월세로 바꿔 비용 지표를 통합',
+      '희망 면적, 필요 시설, 학교·목적지, 최대 통학·통근 시간을 필터로 반영',
+      '예산 우선 또는 교통 우선 기준에 따라 행정동·법정동 후보를 정렬',
     ],
   },
   {
-    eyebrow: 'RESEARCH 02',
-    title: '공간 매핑',
-    lead: '법정동, 행정동, 좌표가 서로 다른 언어로 말하던 데이터를 하나의 지도 기준으로 맞췄습니다.',
+    eyebrow: 'MAP EXPLORATION',
+    title: '지도에서는 공간 맥락을 직접 검증합니다',
+    lead: '추천 결과를 그대로 믿는 대신, 사용자가 지도 위에서 생활시설, 의료시설, 경계, 히트맵을 직접 확인할 수 있게 했습니다.',
+    kind: 'map',
+    bullets: [
+      '지역 검색, 현재 위치, 집·학교 위치 이동',
+      '지도 클릭으로 동네 선택, 후보 담기, 상세 보기',
+      '행정동·법정동 경계와 점수 히트맵으로 지역 특성 비교',
+    ],
+    rows: [
+      {
+        code: '01',
+        title: '공간 탐색',
+        body: '검색과 위치 이동으로 관심 지역을 빠르게 찾습니다.',
+      },
+      {
+        code: '02',
+        title: '점수 히트맵',
+        body: '동네별 특성을 색상으로 비교해 후보를 좁힙니다.',
+      },
+      {
+        code: '03',
+        title: '시설 필터',
+        body: '편의점, 공원, 세탁, 도서관, 병원, 약국 등을 지도에서 확인합니다.',
+      },
+      {
+        code: '04',
+        title: '후보 저장',
+        body: '관심 동네를 담아두고 상세 대시보드로 이어갑니다.',
+      },
+    ],
+  },
+  {
+    eyebrow: 'DETAIL VIEW',
+    title: '대시보드는 후보 동네를 짧게 읽게 합니다',
+    lead: '추천받거나 지도에서 선택한 동네는 시세, 교통, 생활 인프라, 안전 지표로 다시 검증합니다.',
+    kind: 'dashboard',
+    bullets: [
+      '부동산 거래 내역 기반 시세 요약',
+      '교통 접근성과 생활 인프라를 한 화면에서 비교',
+      '안전 지표를 함께 보여줘 실제 거주 가능성을 판단',
+    ],
+    rows: [
+      {
+        code: '01',
+        title: '시세',
+        body: '임대료 지표와 거래 기반 가격 흐름을 요약합니다.',
+      },
+      {
+        code: '02',
+        title: '교통',
+        body: '통학·통근 가능성과 대중교통 접근성을 확인합니다.',
+      },
+      {
+        code: '03',
+        title: '생활',
+        body: '생활시설과 의료시설 접근성을 동네 단위로 정리합니다.',
+      },
+      {
+        code: '04',
+        title: '안전',
+        body: '안전 관련 공공 지표를 함께 제공해 판단 누락을 줄입니다.',
+      },
+    ],
+  },
+  {
+    eyebrow: 'SCORING',
+    title: '동네 점수는 생활 기준별로 나눕니다',
+    lead: '추천 결과는 단일 평균값이 아니라 사용자가 실제로 비교하는 생활 기준의 조합으로 보여줍니다.',
+    kind: 'score',
+    rows: [
+      {
+        code: 'R',
+        title: '임대료',
+        body: '환산월세와 실거래 기반 비용 부담을 비교합니다.',
+        tag: 'rent',
+      },
+      {
+        code: 'T',
+        title: '교통',
+        body: '학교·목적지까지의 이동 가능성과 대중교통 접근성을 반영합니다.',
+        tag: 'transit',
+      },
+      {
+        code: 'L',
+        title: '생활시설',
+        body: '편의점, 공원, 세탁, 도서관 등 자취 생활 신호를 묶습니다.',
+        tag: 'life',
+      },
+      {
+        code: 'S',
+        title: '안전',
+        body: '지역 안전 관련 공공 지표를 후보 검증 정보로 제공합니다.',
+        tag: 'safety',
+      },
+    ],
+    note: '추천 결과 = 임대료 · 교통 · 시설 · 안전 점수 + 사용자 우선순위',
+  },
+  {
+    eyebrow: 'AI EXPERIENCE',
+    title: 'AI는 서비스 데이터로 다시 질문하게 합니다',
+    lead: '사용자가 자연어로 질문하면 공공데이터 기반 DB 조회와 후보 비교 답변으로 탐색 흐름을 이어갑니다.',
+    kind: 'ai',
+    image: {
+      src: aiArchitectureImage,
+      alt: '사용자 질문을 의도 분류, 읽기 전용 SQL, 검증, 답변으로 연결하는 AI 구조도',
+      label: 'AI QUERY FLOW',
+    },
+    bullets: [
+      '질문 의도에 맞는 데이터 테이블 선택',
+      '읽기 전용 SQL 생성과 검증으로 안전하게 조회',
+      '후보별 장단점, 추천 순서, 표와 그래프 형태의 응답 제공',
+    ],
+  },
+  {
+    eyebrow: 'REAL ESTATE HELPER',
+    title: '동네 선택 이후의 매물 검토까지 보조합니다',
+    lead: '후보 동네를 정한 뒤에는 실제 매물의 가격 적정성과 계약 전 확인 사항을 점검할 수 있게 연결합니다.',
+    kind: 'difference',
+    summary: {
+      label: 'Decision support',
+      text: '추천은 동네를 압축하고, 도우미는 실제 계약 전 확인해야 할 정보를 놓치지 않게 합니다.',
+    },
+    rows: [
+      {
+        code: '01',
+        title: '계약 체크리스트',
+        body: '자취 초보자가 계약 전 확인해야 할 항목을 단계별로 정리합니다.',
+      },
+      {
+        code: '02',
+        title: '가격 분석',
+        body: '입력한 매물을 실거래 기반 가격 정보와 비교해 검토합니다.',
+      },
+      {
+        code: '03',
+        title: '외부 정보 연결',
+        body: '등기, 시세, 보증, 공공정보 확인 링크로 후속 확인을 돕습니다.',
+      },
+      {
+        code: '04',
+        title: '후보 비교',
+        body: '담아둔 동네의 장단점과 추천 순서를 다시 확인합니다.',
+      },
+    ],
+  },
+  {
+    eyebrow: 'DATA FOUNDATION',
+    title: '흩어진 공공데이터를 동네 기준으로 맞춥니다',
+    lead: '법정동 실거래, 행정동 탐색 단위, 좌표 기반 시설 데이터를 하나의 판단 단위로 연결했습니다.',
     kind: 'mapping',
     image: {
       src: spatialMappingImage,
@@ -143,220 +338,90 @@ const slides: Slide[] = [
     },
   },
   {
-    eyebrow: 'RESEARCH 03',
-    title: '자취 적합도',
-    lead: '좋은 동네는 하나로 고정되지 않습니다. 사용자마다 중요하게 보는 기준이 다르기 때문입니다.',
-    kind: 'score',
-    rows: [
-      {
-        code: 'R',
-        title: '전월세',
-        body: '환산월세 기반 비용 부담 점수',
-        tag: 'rent',
-      },
-      {
-        code: 'L',
-        title: '생활시설',
-        body: '카페, 편의점, 병원, 약국, 마트, 공원 등 주변 생활 신호',
-        tag: 'life',
-      },
-      {
-        code: 'T',
-        title: '교통',
-        body: '지하철 접근성과 버스 정류장 밀도',
-        tag: 'transit',
-      },
-    ],
-  },
-  {
-    eyebrow: 'SERVICE 01',
-    title: '조건 매칭 지도',
-    lead: '내 예산과 주거 조건에 맞는 실제 거래가 어느 동네에 있었는지 지도에서 바로 확인합니다.',
-    kind: 'map',
-    image: {
-      src: mainMapRealImage,
-      alt: '실제 원격 DB 데이터가 표시된 조건 매칭 지도 화면',
-      label: 'MATCH MAP',
-    },
-    bullets: [
-      '보증금, 월세, 면적, 주거유형, 기간 필터',
-      '조건을 만족한 실거래 수를 행정동별로 집계',
-      '거래량 쏠림은 log scale로 완화',
-    ],
-  },
-  {
-    eyebrow: 'SERVICE 02',
-    title: '위치 점수',
-    lead: '같은 행정동 안에서도 위치가 다르면 체감 생활환경은 달라집니다.',
-    kind: 'dashboard',
-    image: {
-      src: dashboardScrollImage,
-      alt: '오류2동의 월세, 거래, 자취초 지수, 차트, 편의시설 지표를 보여주는 대시보드',
-      label: 'DASHBOARD / O-RYU 2-DONG',
-      scroll: true,
-      scrollDuration: 24,
-      scrollFrameHeight: '610px',
-    },
-    bullets: [
-      '특정 좌표 주변 1km 생활시설 분석',
-      '가까운 시설일수록 더 크게 반영하는 커널 방식',
-      '동네 평균과 위치 주변 분석을 동시에 제공',
-    ],
-  },
-  {
-    eyebrow: 'PERSONALIZATION',
-    title: '선택으로 배우는 선호',
-    lead: '사용자가 복잡한 숫자를 입력하지 않아도, 몇 번의 선택만으로 월세, 시설, 교통 선호를 추정합니다.',
-    kind: 'preference',
-    rows: [
-      {
-        code: 'A/B',
-        title: '비교 선택',
-        body: '두 동네 중 더 끌리는 쪽을 선택',
-      },
-      {
-        code: 'W',
-        title: '가중치 추정',
-        body: '선택 결과를 월세, 생활시설, 교통 선호로 변환',
-      },
-      {
-        code: 'MAP',
-        title: '즉시 반영',
-        body: '지도 색상, 추천, 비교 결과에 개인 기준 반영',
-      },
-    ],
-  },
-  {
-    eyebrow: 'AI EXPERIENCE',
-    title: '질문하면 조회합니다',
-    lead: '자연어 질문을 데이터 조회, 추천 근거, 시각화 답변으로 연결했습니다.',
-    kind: 'ai',
-    image: {
-      src: aiArchitectureImage,
-      alt: '사용자 질문을 의도 분류, 읽기 전용 SQL, 검증, 답변으로 연결하는 AI 구조도',
-      label: 'AI QUERY FLOW',
-    },
-    bullets: [
-      '질문 의도 분류 후 필요한 데이터 테이블 선택',
-      '읽기 전용 SQL 생성과 검증',
-      '추천, 정보 조회, 표, 막대, 선 그래프로 응답',
-    ],
-  },
-  {
-    eyebrow: 'DEMO FLOW',
-    title: '탐색에서 비교까지',
-    lead: '실제 데모는 사용자가 동네 후보를 좁히는 순서를 그대로 따라갑니다.',
-    kind: 'demo',
-    rows: [
-      {
-        code: '01',
-        title: '지도',
-        body: '서울 행정동 단위 후보 확인',
-      },
-      {
-        code: '02',
-        title: '조건',
-        body: '예산과 주거 조건으로 거래 압축',
-      },
-      {
-        code: '03',
-        title: '상세',
-        body: '대시보드와 비교 화면에서 후보 검토',
-      },
-      {
-        code: '04',
-        title: 'AI',
-        body: '마지막 질문을 데이터 기반 답변으로 확인',
-      },
-    ],
-  },
-  {
-    eyebrow: 'MARKET POSITIONING',
-    title: '현재 시장의 빈자리',
-    lead: '동네를 검증하는 서비스는 있습니다. 하지만 자취 초보자의 예산, 실거래, 생활환경, 선호를 한 흐름으로 묶어 후보 동네를 줄이는 서비스는 아직 선명하지 않습니다.',
+    eyebrow: 'RELATED SERVICES',
+    title: '관련 서비스와의 차이',
+    lead: '기존 부동산 서비스가 매물 확인에 강하다면, 자취맵은 매물 검색 이전에 어떤 동네부터 볼지 정리하는 데 초점을 둡니다.',
     kind: 'difference',
+    summary: {
+      label: 'Positioning',
+      text: '자취맵은 매물을 바로 고르는 서비스가 아니라, 예산과 생활 조건으로 후보 동네를 먼저 압축하는 탐색 보조 서비스입니다.',
+    },
     rows: [
       {
-        code: '매물 앱',
-        title: '다방 · 직방 · 네이버',
-        body: '방과 매물을 찾고, 시세와 실거래를 확인하는 단계에 강점이 있습니다.',
-        tag: '한계: 어느 동네부터 볼지는 사용자가 직접 판단',
+        code: '직방 · 다방',
+        title: '매물 탐색 중심',
+        body: '원룸, 오피스텔 등 실제 매물 목록과 조건 검색에 강점이 있습니다.',
+        tag: '차이: 어느 동네부터 볼지는 사용자가 직접 판단',
       },
       {
-        code: '아파트 검증',
-        title: '호갱노노',
-        body: '아파트 실거래가, 학군, 상권, 단지 리뷰처럼 아파트 선택 정보를 깊게 제공합니다.',
-        tag: '한계: 자취·원룸·월세 후보 동네 압축과는 초점이 다름',
+        code: '네이버 부동산',
+        title: '시세·매물 정보 중심',
+        body: '매물, 시세, 단지·지역 정보를 폭넓게 확인하는 데 강점이 있습니다.',
+        tag: '차이: 자취 조건별 후보 동네 압축 흐름은 약함',
       },
       {
-        code: '동네 데이터',
-        title: '동네스코어 · 살고싶은 우리동네',
-        body: '치안, 소음, 교통, 생활편의, 안전 같은 지역 지표를 데이터로 비교합니다.',
-        tag: '한계: 자취 예산과 실제 임대 거래 조건까지 연결되지는 않음',
+        code: '지도 서비스',
+        title: '위치·시설 확인 중심',
+        body: '주변 시설과 이동 경로를 확인할 수 있지만, 자취 적합도를 한 번에 비교하기는 어렵습니다.',
+        tag: '차이: 비용·안전·시설·교통 판단이 분리됨',
       },
       {
-        code: '우리 서비스',
-        title: '슬기로운 자취생활',
-        body: '월세 조건, 실거래, 생활시설, 교통, 개인 선호를 묶어 매물 보기 전 후보 동네를 압축합니다.',
-        tag: '빈자리: 동네 검증을 자취 의사결정으로 바꾸는 흐름',
-      },
-    ],
-  },
-  {
-    eyebrow: 'TECHNICAL DIFFERENTIATION',
-    title: '차별화 기술 구성',
-    lead: '서비스의 차별화는 네 가지 흐름으로 설명할 수 있습니다. 공간 기준을 맞추고, 사용자 선택을 점수에 반영하며, 자연어 조회와 데이터 갱신 구조까지 연결했습니다.',
-    kind: 'ip',
-    rows: [
-      {
-        code: '01',
-        title: '이종 공간 기준 결합',
-        body: '법정동 실거래, 행정동 서비스 단위, 좌표 시설 데이터를 하나의 판단 단위로 변환',
-        tag: 'normalization',
-      },
-      {
-        code: '02',
-        title: '선호 기반 점수 조정',
-        body: '비교 선택에서 추정한 가중치를 비용, 생활, 교통 점수 조합에 반영',
-        tag: 'preference',
-      },
-      {
-        code: '03',
-        title: '안전한 자연어 조회',
-        body: '의도 분류, 테이블 선택, 읽기 전용 SQL 생성, 검증을 거쳐 답변',
-        tag: 'guarded query',
-      },
-      {
-        code: '04',
-        title: '갱신 가능한 산출 구조',
-        body: '공공데이터 수집, 상태 관리, 재계산, 관찰 가능성을 운영 구조로 연결',
-        tag: 'recalculation',
+        code: '자취맵',
+        title: '동네 후보 압축 중심',
+        body: '예산, 통학·통근, 생활시설, 의료시설, 안전 정보를 동네 단위로 묶어 먼저 비교합니다.',
+        tag: '차별점: 추천 → 지도 탐색 → 대시보드 → AI/도우미',
       },
     ],
   },
   {
     eyebrow: 'OPERATION',
-    title: '갱신 가능한 구조',
-    lead: '일회성 데모가 아니라 최신 공공데이터를 다시 계산해 서비스에 반영할 수 있는 구조로 만들었습니다.',
+    title: '데이터가 바뀌어도 다시 계산할 수 있습니다',
+    lead: '공공데이터를 수집, 정제, 공간 결합, 사전 집계하는 흐름을 분리해 향후 지표 추가와 지역 확장이 가능하도록 했습니다.',
     kind: 'operation',
     image: {
       src: operationPipelineImage,
-      alt: 'GitHub Actions 기반 데이터 수집, 재계산, 저장, 관찰 파이프라인',
+      alt: '공공데이터 수집, 재계산, 저장, 관찰 파이프라인',
       label: 'OPERATION PIPELINE',
     },
     bullets: [
-      'GitHub Actions 기반 데이터 업데이트',
-      '생활시설 및 current score 재계산',
-      'lock, 상태 JSON, rate limit 감지',
-      'Prometheus와 OpenTelemetry 기반 관찰 가능성',
+      '전월세, 시설, 의료, 교통, 안전 데이터를 API 단위로 분리',
+      '행정동·법정동 점수와 실거래 데이터를 다시 계산 가능한 구조',
+      '추천 설명 가능성, AI 답변 범위 고지, 공공데이터 한계 안내를 향후 보완',
     ],
   },
   {
+    eyebrow: 'SERVICE OUTCOME',
+    title: '탐색 부담을 줄이고 판단 흐름을 연결합니다',
+    lead: '자취맵은 매물 검색 이전의 동네 선택 문제를 데이터 기반으로 구조화해 초보 사용자의 의사결정을 돕습니다.',
+    kind: 'score',
+    rows: [
+      {
+        code: '01',
+        title: '탐색 부담 감소',
+        body: '여러 사이트를 오가며 가격, 위치, 시설, 교통, 병원 정보를 따로 확인하는 부담을 줄입니다.',
+        tag: 'user value',
+      },
+      {
+        code: '02',
+        title: '후보 압축',
+        body: '조건 추천과 지도 탐색으로 실제 생활 조건에 맞는 거주 가능 지역의 범위를 먼저 정합니다.',
+        tag: 'decision flow',
+      },
+      {
+        code: '03',
+        title: '확장 가능성',
+        body: '데이터 갱신, 생활 지표 추가, 서비스 지역 확대가 API와 데이터 구조 단위로 가능합니다.',
+        tag: 'scalability',
+      },
+    ],
+    note: '추천, 탐색, 검증, 계약 전 점검을 하나의 느슨한 흐름으로 연결합니다.',
+  },
+  {
     eyebrow: 'CONCLUSION',
-    title: '동네를 먼저 찾는다',
-    lead: '슬기로운 자취생활은 흩어진 공공데이터를 자취 의사결정 기준으로 바꿔 사용자의 후보 동네를 줄여주는 서비스입니다.',
+    title: '동네를 먼저 정하면 매물 선택이 쉬워집니다',
+    lead: '자취맵은 흩어진 공공데이터를 자취 의사결정 기준으로 바꿔, 사용자가 볼 후보 동네를 먼저 줄여주는 서비스입니다.',
     kind: 'closing',
-    bullets: ['연구: 데이터 기준 재구성', '서비스: 조건 매칭과 위치 분석', '운영: 갱신 가능한 자동화 구조'],
+    bullets: ['목표: 매물 검색 전 후보 동네 압축', '기능: 추천, 지도, 대시보드, AI, 도우미 연결', '성과: 생활 조건 중심의 자취 의사결정 보조'],
   },
 ];
 
@@ -541,6 +606,7 @@ function SlideChrome({
 
 function SlideBody({ slide }: { slide: Slide }) {
   if (slide.kind === 'cover') return <CoverSlide slide={slide} />;
+  if (slide.kind === 'toc') return <TocSlide slide={slide} />;
   if (slide.kind === 'problem') return <ProblemSlide slide={slide} />;
   if (slide.kind === 'thesis') return <ThesisSlide slide={slide} />;
   if (slide.kind === 'pipeline') return <ImageResearchSlide slide={slide} stats={['5+ 데이터 범주', '3 공간 기준', '1 판단 흐름']} />;
@@ -574,11 +640,36 @@ function CoverSlide({ slide }: { slide: Slide }) {
         <SlideTitle className="cartesian-cover-title">{slide.title}</SlideTitle>
         <Lead>{slide.lead}</Lead>
       </div>
-      {slide.image && <ImagePanel image={slide.image} className="cartesian-cover-image" fit="contain" />}
+      {slide.image ? (
+        <ImagePanel image={slide.image} className="cartesian-cover-image" fit="contain" />
+      ) : (
+        <CoverFlowVisual />
+      )}
       <div className="cartesian-cover-stats">
-        <StatCell number="01" label="공공데이터 재구성" />
-        <StatCell number="02" label="동네 후보 압축" />
-        <StatCell number="03" label="개인 선호 반영" />
+        <StatCell number="10조" label="박세황 · 박지현 · 백수민 · 하승연" />
+        <StatCell number="서울" label="공공데이터 기반 동네 탐색" />
+        <StatCell number="후보" label="추천 · 탐색 · 검증 흐름" />
+      </div>
+    </div>
+  );
+}
+
+function TocSlide({ slide }: { slide: Slide }) {
+  return (
+    <div className="cartesian-content cartesian-toc-layout">
+      <div className="cartesian-heading-block">
+        <span className="cartesian-label">Agenda</span>
+        <SlideTitle>{slide.title}</SlideTitle>
+        <Lead>{slide.lead}</Lead>
+      </div>
+      <div className="cartesian-toc-list">
+        {(slide.rows ?? []).map((row) => (
+          <article key={row.code} className="cartesian-toc-item">
+            <span>{row.code}</span>
+            <h2>{row.title}</h2>
+            <p>{row.body}</p>
+          </article>
+        ))}
       </div>
     </div>
   );
@@ -700,7 +791,9 @@ function ScoreSlide({ slide }: { slide: Slide }) {
           </div>
         ))}
       </div>
-      <div className="cartesian-equation">종합점수 = 전월세×w1 + 생활시설×w2 + 교통×w3</div>
+      <div className="cartesian-equation">
+        {slide.note ?? '종합점수 = 전월세×w1 + 생활시설×w2 + 교통×w3'}
+      </div>
     </div>
   );
 }
@@ -709,12 +802,16 @@ function ScreenSlide({ slide }: { slide: Slide }) {
   return (
     <div className="cartesian-content cartesian-screen-layout">
       <div className="cartesian-copy-column">
-        <span className="cartesian-label">Product screen</span>
+        <span className="cartesian-label">Map exploration</span>
         <SlideTitle>{slide.title}</SlideTitle>
         <Lead>{slide.lead}</Lead>
         <NumberedList bullets={slide.bullets ?? []} compact />
       </div>
-      {slide.image && <ImagePanel image={slide.image} className="cartesian-screen-panel" fit="contain" />}
+      {slide.image ? (
+        <ImagePanel image={slide.image} className="cartesian-screen-panel" fit="contain" />
+      ) : (
+        <ConceptPanel rows={slide.rows ?? []} />
+      )}
     </div>
   );
 }
@@ -723,12 +820,16 @@ function DashboardSlide({ slide }: { slide: Slide }) {
   return (
     <div className="cartesian-content cartesian-dashboard-layout">
       <div className="cartesian-copy-column">
-        <span className="cartesian-label">Location score</span>
+        <span className="cartesian-label">Detail view</span>
         <SlideTitle>{slide.title}</SlideTitle>
         <Lead>{slide.lead}</Lead>
         <NumberedList bullets={slide.bullets ?? []} compact />
       </div>
-      {slide.image && <ImagePanel image={slide.image} className="cartesian-dashboard-panel" />}
+      {slide.image ? (
+        <ImagePanel image={slide.image} className="cartesian-dashboard-panel" />
+      ) : (
+        <ConceptPanel rows={slide.rows ?? []} />
+      )}
     </div>
   );
 }
@@ -787,15 +888,21 @@ function DemoSlide({ slide }: { slide: Slide }) {
 }
 
 function DifferenceSlide({ slide }: { slide: Slide }) {
+  const summary = slide.summary ?? {
+    label: 'Market gap',
+    text: '검증할 정보는 많지만, 자취생이 처음 봐야 할 동네를 줄여주는 흐름은 비어 있습니다.',
+  };
+  const sectionLabel = slide.eyebrow === 'REAL ESTATE HELPER' ? 'Support flow' : 'Positioning';
+
   return (
     <div className="cartesian-content cartesian-difference-layout">
       <div className="cartesian-heading-block">
-        <span className="cartesian-label">Positioning</span>
+        <span className="cartesian-label">{sectionLabel}</span>
         <SlideTitle>{slide.title}</SlideTitle>
         <Lead>{slide.lead}</Lead>
         <div className="cartesian-position-summary">
-          <span>Market gap</span>
-          <strong>검증할 정보는 많지만, 자취생이 처음 봐야 할 동네를 줄여주는 흐름은 비어 있습니다.</strong>
+          <span>{summary.label}</span>
+          <strong>{summary.text}</strong>
         </div>
       </div>
       <DifferenceMatrix rows={slide.rows ?? []} />
@@ -858,6 +965,41 @@ function ArticleRow({ row }: { row: SlideRow }) {
       <p>{row.body}</p>
       {row.tag ? <em>{row.tag}</em> : null}
     </article>
+  );
+}
+
+function CoverFlowVisual() {
+  const steps = [
+    ['Input', '조건', '예산 · 면적 · 목적지 · 시설'],
+    ['Explore', '동네', '추천 · 지도 · 히트맵'],
+    ['Decide', '검토', '대시보드 · AI · 도우미'],
+  ];
+
+  return (
+    <div className="cartesian-cover-flow" aria-label="조건 입력에서 동네 탐색과 매물 검토로 이어지는 서비스 흐름">
+      {steps.map(([label, title, body]) => (
+        <article key={label}>
+          <span>{label}</span>
+          <strong>{title}</strong>
+          <p>{body}</p>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function ConceptPanel({ rows }: { rows: SlideRow[] }) {
+  return (
+    <div className="cartesian-concept-panel" aria-label="기능 개념 요약">
+      {rows.map((row) => (
+        <article key={row.code}>
+          <span>{row.code}</span>
+          <h2>{row.title}</h2>
+          <p>{row.body}</p>
+          {row.tag ? <em>{row.tag}</em> : null}
+        </article>
+      ))}
+    </div>
   );
 }
 
@@ -1275,8 +1417,8 @@ body {
 
 .cartesian-problem-visual {
   position: relative;
-  height: 238px;
-  margin-top: 18px;
+  height: 190px;
+  margin-top: 6px;
   border: 1px solid var(--cartesian-line);
   background:
     linear-gradient(var(--cartesian-line) 1px, transparent 1px),
@@ -1291,7 +1433,7 @@ body {
   left: 50%;
   top: 50%;
   width: 1px;
-  height: 196px;
+  height: 154px;
   background: var(--cartesian-line);
   content: "";
   transform: translate(-50%, -50%) rotate(52deg);
@@ -1343,8 +1485,8 @@ body {
 
 .cartesian-problem-node {
   width: 128px;
-  height: 72px;
-  padding: 14px 16px;
+  height: 64px;
+  padding: 12px 16px;
 }
 
 .cartesian-problem-node strong {
@@ -1359,22 +1501,22 @@ body {
 
 .cartesian-problem-node.node-0 {
   left: 38px;
-  top: 28px;
+  top: 22px;
 }
 
 .cartesian-problem-node.node-1 {
   right: 38px;
-  top: 28px;
+  top: 22px;
 }
 
 .cartesian-problem-node.node-2 {
   left: 38px;
-  bottom: 28px;
+  bottom: 22px;
 }
 
 .cartesian-problem-node.node-3 {
   right: 38px;
-  bottom: 28px;
+  bottom: 22px;
 }
 
 .cartesian-image-panel {
@@ -1579,6 +1721,74 @@ body {
   height: 430px;
 }
 
+.cartesian-cover-flow {
+  position: absolute;
+  right: 44px;
+  top: 92px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  width: 760px;
+  height: 430px;
+  border: 1px solid var(--cartesian-line);
+  background:
+    linear-gradient(var(--cartesian-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--cartesian-line) 1px, transparent 1px),
+    rgba(255, 255, 255, 0.16);
+  background-size: 76px 76px;
+}
+
+.cartesian-cover-flow article {
+  position: relative;
+  display: grid;
+  align-content: end;
+  gap: 24px;
+  padding: 42px 36px;
+  border-right: 1px solid var(--cartesian-line);
+}
+
+.cartesian-cover-flow article:last-child {
+  border-right: 0;
+}
+
+.cartesian-cover-flow article::before {
+  position: absolute;
+  left: 36px;
+  top: 42px;
+  width: 78px;
+  height: 78px;
+  border: 1px solid var(--cartesian-line);
+  border-radius: 50%;
+  content: "";
+}
+
+.cartesian-cover-flow span,
+.cartesian-toc-item span,
+.cartesian-concept-panel span {
+  display: block;
+  color: var(--cartesian-accent);
+  font-family: var(--cartesian-serif);
+  font-size: 31px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.cartesian-cover-flow strong {
+  color: var(--cartesian-ink);
+  font-family: var(--cartesian-serif);
+  font-size: 52px;
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.cartesian-cover-flow p {
+  color: var(--cartesian-text);
+  font-size: 22px;
+  line-height: 1.42;
+  letter-spacing: 0;
+}
+
 .cartesian-cover-stats {
   position: absolute;
   left: 0;
@@ -1587,6 +1797,46 @@ body {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 34px;
+}
+
+.cartesian-toc-layout {
+  display: grid;
+  grid-template-columns: 560px 1fr;
+  gap: 92px;
+  align-items: center;
+}
+
+.cartesian-toc-layout .cartesian-title {
+  font-size: 94px;
+}
+
+.cartesian-toc-list {
+  border-top: 1px solid var(--cartesian-ink);
+}
+
+.cartesian-toc-item {
+  display: grid;
+  grid-template-columns: 96px 260px 1fr;
+  gap: 34px;
+  align-items: start;
+  padding: 32px 0;
+  border-bottom: 1px solid var(--cartesian-line);
+}
+
+.cartesian-toc-item h2 {
+  color: var(--cartesian-ink);
+  font-family: var(--cartesian-serif);
+  font-size: 34px;
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: 0;
+}
+
+.cartesian-toc-item p {
+  color: var(--cartesian-text);
+  font-size: 22px;
+  line-height: 1.46;
+  letter-spacing: 0;
 }
 
 .cartesian-problem-layout,
@@ -1723,11 +1973,20 @@ body {
   line-height: 1.08;
 }
 
+.cartesian-operation .cartesian-copy-column .cartesian-title {
+  font-size: 62px;
+}
+
 .cartesian-ai .cartesian-copy-column .cartesian-lead,
 .cartesian-operation .cartesian-copy-column .cartesian-lead {
   max-width: 520px;
   font-size: 24px;
   line-height: 1.46;
+}
+
+.cartesian-operation .cartesian-copy-column .cartesian-lead {
+  font-size: 22px;
+  line-height: 1.38;
 }
 
 .cartesian-ai .cartesian-numbered-list.compact,
@@ -1740,11 +1999,21 @@ body {
   padding: 14px 0 15px;
 }
 
+.cartesian-operation .cartesian-numbered-list.compact > div {
+  padding: 10px 0 11px;
+}
+
 .cartesian-ai .cartesian-numbered-list.compact p,
 .cartesian-operation .cartesian-numbered-list.compact p {
   margin-top: 14px;
   font-size: 20px;
   line-height: 1.4;
+}
+
+.cartesian-operation .cartesian-numbered-list.compact p {
+  margin-top: 10px;
+  font-size: 18px;
+  line-height: 1.32;
 }
 
 .cartesian-mini-stats {
@@ -1770,26 +2039,54 @@ body {
 
 .cartesian-formula-layout {
   display: grid;
-  grid-template-rows: auto 214px auto;
-  gap: 62px;
+  grid-template-columns: 650px 1fr;
+  grid-template-rows: auto 238px;
+  column-gap: 86px;
+  row-gap: 44px;
+  align-items: start;
 }
 
 .cartesian-formula-header {
   display: grid;
-  gap: 24px;
+  grid-column: 1;
+  grid-row: 1;
+  gap: 20px;
 }
 
 .cartesian-formula-header .cartesian-title {
-  font-size: 84px;
+  padding-bottom: 6px;
+  font-size: 68px;
+  line-height: 1.1;
 }
 
 .cartesian-formula-box {
   display: grid;
+  grid-column: 1;
+  grid-row: 2;
   align-content: center;
   justify-items: center;
   gap: 24px;
   border-top: 1px solid var(--cartesian-ink);
   border-bottom: 1px solid var(--cartesian-ink);
+}
+
+.cartesian-formula-layout > .cartesian-numbered-list {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  grid-template-columns: 1fr;
+  gap: 26px;
+  align-self: center;
+}
+
+.cartesian-formula-layout > .cartesian-numbered-list > div {
+  min-height: 142px;
+  padding: 24px 28px;
+}
+
+.cartesian-formula-layout > .cartesian-numbered-list p {
+  margin-top: 18px;
+  font-size: 22px;
+  line-height: 1.42;
 }
 
 .cartesian-formula-box span {
@@ -1805,7 +2102,7 @@ body {
   padding-bottom: 14px;
   color: var(--cartesian-ink);
   font-family: var(--cartesian-serif);
-  font-size: 74px;
+  font-size: 58px;
   font-weight: 400;
   line-height: 1.08;
   letter-spacing: 0;
@@ -1830,7 +2127,7 @@ body {
 .cartesian-score-layout {
   display: grid;
   grid-template-rows: auto 1fr auto;
-  gap: 54px;
+  gap: 36px;
 }
 
 .cartesian-score-heading {
@@ -1841,28 +2138,28 @@ body {
 
 .cartesian-score-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 42px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
 }
 
 .cartesian-score-card {
-  min-height: 314px;
-  padding: 34px 36px;
+  min-height: 248px;
+  padding: 26px 28px;
   border: 1px solid var(--cartesian-line);
   background: var(--cartesian-paper);
 }
 
 .cartesian-score-card h2 {
-  margin-top: 34px;
+  margin-top: 24px;
 }
 
 .cartesian-score-card p {
-  margin-top: 22px;
+  margin-top: 17px;
 }
 
 .cartesian-score-card small {
   display: block;
-  margin-top: 28px;
+  margin-top: 20px;
   color: var(--cartesian-accent);
   font-size: 15px;
   line-height: 1;
@@ -1871,12 +2168,12 @@ body {
 }
 
 .cartesian-equation {
-  padding: 28px 32px;
+  padding: 18px 28px;
   border-top: 1px solid var(--cartesian-ink);
   border-bottom: 1px solid var(--cartesian-ink);
   color: var(--cartesian-ink);
   font-family: var(--cartesian-serif);
-  font-size: 38px;
+  font-size: 32px;
   line-height: 1.2;
   letter-spacing: 0;
   text-align: center;
@@ -1888,12 +2185,93 @@ body {
   gap: 70px;
 }
 
+.cartesian-screen-layout .cartesian-copy-column,
+.cartesian-dashboard-layout .cartesian-copy-column {
+  gap: 22px;
+}
+
+.cartesian-screen-layout .cartesian-copy-column .cartesian-title,
+.cartesian-dashboard-layout .cartesian-copy-column .cartesian-title {
+  padding-bottom: 8px;
+  font-size: 66px;
+  line-height: 1.08;
+}
+
+.cartesian-screen-layout .cartesian-copy-column .cartesian-lead,
+.cartesian-dashboard-layout .cartesian-copy-column .cartesian-lead {
+  max-width: 510px;
+  font-size: 24px;
+  line-height: 1.42;
+}
+
+.cartesian-screen-layout .cartesian-numbered-list.compact,
+.cartesian-dashboard-layout .cartesian-numbered-list.compact {
+  gap: 8px;
+}
+
+.cartesian-screen-layout .cartesian-numbered-list.compact > div,
+.cartesian-dashboard-layout .cartesian-numbered-list.compact > div {
+  padding: 14px 0 15px;
+}
+
+.cartesian-screen-layout .cartesian-numbered-list.compact p,
+.cartesian-dashboard-layout .cartesian-numbered-list.compact p {
+  margin-top: 12px;
+  font-size: 19px;
+  line-height: 1.34;
+}
+
 .cartesian-screen-panel {
   height: 646px;
 }
 
 .cartesian-dashboard-panel {
   height: var(--cartesian-scroll-frame-height, 610px);
+}
+
+.cartesian-concept-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+  height: 646px;
+}
+
+.cartesian-concept-panel article {
+  display: grid;
+  align-content: start;
+  min-height: 0;
+  padding: 32px 34px;
+  border: 1px solid var(--cartesian-line);
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.cartesian-concept-panel h2 {
+  margin-top: 34px;
+  color: var(--cartesian-ink);
+  font-family: var(--cartesian-serif);
+  font-size: 35px;
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: 0;
+}
+
+.cartesian-concept-panel p {
+  margin-top: 20px;
+  color: var(--cartesian-text);
+  font-size: 21px;
+  line-height: 1.46;
+  letter-spacing: 0;
+}
+
+.cartesian-concept-panel em {
+  display: block;
+  margin-top: 20px;
+  color: var(--cartesian-accent);
+  font-size: 14px;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: uppercase;
 }
 
 .cartesian-preference-grid {
@@ -2001,9 +2379,24 @@ body {
   grid-template-columns: 84px 300px 1fr;
 }
 
+.cartesian-difference-layout .cartesian-heading-block {
+  gap: 22px;
+}
+
+.cartesian-difference-layout .cartesian-title {
+  padding-bottom: 8px;
+  font-size: 76px;
+  line-height: 1.08;
+}
+
+.cartesian-difference-layout .cartesian-lead {
+  font-size: 24px;
+  line-height: 1.42;
+}
+
 .cartesian-position-summary {
-  margin-top: 18px;
-  padding: 26px 28px;
+  margin-top: 6px;
+  padding: 17px 22px;
   border-top: 1px solid var(--cartesian-ink);
   border-bottom: 1px solid var(--cartesian-ink);
 }
@@ -2020,10 +2413,10 @@ body {
 
 .cartesian-position-summary strong {
   display: block;
-  margin-top: 18px;
+  margin-top: 12px;
   color: var(--cartesian-ink);
   font-family: var(--cartesian-serif);
-  font-size: 31px;
+  font-size: 26px;
   font-weight: 400;
   line-height: 1.28;
   letter-spacing: 0;
@@ -2032,13 +2425,13 @@ body {
 .cartesian-difference-matrix {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 28px;
+  gap: 24px;
   align-self: stretch;
 }
 
 .cartesian-difference-matrix article {
-  min-height: 270px;
-  padding: 28px 30px;
+  min-height: 236px;
+  padding: 24px 28px;
   border: 1px solid var(--cartesian-line);
   background: rgba(255, 255, 255, 0.22);
 }
@@ -2059,7 +2452,7 @@ body {
 }
 
 .cartesian-difference-matrix h2 {
-  margin-top: 24px;
+  margin-top: 20px;
   color: var(--cartesian-ink);
   font-family: var(--cartesian-serif);
   font-size: 30px;
@@ -2069,7 +2462,7 @@ body {
 }
 
 .cartesian-difference-matrix p {
-  margin-top: 18px;
+  margin-top: 14px;
   color: var(--cartesian-text);
   font-size: 19px;
   line-height: 1.46;
@@ -2078,8 +2471,8 @@ body {
 
 .cartesian-difference-matrix em {
   display: block;
-  margin-top: 20px;
-  padding-top: 16px;
+  margin-top: 14px;
+  padding-top: 12px;
   border-top: 1px solid var(--cartesian-line);
   color: var(--cartesian-accent);
   font-size: 15px;
