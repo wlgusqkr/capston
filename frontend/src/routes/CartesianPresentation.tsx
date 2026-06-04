@@ -1133,19 +1133,26 @@ function CartesianStyles() {
   return (
     <style>
       {`
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;600&family=Noto+Serif+KR:wght@400;600&family=Playfair+Display:wght@400&display=swap');
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css');
 
 .cartesian-deck-root {
-  --cartesian-bg: #EDE8E0;
-  --cartesian-bg-2: #E2DBD1;
-  --cartesian-ink: #1A1A1A;
-  --cartesian-text: #5A5A5A;
-  --cartesian-accent: #8A8178;
-  --cartesian-line: #B8B0A4;
-  --cartesian-paper: rgba(255, 255, 255, 0.34);
-  --cartesian-serif: "Playfair Display", "Noto Serif KR", serif;
-  --cartesian-sans: "Inter", "Noto Sans KR", sans-serif;
-  --stage-bg: #1A1A1A;
+  --cartesian-bg: #F2FBF6;
+  --cartesian-bg-2: #E3F7EC;
+  --cartesian-ink: #18211E;
+  --cartesian-text: #42514C;
+  --cartesian-muted: #71847B;
+  --cartesian-accent: #047857;
+  --cartesian-highlight: #10B981;
+  --cartesian-teal: #0D9488;
+  --cartesian-blue: #1863DC;
+  --cartesian-coral: #FF7759;
+  --cartesian-line: #AED8C7;
+  --cartesian-paper: rgba(255, 255, 255, 0.52);
+  --cartesian-panel: rgba(236, 253, 245, 0.92);
+  --cartesian-panel-soft: rgba(237, 252, 233, 0.72);
+  --cartesian-serif: "Pretendard Variable", "Pretendard", "Noto Sans KR", sans-serif;
+  --cartesian-sans: "Pretendard Variable", "Pretendard", "Noto Sans KR", sans-serif;
+  --stage-bg: #06251F;
   position: fixed;
   inset: 0;
   overflow: hidden;
@@ -1159,7 +1166,7 @@ body {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  background: var(--stage-bg, #1A1A1A);
+  background: var(--stage-bg, #06251F);
 }
 
 .cartesian-deck-viewport {
@@ -1177,7 +1184,9 @@ body {
   height: 1080px;
   overflow: hidden;
   transform-origin: 0 0;
-  background: var(--cartesian-bg);
+  background:
+    linear-gradient(180deg, rgba(240, 251, 245, 0.98) 0%, rgba(236, 253, 245, 0.92) 100%),
+    var(--cartesian-bg);
 }
 
 .cartesian-slide {
@@ -1189,7 +1198,9 @@ body {
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
-  background: var(--cartesian-bg);
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.28), rgba(237, 252, 233, 0.38)),
+    var(--cartesian-bg);
   color: var(--cartesian-ink);
   font-family: var(--cartesian-sans);
   transition: opacity 260ms ease;
@@ -1223,7 +1234,7 @@ body {
   top: 0;
   z-index: 1200;
   height: 3px;
-  background: var(--cartesian-line);
+  background: var(--cartesian-highlight);
   transition: width 220ms ease;
 }
 
@@ -1244,7 +1255,7 @@ body {
   place-items: center;
   border: 1px solid var(--cartesian-line);
   border-radius: 0;
-  background: rgba(237, 232, 224, 0.84);
+  background: rgba(236, 253, 245, 0.88);
   color: var(--cartesian-ink);
   font-family: var(--cartesian-sans);
   font-size: 18px;
@@ -1312,7 +1323,7 @@ body {
 }
 
 .cartesian-nav-dots span.active {
-  background: var(--cartesian-ink);
+  background: var(--cartesian-highlight);
   transform: scale(1.3);
 }
 
@@ -1322,7 +1333,7 @@ body {
   z-index: 0;
   display: block;
   background: var(--cartesian-line);
-  opacity: 0.34;
+  opacity: 0.42;
 }
 
 .cartesian-axis-v {
@@ -1450,7 +1461,7 @@ body {
   display: grid;
   align-content: center;
   border: 1px solid var(--cartesian-line);
-  background: rgba(237, 232, 224, 0.9);
+  background: var(--cartesian-panel);
 }
 
 .cartesian-problem-center {
@@ -1560,7 +1571,7 @@ body {
   bottom: 20px;
   padding: 9px 12px;
   border: 1px solid var(--cartesian-line);
-  background: rgba(237, 232, 224, 0.88);
+  background: rgba(236, 253, 245, 0.92);
   color: var(--cartesian-accent);
   font-size: 13px;
   font-weight: 500;
@@ -1662,7 +1673,7 @@ body {
   min-height: 154px;
   padding: 28px 30px;
   border: 1px solid var(--cartesian-line);
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--cartesian-paper);
 }
 
 .cartesian-stat-cell strong {
@@ -1691,7 +1702,7 @@ body {
   bottom: 24px;
   display: block;
   height: 1px;
-  background: var(--cartesian-ink);
+  background: var(--cartesian-highlight);
 }
 
 .cartesian-cover-layout {
@@ -1733,7 +1744,7 @@ body {
   background:
     linear-gradient(var(--cartesian-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--cartesian-line) 1px, transparent 1px),
-    rgba(255, 255, 255, 0.16);
+    var(--cartesian-panel-soft);
   background-size: 76px 76px;
 }
 
@@ -1756,7 +1767,7 @@ body {
   top: 42px;
   width: 78px;
   height: 78px;
-  border: 1px solid var(--cartesian-line);
+  border: 1px solid var(--cartesian-highlight);
   border-radius: 50%;
   content: "";
 }
@@ -1897,7 +1908,7 @@ body {
   gap: 16px;
   padding: 22px;
   border: 1px solid var(--cartesian-line);
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--cartesian-paper);
 }
 
 .cartesian-pipeline-row {
@@ -1923,6 +1934,7 @@ body {
   place-items: center;
   border-top: 1px solid var(--cartesian-ink);
   border-bottom: 1px solid var(--cartesian-ink);
+  background: rgba(221, 246, 233, 0.42);
 }
 
 .cartesian-pipeline-core strong {
@@ -2172,6 +2184,7 @@ body {
   border-top: 1px solid var(--cartesian-ink);
   border-bottom: 1px solid var(--cartesian-ink);
   color: var(--cartesian-ink);
+  background: rgba(236, 253, 245, 0.56);
   font-family: var(--cartesian-serif);
   font-size: 32px;
   line-height: 1.2;
@@ -2242,7 +2255,7 @@ body {
   min-height: 0;
   padding: 32px 34px;
   border: 1px solid var(--cartesian-line);
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--cartesian-paper);
 }
 
 .cartesian-concept-panel h2 {
@@ -2399,6 +2412,7 @@ body {
   padding: 17px 22px;
   border-top: 1px solid var(--cartesian-ink);
   border-bottom: 1px solid var(--cartesian-ink);
+  background: rgba(236, 253, 245, 0.48);
 }
 
 .cartesian-position-summary span {
@@ -2433,12 +2447,12 @@ body {
   min-height: 236px;
   padding: 24px 28px;
   border: 1px solid var(--cartesian-line);
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--cartesian-paper);
 }
 
 .cartesian-difference-matrix article:last-child {
-  border-color: var(--cartesian-ink);
-  background: rgba(255, 255, 255, 0.36);
+  border-color: var(--cartesian-line);
+  background: var(--cartesian-paper);
 }
 
 .cartesian-difference-matrix span {
@@ -2576,11 +2590,151 @@ body {
   min-height: 138px;
   padding: 26px 28px;
   border: 1px solid var(--cartesian-line);
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--cartesian-paper);
 }
 
 .cartesian-closing-list p {
   margin-top: 22px;
+}
+
+.cartesian-slide {
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.cartesian-title,
+.cartesian-cover-title,
+.cartesian-formula-box strong,
+.cartesian-closing-layout .cartesian-title {
+  font-weight: 800;
+  letter-spacing: 0px;
+}
+
+.cartesian-article-row h2,
+.cartesian-score-card h2,
+.cartesian-timeline h2,
+.cartesian-toc-item h2,
+.cartesian-concept-panel h2,
+.cartesian-difference-matrix h2,
+.cartesian-ip-row strong,
+.cartesian-cover-flow strong,
+.cartesian-pipeline-core strong,
+.cartesian-problem-center strong,
+.cartesian-problem-node strong,
+.cartesian-position-summary strong,
+.cartesian-weight-panel strong,
+.cartesian-stat-cell strong {
+  font-weight: 700;
+  letter-spacing: 0px;
+}
+
+.cartesian-lead,
+.cartesian-numbered-list p,
+.cartesian-article-row p,
+.cartesian-score-card p,
+.cartesian-timeline p,
+.cartesian-ip-row p,
+.cartesian-closing-list p,
+.cartesian-toc-item p,
+.cartesian-concept-panel p,
+.cartesian-difference-matrix p,
+.cartesian-cover-flow p,
+.cartesian-stat-cell span,
+.cartesian-weight-panel span {
+  font-weight: 500;
+  letter-spacing: 0px;
+}
+
+.cartesian-label,
+.cartesian-topbar,
+.cartesian-footer,
+.cartesian-numbered-list span,
+.cartesian-article-row > span,
+.cartesian-score-card > span,
+.cartesian-timeline span,
+.cartesian-closing-list span,
+.cartesian-ip-row > span,
+.cartesian-cover-flow span,
+.cartesian-toc-item span,
+.cartesian-concept-panel span,
+.cartesian-position-summary span,
+.cartesian-difference-matrix span,
+.cartesian-formula-box span,
+.cartesian-difference-matrix em,
+.cartesian-concept-panel em,
+.cartesian-ip-row em,
+.cartesian-score-card small {
+  font-weight: 700;
+  letter-spacing: 0px;
+}
+
+.cartesian-title,
+.cartesian-cover-title,
+.cartesian-formula-box strong,
+.cartesian-closing-layout .cartesian-title,
+.cartesian-article-row h2,
+.cartesian-score-card h2,
+.cartesian-timeline h2,
+.cartesian-toc-item h2,
+.cartesian-concept-panel h2,
+.cartesian-difference-matrix h2,
+.cartesian-ip-row strong,
+.cartesian-cover-flow strong,
+.cartesian-pipeline-core strong,
+.cartesian-problem-center strong,
+.cartesian-problem-node strong,
+.cartesian-position-summary strong,
+.cartesian-weight-panel strong,
+.cartesian-stat-cell strong {
+  color: var(--cartesian-ink);
+}
+
+.cartesian-lead,
+.cartesian-numbered-list p,
+.cartesian-article-row p,
+.cartesian-score-card p,
+.cartesian-timeline p,
+.cartesian-ip-row p,
+.cartesian-closing-list p,
+.cartesian-toc-item p,
+.cartesian-concept-panel p,
+.cartesian-difference-matrix p,
+.cartesian-cover-flow p,
+.cartesian-stat-cell span,
+.cartesian-weight-panel span {
+  color: var(--cartesian-text);
+}
+
+.cartesian-label,
+.cartesian-topbar,
+.cartesian-footer,
+.cartesian-formula-box span,
+.cartesian-image-panel figcaption,
+.cartesian-problem-center span,
+.cartesian-problem-node span,
+.cartesian-pipeline-core small {
+  color: var(--cartesian-accent);
+}
+
+.cartesian-numbered-list span,
+.cartesian-article-row > span,
+.cartesian-score-card > span,
+.cartesian-timeline span,
+.cartesian-closing-list span,
+.cartesian-ip-row > span,
+.cartesian-cover-flow span,
+.cartesian-toc-item span,
+.cartesian-concept-panel span,
+.cartesian-difference-matrix span {
+  color: var(--cartesian-teal);
+}
+
+.cartesian-difference-matrix em,
+.cartesian-concept-panel em,
+.cartesian-ip-row em,
+.cartesian-score-card small,
+.cartesian-article-row em {
+  color: var(--cartesian-muted);
 }
 
 @keyframes cartesianAutoScroll {
