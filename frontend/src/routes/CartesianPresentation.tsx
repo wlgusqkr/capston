@@ -7,7 +7,6 @@ import {
   type CSSProperties,
 } from 'react';
 
-import aiArchitectureImage from '@/assets/presentation/ai-architecture.svg';
 import mapCurrentImage from '@/assets/presentation/map-current.png';
 import serviceQrImage from '@/assets/presentation/service-qr.png';
 
@@ -29,6 +28,11 @@ type SlideKind =
   | 'difference'
   | 'ip'
   | 'operation'
+  | 'aiChat'
+  | 'architecture'
+  | 'process'
+  | 'aiAppendix'
+  | 'thanks'
   | 'closing';
 
 interface SlideRow {
@@ -75,13 +79,12 @@ interface Slide {
 }
 
 const SERVICE_URL = 'https://slgi-life.duckdns.org/';
-const MAP_URL = 'https://slgi-life.duckdns.org/map';
 
 const slides: Slide[] = [
   {
     eyebrow: 'INTRO',
     title: '자취맵',
-    lead: '서울로 상경한 대학생을 위한 공공데이터 기반 동네 큐레이션 서비스',
+    lead: '서울에서 자취하는 대학생을 위한 공공데이터 기반 동네 큐레이션 서비스',
     kind: 'cover',
     rows: [
       {
@@ -92,12 +95,12 @@ const slides: Slide[] = [
       {
         code: 'class',
         title: '분반 · 담당 교수',
-        body: '분반명 · 담당 교수님 성함',
+        body: '1분반 · 강동현 교수님',
       },
       {
-        code: 'url',
-        title: 'URL',
-        body: 'slgi-life.duckdns.org',
+        code: 'subject',
+        title: '설계 주제',
+        body: '분산 데이터 수집 및 시각화를 활용한 스마트 대시보드',
       },
     ],
   },
@@ -106,23 +109,7 @@ const slides: Slide[] = [
     title: '서비스 접속 경로',
     lead: '서비스와 대표 화면에 바로 접속할 수 있는 주소입니다.',
     kind: 'qr',
-    rows: [
-      {
-        code: '01',
-        title: '서비스 URL',
-        body: SERVICE_URL,
-      },
-      {
-        code: '02',
-        title: '지도 화면',
-        body: MAP_URL,
-      },
-      {
-        code: '03',
-        title: '대시보드 화면',
-        body: '.../dashboard/adong/용산구-용산2가동',
-      },
-    ],
+    rows: [],
   },
   {
     eyebrow: 'PROBLEM',
@@ -155,7 +142,7 @@ const slides: Slide[] = [
   {
     eyebrow: 'SERVICE THESIS',
     title: '매물 검색 이전 단계에서 후보 동네를 압축합니다',
-    lead: '자취맵은 행정동·법정동 단위 점수로 동네 자체의 적합성을 먼저 판단하도록 돕는 서비스입니다.',
+    lead: '자취맵은 사용자의 라이프 스타일에 맞는 동네를 찾을 수 있도록 돕는 서비스입니다.',
     kind: 'thesis',
     bullets: [
       '추천: 보증금, 월세, 면적, 시설, 통학시간을 입력해 후보를 정렬',
@@ -201,10 +188,9 @@ const slides: Slide[] = [
   },
   {
     eyebrow: 'DEMO PLAN',
-    title: '서비스 흐름은 후보 탐색과 검증으로 이어집니다',
+    title: '후보 탐색부터 계약 점검까지',
     lead: '지도 탐색, 후보 담기, 대시보드 확인, 계약 전 점검까지 실제 화면 전환으로 연결됩니다.',
     kind: 'demo',
-    videoCue: '30초 영상: 홈 진입 → 지도 필터 → 후보 담기 → 대시보드 이동',
     rows: [
       {
         code: '01',
@@ -241,7 +227,7 @@ const slides: Slide[] = [
   },
   {
     eyebrow: 'MAP EXPLORATION',
-    title: '지도에서는 동네의 공간 맥락을 직접 검증합니다',
+    title: '지도에서 모든 동네를 한눈에 비교합니다',
     lead: '점수 히트맵과 시설 필터를 켜고 끄며 후보 동네의 생활 조건을 시각적으로 확인합니다.',
     kind: 'map',
     image: {
@@ -249,7 +235,6 @@ const slides: Slide[] = [
       alt: '현재 자취맵 지도 화면. 행정동과 법정동 히트맵, 생활시설과 의료시설 필터가 보인다.',
       label: 'LIVE MAP / CURRENT SERVICE',
     },
-    videoCue: '20초 영상: 행정동·법정동 전환, 히트맵 항목 변경, 시설 필터 켜기',
     bullets: [
       '행정동·법정동 전환으로 비교 단위를 바꿔 볼 수 있음',
       '종합, 부동산, 교통, 편의시설, 안전 지수를 히트맵으로 비교',
@@ -258,71 +243,91 @@ const slides: Slide[] = [
   },
   {
     eyebrow: 'DETAIL VIEW',
-    title: '대시보드는 후보 동네를 계약 전 점검 기준으로 정리합니다',
-    lead: '지도에서 고른 동네를 임대료, 교통, 편의시설, 안전 지표와 실거래 차트로 다시 검증합니다.',
+    title: '대시보드에서 동네 지표를 확인하고 계약까지 도와줍니다',
+    lead: '동네를 결정한 뒤에는 시세와 생활 지표를 확인하고, 실제 매물 보기와 계약 전 체크리스트로 이어집니다.',
     kind: 'dashboard',
-    videoCue: '25초 영상: 대시보드 스크롤로 시세, 교통, 편의시설, 안전 지표 훑기',
-    bullets: [
-      '실거래 기반 평균 환산월세, 평균 보증금, 최근 거래 건수 요약',
-      '월별 추이, 주택 유형 분포, 면적별 산점도, 보증금 구간별 월세 제공',
-      '교통 접근성, 편의시설 밀도, 의료시설, 안전 지수를 같은 화면에서 검토',
-    ],
     rows: [
       {
         code: '01',
         title: '시세',
-        body: '평균 환산월세, 평균 보증금, 최근 거래 건수와 가격 흐름을 요약합니다.',
+        body: '평균 환산월세, 평균 보증금, 최근 거래 건수, 가격 흐름을 요약합니다.',
       },
       {
         code: '02',
         title: '교통',
-        body: '지하철역, 버스정류장, 통학 가능성 등 이동 조건을 확인합니다.',
+        body: '지하철역, 버스정류장, 통학 가능 시간 등 이동 조건을 확인합니다.',
       },
       {
         code: '03',
         title: '생활',
-        body: '편의시설, 의료시설, 공원 등 실제 생활 인프라를 동네 단위로 봅니다.',
+        body: '편의시설, 의료시설, 공원 등 생활 인프라를 동네 단위로 봅니다.',
       },
       {
         code: '04',
         title: '안전',
         body: '안전 지표를 함께 보여줘 계약 전 판단 누락을 줄입니다.',
       },
+      {
+        code: '05',
+        title: '매물 · 계약',
+        body: '실제 매물 보기와 계약 전 체크리스트로 동네 선택 이후의 행동까지 연결합니다.',
+      },
     ],
   },
   {
-    eyebrow: 'AI + HELPER',
-    title: 'AI와 부동산 도우미는 계약 전 확인을 보조합니다',
-    lead: '동네를 고른 뒤에는 자연어 질문, 후보 비교, 실제 매물 확인, 계약 전 체크리스트로 판단을 이어갑니다.',
-    kind: 'ai',
-    image: {
-      src: aiArchitectureImage,
-      alt: '사용자 질문을 질문 분류, Text-to-SQL, SQL 안전 검증, 읽기 전용 DB 조회, 답변 반환으로 연결하는 AI Agent 구조도',
-      label: 'AI AGENT / READ-ONLY DB FLOW',
-    },
-    videoCue: '20초 영상: 자연어 질문 → SQL 조회 기반 답변 → 후보 비교 또는 체크리스트 확인',
-    bullets: [
-      'AI Agent 전용 read-only DB URL을 사용해 쓰기 가능한 DB 권한과 분리',
-      '질문 의도, 테이블 선택, SQL 검증을 거쳐 표·그래프·후보 비교로 응답',
-      '부동산 도우미는 실제 매물 보기, 가격 적정성, 계약 체크리스트, 외부 확인 링크로 연결',
+    eyebrow: 'AI CHATBOT',
+    title: 'AI 챗봇으로 편하게 정보를 습득합니다',
+    lead: '복잡한 필터를 직접 고르지 않아도 자연어 질문으로 동네 추천, 지역 정보, 시설 정보를 확인할 수 있습니다.',
+    kind: 'aiChat',
+    rows: [
+      {
+        code: '01',
+        title: '자연어 기반 동네 추천',
+        body: '월세, 교통, 생활시설 조건을 문장으로 입력하면 후보 동네와 핵심 수치를 함께 보여줍니다.',
+      },
+      {
+        code: '02',
+        title: '지역 정보 조회',
+        body: '특정 동네의 월세 거래, 생활시설, 교통 지표를 공공데이터 기반으로 설명합니다.',
+      },
+      {
+        code: '03',
+        title: '시설 정보 조회',
+        body: '도서관, 카페, 편의점, 병원, 지하철역처럼 생활에 필요한 시설을 찾아줍니다.',
+      },
+      {
+        code: '04',
+        title: '시각화 응답',
+        body: '월세 비교는 그래프, 운영시간은 표, 위치 질문은 지도 데이터로 응답합니다.',
+      },
+      {
+        code: '05',
+        title: '후보 동네 맥락 반영',
+        body: '사용자가 담아둔 후보 동네를 기준으로 후속 질문과 비교 답변을 이어갑니다.',
+      },
     ],
   },
   {
     eyebrow: 'TECH STACK',
-    title: '빠른 화면, 미리 계산한 데이터',
-    lead: '사용자 화면, 서비스 API, 데이터·캐시 계층을 나눠 지도와 대시보드가 짧은 시간 안에 응답하도록 구성했습니다.',
-    kind: 'operation',
-    diagramSlot: {
-      label: '구현 구조',
-      title: '서비스 아키텍처',
-      guide: '사용자 화면, 서비스 API, 데이터·캐시 계층을 분리해 기능 흐름과 데이터 조회 책임을 나눴습니다.',
-      variant: 'architecture',
-      items: ['React/Vite/TS', 'Django REST/GeoDjango', 'PostgreSQL/PostGIS', 'Redis', 'Docker Compose'],
-    },
-    bullets: [
-      '화면: 추천, 지도, 대시보드, 부동산 도우미를 하나의 SPA 흐름으로 제공',
-      'API: 지도, 추천, 대시보드, AI, 매물 분석 기능을 도메인별로 분리',
-      '데이터: PostGIS 공간 연산과 캐시 테이블로 반복 계산을 줄임',
+    title: '서비스 아키텍처',
+    lead: '사용자 화면, 백엔드 API, AI 파이프라인이 역할을 나누어 추천, 지도, 대시보드, 챗봇을 연결합니다.',
+    kind: 'architecture',
+    rows: [
+      {
+        code: 'Frontend',
+        title: 'React · Vite',
+        body: 'AI 채팅 UI, 표·그래프·지도 시각화, 추천/지도/대시보드 SPA 화면을 담당합니다.',
+      },
+      {
+        code: 'Backend',
+        title: 'Django · DRF',
+        body: '/api/agent/query, 대화 히스토리 관리, 사용자 정보 조회, 담은 후보 동네 조회를 담당합니다.',
+      },
+      {
+        code: 'AI Pipeline',
+        title: 'LangChain · OpenAI API',
+        body: '질문 분류, Text-to-SQL, Pydantic structured output으로 데이터 기반 답변을 생성합니다.',
+      },
     ],
   },
   {
@@ -335,31 +340,66 @@ const slides: Slide[] = [
         code: '01',
         title: '700만 건 조회 성능',
         body: '원본 실거래와 시설 데이터를 요청마다 계산하면 지도와 대시보드 응답이 느려집니다.',
-        tag: 'current score cache table, iterator, 사전 집계로 해결',
+        tag: '점수 캐시 테이블에 사전 집계하고 대시보드는 캐시 JSON을 바로 조회',
       },
       {
         code: '02',
         title: '공간 매핑 비용',
         body: '법정동 실거래, 행정동 경계, 좌표 시설 데이터의 기준이 서로 달라 공간 결합이 필요했습니다.',
-        tag: 'PostGIS ST_Intersection, GIST index, 행정동/법정동 매핑 테이블',
+        tag: 'PostGIS 공간 조인과 GIST 인덱스로 행정동·법정동 기준을 통일',
       },
       {
         code: '03',
         title: 'AI 응답 안전성',
         body: 'LLM이 만든 SQL을 쓰기 가능한 DB에서 실행하면 위험하고, 응답 시간도 길어질 수 있습니다.',
-        tag: 'AI_AGENT_DATABASE_URL, read-only SQL guard, timeout/retry 설정',
+        tag: '읽기 전용 DB 계정, SELECT-only 검증, timeout/retry로 안전하게 제한',
       },
     ],
   },
   {
     eyebrow: 'OUTCOME',
-    title: '동네를 먼저 정하면 매물 선택이 쉬워집니다',
-    lead: '자취맵은 흩어진 공공데이터를 자취 의사결정 기준으로 바꿔, 사용자가 살펴볼 후보 동네를 줄입니다.',
+    title: '서울을 몰라도, 살아갈 동네를 찾아주는 단 하나의 서비스',
+    lead: '서울에 상경한 대학생이 자취할 동네를 선택할 수 있게 돕습니다.',
     kind: 'closing',
-    bullets: [
-      '탐색 부담 감소: 여러 사이트를 오가던 가격, 시설, 교통, 안전 확인을 하나의 흐름으로 연결',
-      '확장성: 데이터와 지표가 API 단위로 분리되어 지역 확대와 지표 추가가 가능',
-      '향후: 동네 리뷰, 자취 팁 게시판으로 공공데이터가 담지 못하는 생활 정보를 보완',
+    rows: [
+      {
+        code: '01',
+        title: '탐색 부담 감소',
+        body: '가격, 시설, 교통, 안전 정보를 한 흐름으로 묶어 후보 동네를 빠르게 좁힙니다.',
+      },
+      {
+        code: '02',
+        title: '끝없는 확장성',
+        body: '데이터와 지표가 API 단위로 분리되어 지역 확대, 지표 추가, AI 챗봇 기반 자취 생활 정보 제공으로 확장할 수 있습니다.',
+      },
+      {
+        code: '03',
+        title: '향후 계획',
+        body: '동네 실거주 자취생 리뷰와 자취 정보 커뮤니티 게시판으로 공공데이터가 담지 못하는 생활 정보를 보완합니다.',
+      },
+    ],
+  },
+  {
+    eyebrow: 'THANK YOU',
+    title: '감사합니다.',
+    lead: 'Q&A',
+    kind: 'thanks',
+    rows: [
+      {
+        code: 'team',
+        title: '10조',
+        body: '박세황 · 박지현 · 백수민 · 하승연',
+      },
+      {
+        code: 'class',
+        title: '분반 · 담당 교수',
+        body: '1분반 · 강동현 교수님',
+      },
+      {
+        code: 'subject',
+        title: '설계 주제',
+        body: '분산 데이터 수집 및 시각화를 활용한 스마트 대시보드',
+      },
     ],
   },
   {
@@ -391,6 +431,72 @@ const slides: Slide[] = [
       '전월세, 시설, 의료, 교통, 안전 데이터를 public_data 앱과 update scripts로 적재',
       '행정동·법정동 점수, 추천용 임대료, 대시보드 JSON을 캐시 테이블로 제공',
       '데이터 출처와 공공데이터의 한계는 별도 데이터 출처 화면에서 관리',
+    ],
+  },
+  {
+    eyebrow: 'APPENDIX 03',
+    title: '개발 프로세스',
+    lead: '서비스 주제 선정부터 데이터 적재, AI 챗봇, 웹 개발, 운영 개선까지 단계적으로 진행했습니다.',
+    kind: 'process',
+    rows: [
+      {
+        code: '3월',
+        title: '서비스 결정',
+        body: '서울 자취생의 동네 선택 문제를 주제로 정하고 핵심 사용자와 문제 범위를 좁혔습니다.',
+      },
+      {
+        code: '4월',
+        title: '기획 구체화 · 데이터 수집',
+        body: '추천 기준, 지도 탐색, 대시보드 흐름을 설계하고 공공데이터 수집 구조를 잡았습니다.',
+      },
+      {
+        code: '5월',
+        title: '데이터 적재 · AI 챗봇 개발',
+        body: 'PostGIS 기반 공간 데이터 적재, 캐시 계산, DB 기반 AI 답변 파이프라인을 구현했습니다.',
+      },
+      {
+        code: '5월 말~',
+        title: '웹 개발 · 지속 개선',
+        body: 'React 화면, 추천/지도/대시보드/부동산 도우미를 연결하고 시연 흐름을 계속 개선하고 있습니다.',
+      },
+    ],
+  },
+  {
+    eyebrow: 'APPENDIX 04',
+    title: 'AI 챗봇 처리 파이프라인',
+    lead: '사용자 질문을 서비스 범위 안에서 분류하고, 필요한 경우 읽기 전용 SQL 조회와 시각화 응답으로 연결합니다.',
+    kind: 'aiAppendix',
+    rows: [
+      {
+        code: '01',
+        title: 'API 진입',
+        body: '사용자 질문이 /api/agent/query로 들어오면 대화 히스토리, 사용자 정보, 담은 동네 목록을 불러옵니다.',
+      },
+      {
+        code: '02',
+        title: '캐시 우선 확인',
+        body: '특정 동네 정보처럼 자주 묻는 질문은 대시보드 캐시에서 먼저 답변 가능 여부를 확인합니다.',
+      },
+      {
+        code: '03',
+        title: '질문 분류',
+        body: '질문을 db, direct, blocked로 나누고 추천, 정보 조회, 일반 답변 여부를 구분합니다.',
+      },
+      {
+        code: '04',
+        title: 'Text-to-SQL',
+        body: 'DB 조회가 필요한 경우 필요한 테이블과 조인 경로를 바탕으로 SELECT SQL을 생성합니다.',
+      },
+      {
+        code: '05',
+        title: '안전 검증 · 조회',
+        body: '읽기 전용 SQL만 허용하고 검증된 쿼리만 DB에서 실행합니다.',
+      },
+      {
+        code: '06',
+        title: '답변 · 시각화',
+        body: '최종 답변과 함께 표, 그래프, 지도에서 렌더링할 데이터를 반환합니다.',
+      },
     ],
   },
 ];
@@ -554,7 +660,7 @@ function SlideChrome({
       <span className="cartesian-axis-h" aria-hidden="true" />
       <header className="cartesian-topbar">
         <span>{slide.eyebrow}</span>
-        <span>Cartesian</span>
+        <span>종합설계1</span>
       </header>
       <nav className="cartesian-nav-dots" aria-label="슬라이드 위치">
         {slides.map((item, index) => (
@@ -594,9 +700,14 @@ function SlideBody({ slide }: { slide: Slide }) {
   if (slide.kind === 'dashboard') return <DashboardSlide slide={slide} />;
   if (slide.kind === 'preference') return <PreferenceSlide slide={slide} />;
   if (slide.kind === 'ai') return <ImageResearchSlide slide={slide} />;
+  if (slide.kind === 'aiChat') return <AiChatSlide slide={slide} />;
   if (slide.kind === 'demo') return <DemoSlide slide={slide} />;
   if (slide.kind === 'difference') return <DifferenceSlide slide={slide} />;
   if (slide.kind === 'ip') return <IpSlide slide={slide} />;
+  if (slide.kind === 'architecture') return <ArchitectureSlide slide={slide} />;
+  if (slide.kind === 'process') return <TimelineSlide slide={slide} />;
+  if (slide.kind === 'aiAppendix') return <AiAppendixSlide slide={slide} />;
+  if (slide.kind === 'thanks') return <ThanksSlide slide={slide} />;
   if (slide.kind === 'operation') return <ImageResearchSlide slide={slide} />;
   return <ClosingSlide slide={slide} />;
 }
@@ -620,7 +731,10 @@ function CoverSlide({ slide }: { slide: Slide }) {
     <div className="cartesian-content cartesian-cover-layout">
       <div className="cartesian-cover-copy">
         <span className="cartesian-label">Neighborhood first</span>
-        <SlideTitle className="cartesian-cover-title">{slide.title}</SlideTitle>
+        <div className="cartesian-cover-brand">
+          <img src="/logo.svg" alt="" aria-hidden="true" />
+          <SlideTitle className="cartesian-cover-title">{slide.title}</SlideTitle>
+        </div>
         <Lead>{slide.lead}</Lead>
       </div>
       {slide.image ? (
@@ -638,21 +752,25 @@ function CoverSlide({ slide }: { slide: Slide }) {
 }
 
 function QrSlide({ slide }: { slide: Slide }) {
+  const rows = slide.rows ?? [];
+
   return (
-    <div className="cartesian-content cartesian-qr-layout">
+    <div className={`cartesian-content cartesian-qr-layout ${rows.length === 0 ? 'minimal' : ''}`}>
       <div className="cartesian-qr-copy">
         <span className="cartesian-label">Try it now</span>
         <SlideTitle>{slide.title}</SlideTitle>
         <Lead>{slide.lead}</Lead>
-        <div className="cartesian-qr-list">
-          {(slide.rows ?? []).map((row) => (
-            <article key={row.code}>
-              <span>{row.code}</span>
-              <h2>{row.title}</h2>
-              <p>{row.body}</p>
-            </article>
-          ))}
-        </div>
+        {rows.length > 0 ? (
+          <div className="cartesian-qr-list">
+            {rows.map((row) => (
+              <article key={row.code}>
+                <span>{row.code}</span>
+                <h2>{row.title}</h2>
+                <p>{row.body}</p>
+              </article>
+            ))}
+          </div>
+        ) : null}
       </div>
       <figure className="cartesian-qr-card" aria-label="자취맵 서비스 접속 QR 코드">
         <img src={serviceQrImage} alt="자취맵 서비스 URL QR 코드" />
@@ -762,8 +880,12 @@ function FormulaSlide({ slide }: { slide: Slide }) {
         <span>Converted rent</span>
         <strong>월세 + 보증금 × 0.005</strong>
       </div>
+      <VideoPlaceholder
+        className="cartesian-formula-video"
+        label="조건 추천 시연"
+        detail="보증금 · 월세 · 시설 · 통학시간 입력 후 후보 동네 정렬"
+      />
       <RecommendationFlowVisual />
-      <NumberedList bullets={slide.bullets ?? []} />
     </div>
   );
 }
@@ -825,7 +947,11 @@ function ScreenSlide({ slide }: { slide: Slide }) {
         <NumberedList bullets={slide.bullets ?? []} compact />
       </div>
       {slide.image ? (
-        <ImagePanel image={slide.image} className="cartesian-screen-panel" fit="contain" />
+        <VideoPlaceholder
+          className="cartesian-map-video"
+          label="지도 탐색 시연"
+          detail="히트맵 전환 · 행정동/법정동 비교 · 생활시설 필터"
+        />
       ) : (
         <ConceptPanel rows={slide.rows ?? []} />
       )}
@@ -840,13 +966,21 @@ function DashboardSlide({ slide }: { slide: Slide }) {
         <span className="cartesian-label">Detail view</span>
         <SlideTitle>{slide.title}</SlideTitle>
         <Lead>{slide.lead}</Lead>
-        <NumberedList bullets={slide.bullets ?? []} compact />
+        <div className="cartesian-dashboard-points">
+          {(slide.rows ?? []).map((row) => (
+            <article key={row.code}>
+              <span>{row.code}</span>
+              <strong>{row.title}</strong>
+              <p>{row.body}</p>
+            </article>
+          ))}
+        </div>
       </div>
-      {slide.image ? (
-        <ImagePanel image={slide.image} className="cartesian-dashboard-panel" />
-      ) : (
-        <ConceptPanel rows={slide.rows ?? []} />
-      )}
+      <VideoPlaceholder
+        className="cartesian-dashboard-video"
+        label="대시보드 · 계약 흐름 시연"
+        detail="시세/지표 확인 → 실제 매물 보기 → 계약 전 체크리스트"
+      />
     </div>
   );
 }
@@ -888,9 +1022,16 @@ function PreferenceSlide({ slide }: { slide: Slide }) {
 function DemoSlide({ slide }: { slide: Slide }) {
   return (
     <div className="cartesian-content cartesian-demo-layout">
-      <span className="cartesian-label">Demo sequence</span>
-      <SlideTitle>{slide.title}</SlideTitle>
-      <Lead>{slide.lead}</Lead>
+      <div className="cartesian-demo-copy">
+        <span className="cartesian-label">Demo sequence</span>
+        <SlideTitle>{slide.title}</SlideTitle>
+        <Lead>{slide.lead}</Lead>
+      </div>
+      <VideoPlaceholder
+        className="cartesian-demo-video"
+        label="전체 서비스 시연"
+        detail="홈 진입 → 지도 필터 → 후보 담기 → 대시보드 이동"
+      />
       <div className="cartesian-timeline">
         {(slide.rows ?? []).map((row) => (
           <div key={row.code}>
@@ -898,6 +1039,130 @@ function DemoSlide({ slide }: { slide: Slide }) {
             <h2>{row.title}</h2>
             <p>{row.body}</p>
           </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AiChatSlide({ slide }: { slide: Slide }) {
+  const flow = ['사용자 질문', '의도 분류', 'SQL 생성', 'DB 조회', '답변 생성', '시각화'];
+
+  return (
+    <div className="cartesian-content cartesian-ai-chat-layout">
+      <div className="cartesian-ai-chat-copy">
+        <span className="cartesian-label">DB-grounded AI</span>
+        <SlideTitle>{slide.title}</SlideTitle>
+        <Lead>{slide.lead}</Lead>
+        <div className="cartesian-ai-flow" aria-label="AI 챗봇 서비스 흐름">
+          {flow.map((item, index) => (
+            <article key={item}>
+              <span>{String(index + 1).padStart(2, '0')}</span>
+              <strong>{item}</strong>
+            </article>
+          ))}
+        </div>
+      </div>
+      <VideoPlaceholder
+        className="cartesian-ai-video"
+        label="AI 챗봇 시연"
+        detail="자연어 질문 → 데이터 기반 답변 → 표/그래프/지도 응답"
+      />
+      <div className="cartesian-ai-feature-grid">
+        {(slide.rows ?? []).map((row) => (
+          <article key={row.code}>
+            <span>{row.code}</span>
+            <strong>{row.title}</strong>
+            <p>{row.body}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ArchitectureSlide({ slide }: { slide: Slide }) {
+  return (
+    <div className="cartesian-content cartesian-architecture-layout">
+      <div className="cartesian-architecture-heading">
+        <span className="cartesian-label">Service architecture</span>
+        <SlideTitle>{slide.title}</SlideTitle>
+        <Lead>{slide.lead}</Lead>
+      </div>
+      <div className="cartesian-architecture-flow" aria-label="서비스 아키텍처 3계층 구조">
+        {(slide.rows ?? []).map((row) => (
+          <article key={row.code}>
+            <span>{row.code}</span>
+            <h2>{row.title}</h2>
+            <p>{row.body}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TimelineSlide({ slide }: { slide: Slide }) {
+  return (
+    <div className="cartesian-content cartesian-process-layout">
+      <div className="cartesian-heading-block">
+        <span className="cartesian-label">Development process</span>
+        <SlideTitle>{slide.title}</SlideTitle>
+        <Lead>{slide.lead}</Lead>
+      </div>
+      <div className="cartesian-process-timeline">
+        {(slide.rows ?? []).map((row) => (
+          <article key={row.code}>
+            <span>{row.code}</span>
+            <h2>{row.title}</h2>
+            <p>{row.body}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AiAppendixSlide({ slide }: { slide: Slide }) {
+  return (
+    <div className="cartesian-content cartesian-ai-appendix-layout">
+      <div className="cartesian-heading-block">
+        <span className="cartesian-label">AI pipeline</span>
+        <SlideTitle>{slide.title}</SlideTitle>
+        <Lead>{slide.lead}</Lead>
+      </div>
+      <div className="cartesian-ai-appendix-grid">
+        {(slide.rows ?? []).map((row) => (
+          <article key={row.code}>
+            <span>{row.code}</span>
+            <strong>{row.title}</strong>
+            <p>{row.body}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ThanksSlide({ slide }: { slide: Slide }) {
+  return (
+    <div className="cartesian-content cartesian-thanks-layout">
+      <div className="cartesian-thanks-copy">
+        <span className="cartesian-label">Jachwimap</span>
+        <div className="cartesian-cover-brand">
+          <img src="/logo.svg" alt="" aria-hidden="true" />
+          <SlideTitle className="cartesian-thanks-title">{slide.title}</SlideTitle>
+        </div>
+        <Lead>{slide.lead}</Lead>
+      </div>
+      <div className="cartesian-thanks-card" aria-label="자취맵 서비스 요약">
+        <span>자취맵</span>
+        <strong>서울에서 자취하는 대학생을 위한</strong>
+        <p>공공데이터 기반 동네 큐레이션 서비스</p>
+      </div>
+      <div className="cartesian-thanks-stats">
+        {(slide.rows ?? []).map((row, index) => (
+          <StatCell key={row.code} number={row.title} label={row.body} index={index} />
         ))}
       </div>
     </div>
@@ -956,6 +1221,17 @@ function IpSlide({ slide }: { slide: Slide }) {
 }
 
 function ClosingSlide({ slide }: { slide: Slide }) {
+  const rows =
+    slide.rows ??
+    (slide.bullets ?? []).map((bullet, index) => {
+      const [title, ...bodyParts] = bullet.split(': ');
+      return {
+        code: String(index + 1).padStart(2, '0'),
+        title,
+        body: bodyParts.join(': ') || bullet,
+      };
+    });
+
   return (
     <div className="cartesian-content cartesian-closing-layout">
       <span className="cartesian-geo-ring soft" aria-hidden="true" />
@@ -963,10 +1239,11 @@ function ClosingSlide({ slide }: { slide: Slide }) {
       <SlideTitle>{slide.title}</SlideTitle>
       <Lead>{slide.lead}</Lead>
       <div className="cartesian-closing-list">
-        {(slide.bullets ?? []).map((bullet, index) => (
-          <div key={bullet}>
-            <span>{String(index + 1).padStart(2, '0')}</span>
-            <p>{bullet}</p>
+        {rows.map((row) => (
+          <div key={row.code}>
+            <span>{row.code}</span>
+            <h2>{row.title}</h2>
+            <p>{row.body}</p>
           </div>
         ))}
       </div>
@@ -1136,7 +1413,7 @@ function ArchitectureDiagram({
         ))}
       </div>
       <p className="cartesian-diagram-note">
-        구현 근거: /api/recommend/regions, /api/heatmap/*, /api/dashboard/cache, recommend_rent_region_cache
+        추천, 지도, 대시보드, AI 기능은 화면과 API, 데이터 캐시가 분리되어 함께 동작합니다.
       </p>
     </figure>
   );
@@ -1188,7 +1465,7 @@ function SpatialMappingDiagram({
         ))}
       </div>
       <p className="cartesian-diagram-note">
-        구현 근거: boundary__contains(point), rent_deal_ldong_adong_map, region_amenity_category_cache
+        기준이 다른 데이터를 같은 동네 단위로 맞춰 추천, 지도, 대시보드에서 함께 사용합니다.
       </p>
     </figure>
   );
@@ -1222,7 +1499,7 @@ function DataPipelineDiagram({
         ))}
       </div>
       <p className="cartesian-diagram-note">
-        구현 근거: update_all.py, current_adong/current_ldong, dashboard_*_cache, recommend_rent_region_cache
+        데이터가 갱신되면 점수와 캐시를 다시 계산해 서비스 화면에 반영할 수 있습니다.
       </p>
     </figure>
   );
@@ -1242,7 +1519,7 @@ function DifferenceMatrix({ rows }: { rows: SlideRow[] }) {
   return (
     <div className="cartesian-difference-matrix" aria-label="유사 서비스와 슬기로운 자취생활의 포지셔닝 비교">
       {rows.map((row) => (
-        <article key={row.code}>
+        <article key={row.code} className={row.code === '자취맵' ? 'is-highlight' : undefined}>
           <span>{row.code}</span>
           <h2>{row.title}</h2>
           <p>{row.body}</p>
@@ -1250,6 +1527,24 @@ function DifferenceMatrix({ rows }: { rows: SlideRow[] }) {
         </article>
       ))}
     </div>
+  );
+}
+
+function VideoPlaceholder({
+  label,
+  detail,
+  className = '',
+}: {
+  label: string;
+  detail?: string;
+  className?: string;
+}) {
+  return (
+    <figure className={`cartesian-video-placeholder ${className}`} aria-label="시연 영상 삽입 영역">
+      <span>영상 삽입 영역</span>
+      <strong>{label}</strong>
+      {detail ? <p>{detail}</p> : null}
+    </figure>
   );
 }
 
@@ -1548,6 +1843,44 @@ body {
   font-size: 17px;
   font-weight: 700;
   line-height: 1.36;
+  letter-spacing: 0;
+}
+
+.cartesian-video-placeholder {
+  display: grid;
+  align-content: center;
+  gap: 18px;
+  min-height: 260px;
+  margin: 0;
+  padding: 34px 38px;
+  border: 2px dashed rgba(4, 120, 87, 0.58);
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.cartesian-video-placeholder span {
+  color: var(--cartesian-accent);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.cartesian-video-placeholder strong {
+  color: var(--cartesian-ink);
+  font-family: var(--cartesian-serif);
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: 0;
+}
+
+.cartesian-video-placeholder p {
+  max-width: 720px;
+  color: var(--cartesian-text);
+  font-size: 25px;
+  font-weight: 600;
+  line-height: 1.42;
   letter-spacing: 0;
 }
 
@@ -1893,12 +2226,7 @@ body {
   gap: 22px;
   padding: 30px;
   border: 1px solid var(--cartesian-line);
-  background:
-    linear-gradient(var(--cartesian-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--cartesian-line) 1px, transparent 1px),
-    var(--cartesian-paper);
-  background-size: 72px 72px;
-  background-position: -1px -1px;
+  background: var(--cartesian-paper);
 }
 
 .cartesian-repo-diagram-header {
@@ -2200,6 +2528,18 @@ body {
   line-height: 1.04;
 }
 
+.cartesian-cover-brand {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.cartesian-cover-brand img {
+  width: 118px;
+  height: 118px;
+  flex: 0 0 auto;
+}
+
 .cartesian-cover-image {
   position: absolute;
   right: 44px;
@@ -2296,6 +2636,10 @@ body {
 .cartesian-qr-copy {
   display: grid;
   gap: 30px;
+}
+
+.cartesian-qr-layout.minimal .cartesian-qr-copy {
+  transform: translateY(54px);
 }
 
 .cartesian-qr-copy .cartesian-title {
@@ -2429,7 +2773,7 @@ body {
 }
 
 .cartesian-problem-layout .cartesian-row-list {
-  padding-top: 16px;
+  padding-top: 54px;
 }
 
 .cartesian-thesis-layout {
@@ -2619,10 +2963,10 @@ body {
 
 .cartesian-formula-layout {
   display: grid;
-  grid-template-columns: 650px 1fr;
-  grid-template-rows: auto 176px 1fr;
-  column-gap: 86px;
-  row-gap: 28px;
+  grid-template-columns: 590px 1fr;
+  grid-template-rows: auto 90px 1fr;
+  column-gap: 82px;
+  row-gap: 14px;
   align-items: start;
 }
 
@@ -2635,7 +2979,7 @@ body {
 
 .cartesian-formula-header .cartesian-title {
   padding-bottom: 6px;
-  font-size: 68px;
+  font-size: 66px;
   line-height: 1.1;
 }
 
@@ -2645,28 +2989,15 @@ body {
   grid-row: 2;
   align-content: center;
   justify-items: center;
-  gap: 24px;
+  gap: 6px;
   border-top: 1px solid var(--cartesian-ink);
   border-bottom: 1px solid var(--cartesian-ink);
 }
 
-.cartesian-formula-layout > .cartesian-numbered-list {
+.cartesian-formula-video {
   grid-column: 2;
   grid-row: 1 / span 2;
-  grid-template-columns: 1fr;
-  gap: 18px;
-  align-self: center;
-}
-
-.cartesian-formula-layout > .cartesian-numbered-list > div {
-  min-height: 122px;
-  padding: 20px 24px;
-}
-
-.cartesian-formula-layout > .cartesian-numbered-list p {
-  margin-top: 14px;
-  font-size: 20px;
-  line-height: 1.36;
+  min-height: 418px;
 }
 
 .cartesian-formula-box span {
@@ -2679,11 +3010,11 @@ body {
 }
 
 .cartesian-formula-box strong {
-  padding-bottom: 14px;
+  padding-bottom: 6px;
   color: var(--cartesian-ink);
   font-family: var(--cartesian-serif);
-  font-size: 58px;
-  font-weight: 400;
+  font-size: 34px;
+  font-weight: 600;
   line-height: 1.08;
   letter-spacing: 0;
 }
@@ -2693,14 +3024,15 @@ body {
   grid-column: 1 / -1;
   grid-row: 3;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
-  align-self: stretch;
+  gap: 16px;
+  align-self: end;
+  margin-top: 52px;
 }
 
 .cartesian-recommendation-flow article {
   position: relative;
-  min-height: 180px;
-  padding: 24px 24px 22px;
+  min-height: 142px;
+  padding: 16px 20px 10px;
   border: 1px solid var(--cartesian-line);
   background: var(--cartesian-paper);
 }
@@ -2722,7 +3054,7 @@ body {
   display: block;
   color: var(--cartesian-teal);
   font-family: var(--cartesian-serif);
-  font-size: 28px;
+  font-size: 25px;
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0;
@@ -2730,7 +3062,7 @@ body {
 
 .cartesian-recommendation-flow strong {
   display: block;
-  margin-top: 18px;
+  margin-top: 11px;
   color: var(--cartesian-ink);
   font-family: var(--cartesian-serif);
   font-size: 28px;
@@ -2741,9 +3073,9 @@ body {
 
 .cartesian-recommendation-flow em {
   display: block;
-  margin-top: 12px;
+  margin-top: 8px;
   color: var(--cartesian-accent);
-  font-size: 13px;
+  font-size: 12px;
   font-style: normal;
   font-weight: 800;
   line-height: 1.25;
@@ -2751,7 +3083,7 @@ body {
 }
 
 .cartesian-recommendation-flow p {
-  margin-top: 12px;
+  margin-top: 8px;
   color: var(--cartesian-text);
   font-size: 17px;
   font-weight: 500;
@@ -2874,11 +3206,88 @@ body {
 }
 
 .cartesian-screen-panel {
-  height: 646px;
+  height: 344px;
 }
 
 .cartesian-dashboard-panel {
   height: var(--cartesian-scroll-frame-height, 610px);
+}
+
+.cartesian-screen-media {
+  display: grid;
+  grid-template-rows: 260px 1fr;
+  gap: 24px;
+  height: 646px;
+}
+
+.cartesian-screen-media .cartesian-video-placeholder {
+  min-height: 260px;
+}
+
+.cartesian-map-video {
+  min-height: 646px;
+}
+
+.cartesian-dashboard-layout {
+  grid-template-columns: 760px 1fr;
+  gap: 64px;
+  align-items: stretch;
+}
+
+.cartesian-dashboard-layout .cartesian-copy-column .cartesian-title {
+  font-size: 58px;
+}
+
+.cartesian-dashboard-points {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 6px;
+}
+
+.cartesian-dashboard-points article {
+  min-height: 112px;
+  padding: 16px 18px;
+  border: 1px solid var(--cartesian-line);
+  background: var(--cartesian-paper);
+}
+
+.cartesian-dashboard-points article:last-child {
+  grid-column: 1 / -1;
+}
+
+.cartesian-dashboard-points span {
+  display: block;
+  color: var(--cartesian-teal);
+  font-family: var(--cartesian-serif);
+  font-size: 25px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.cartesian-dashboard-points strong {
+  display: block;
+  margin-top: 11px;
+  color: var(--cartesian-ink);
+  font-family: var(--cartesian-serif);
+  font-size: 27px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+.cartesian-dashboard-points p {
+  margin-top: 8px;
+  color: var(--cartesian-text);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.34;
+  letter-spacing: 0;
+}
+
+.cartesian-dashboard-video {
+  min-height: 646px;
 }
 
 .cartesian-concept-panel {
@@ -2988,20 +3397,43 @@ body {
 
 .cartesian-demo-layout {
   display: grid;
-  grid-template-rows: auto auto auto 1fr;
-  gap: 28px;
+  grid-template-columns: 660px 1fr;
+  grid-template-rows: auto 1fr;
+  column-gap: 72px;
+  row-gap: 46px;
   align-content: start;
 }
 
-.cartesian-demo-layout .cartesian-lead {
-  margin-bottom: 62px;
+.cartesian-demo-copy {
+  display: grid;
+  gap: 24px;
+}
+
+.cartesian-demo-copy .cartesian-title {
+  max-width: 650px;
+  font-size: 76px;
+  line-height: 1.08;
+}
+
+.cartesian-demo-copy .cartesian-lead {
+  max-width: 620px;
+  font-size: 25px;
+  line-height: 1.44;
+}
+
+.cartesian-demo-video {
+  min-height: 338px;
+  align-self: start;
 }
 
 .cartesian-timeline {
   position: relative;
   display: grid;
+  grid-column: 1 / -1;
   grid-template-columns: repeat(4, 1fr);
-  gap: 44px;
+  gap: 26px;
+  align-self: end;
+  margin-top: 22px;
 }
 
 .cartesian-timeline::before {
@@ -3015,16 +3447,18 @@ body {
 }
 
 .cartesian-timeline > div {
-  padding-top: 44px;
+  padding-top: 28px;
 }
 
 .cartesian-timeline h2 {
-  margin-top: 32px;
+  margin-top: 22px;
 }
 
 .cartesian-timeline p {
-  margin-top: 22px;
-  max-width: 310px;
+  margin-top: 14px;
+  max-width: 350px;
+  font-size: 21px;
+  line-height: 1.38;
 }
 
 .cartesian-difference-layout .cartesian-article-row {
@@ -3094,6 +3528,22 @@ body {
   background: var(--cartesian-paper);
 }
 
+.cartesian-difference-matrix article.is-highlight {
+  border-color: #064E3B;
+  background: #064E3B;
+}
+
+.cartesian-difference-matrix article.is-highlight span,
+.cartesian-difference-matrix article.is-highlight h2,
+.cartesian-difference-matrix article.is-highlight p,
+.cartesian-difference-matrix article.is-highlight em {
+  color: #ECFDF5;
+}
+
+.cartesian-difference-matrix article.is-highlight em {
+  border-top-color: rgba(236, 253, 245, 0.35);
+}
+
 .cartesian-difference-matrix span {
   display: block;
   color: var(--cartesian-accent);
@@ -3108,7 +3558,7 @@ body {
   margin-top: 20px;
   color: var(--cartesian-ink);
   font-family: var(--cartesian-serif);
-  font-size: 30px;
+  font-size: 34px;
   font-weight: 400;
   line-height: 1.12;
   letter-spacing: 0;
@@ -3117,7 +3567,7 @@ body {
 .cartesian-difference-matrix p {
   margin-top: 14px;
   color: var(--cartesian-text);
-  font-size: 19px;
+  font-size: 21px;
   line-height: 1.46;
   letter-spacing: 0;
 }
@@ -3128,15 +3578,202 @@ body {
   padding-top: 12px;
   border-top: 1px solid var(--cartesian-line);
   color: var(--cartesian-accent);
-  font-size: 15px;
+  font-size: 16px;
   font-style: normal;
   line-height: 1.42;
+  letter-spacing: 0;
+}
+
+.cartesian-ai-chat-layout {
+  display: grid;
+  grid-template-columns: 690px 1fr;
+  grid-template-rows: auto 1fr;
+  column-gap: 70px;
+  row-gap: 28px;
+  align-items: start;
+}
+
+.cartesian-ai-chat-copy {
+  display: grid;
+  gap: 22px;
+}
+
+.cartesian-ai-chat-copy .cartesian-title {
+  max-width: 680px;
+  padding-bottom: 6px;
+  font-size: 66px;
+  line-height: 1.08;
+}
+
+.cartesian-ai-chat-copy .cartesian-lead {
+  max-width: 660px;
+  font-size: 24px;
+  line-height: 1.42;
+}
+
+.cartesian-ai-video {
+  min-height: 330px;
+}
+
+.cartesian-ai-flow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.cartesian-ai-flow article {
+  position: relative;
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  align-items: center;
+  gap: 14px;
+  min-height: 74px;
+  padding: 14px 16px;
+  border: 1px solid var(--cartesian-line);
+  background: var(--cartesian-paper);
+}
+
+.cartesian-ai-flow span,
+.cartesian-ai-feature-grid span,
+.cartesian-process-timeline span,
+.cartesian-ai-appendix-grid span {
+  display: block;
+  color: var(--cartesian-teal);
+  font-family: var(--cartesian-serif);
+  font-size: 25px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.cartesian-ai-flow strong {
+  color: var(--cartesian-ink);
+  font-family: var(--cartesian-serif);
+  font-size: 25px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+.cartesian-ai-feature-grid {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.cartesian-ai-feature-grid article {
+  min-height: 202px;
+  padding: 20px 20px 18px;
+  border: 1px solid var(--cartesian-line);
+  background: var(--cartesian-paper);
+}
+
+.cartesian-ai-feature-grid strong {
+  display: block;
+  margin-top: 16px;
+  color: var(--cartesian-ink);
+  font-family: var(--cartesian-serif);
+  font-size: 25px;
+  font-weight: 800;
+  line-height: 1.14;
+  letter-spacing: 0;
+}
+
+.cartesian-ai-feature-grid p {
+  margin-top: 11px;
+  color: var(--cartesian-text);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+.cartesian-architecture-layout {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 28px;
+}
+
+.cartesian-architecture-heading {
+  display: grid;
+  max-width: 1180px;
+  gap: 20px;
+}
+
+.cartesian-architecture-heading .cartesian-title {
+  padding-bottom: 6px;
+  font-size: 74px;
+  line-height: 1.08;
+}
+
+.cartesian-architecture-heading .cartesian-lead {
+  max-width: 1160px;
+  font-size: 25px;
+  line-height: 1.42;
+}
+
+.cartesian-architecture-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 32px;
+  align-self: center;
+  transform: translateY(34px);
+}
+
+.cartesian-architecture-flow article {
+  position: relative;
+  min-height: 0;
+  padding: 34px 36px 30px;
+  border: 1px solid var(--cartesian-line);
+  background: rgba(255, 255, 255, 0.64);
+}
+
+.cartesian-architecture-flow article:not(:last-child)::after {
+  position: absolute;
+  right: -28px;
+  top: 50%;
+  z-index: 2;
+  color: var(--cartesian-accent);
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1;
+  content: "→";
+  transform: translateY(-50%);
+}
+
+.cartesian-architecture-flow span {
+  color: var(--cartesian-teal);
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.cartesian-architecture-flow h2 {
+  margin-top: 24px;
+  color: var(--cartesian-ink);
+  font-family: var(--cartesian-serif);
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: 0;
+}
+
+.cartesian-architecture-flow p {
+  margin-top: 22px;
+  color: var(--cartesian-text);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.44;
   letter-spacing: 0;
 }
 
 .cartesian-ip-layout {
   grid-template-columns: 520px 1fr;
   gap: 72px;
+  align-items: center;
 }
 
 .cartesian-ip-layout .cartesian-title {
@@ -3149,13 +3786,14 @@ body {
 
 .cartesian-ip-table {
   border-top: 1px solid var(--cartesian-ink);
+  margin-top: 46px;
 }
 
 .cartesian-ip-head,
 .cartesian-ip-row {
   display: grid;
-  grid-template-columns: 80px 260px 1fr 270px;
-  gap: 20px;
+  grid-template-columns: 72px 250px 1fr 360px;
+  gap: 24px;
   align-items: start;
   border-bottom: 1px solid var(--cartesian-line);
 }
@@ -3171,8 +3809,8 @@ body {
 }
 
 .cartesian-ip-row {
-  min-height: 125px;
-  padding: 26px 0;
+  min-height: 152px;
+  padding: 30px 0;
 }
 
 .cartesian-ip-row strong {
@@ -3185,17 +3823,225 @@ body {
 }
 
 .cartesian-ip-row p {
-  font-size: 20px;
+  font-size: 22px;
   line-height: 1.48;
 }
 
 .cartesian-ip-row em {
-  color: var(--cartesian-accent);
-  font-size: 14px;
+  color: #064E3B;
+  font-size: 22px;
+  font-weight: 800;
   font-style: normal;
   line-height: 1.35;
   letter-spacing: 0;
-  text-transform: uppercase;
+}
+
+.cartesian-thanks-layout {
+  inset: 136px 96px 154px 132px;
+}
+
+.cartesian-thanks-copy {
+  position: absolute;
+  left: 0;
+  top: 132px;
+  display: grid;
+  gap: 34px;
+}
+
+.cartesian-thanks-title {
+  max-width: 820px;
+  font-size: 118px;
+  line-height: 1.04;
+}
+
+.cartesian-thanks-copy .cartesian-lead {
+  color: var(--cartesian-accent);
+  font-size: 72px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.cartesian-thanks-card {
+  position: absolute;
+  right: 44px;
+  top: 112px;
+  display: grid;
+  align-content: center;
+  gap: 28px;
+  width: 760px;
+  height: 430px;
+  padding: 48px;
+  border: 1px solid var(--cartesian-line);
+  background:
+    linear-gradient(var(--cartesian-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--cartesian-line) 1px, transparent 1px),
+    var(--cartesian-panel-soft);
+  background-size: 76px 76px;
+}
+
+.cartesian-thanks-card span {
+  color: var(--cartesian-teal);
+  font-family: var(--cartesian-serif);
+  font-size: 76px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.cartesian-thanks-card strong {
+  color: var(--cartesian-ink);
+  font-family: var(--cartesian-serif);
+  font-size: 46px;
+  font-weight: 800;
+  line-height: 1.14;
+  letter-spacing: 0;
+}
+
+.cartesian-thanks-card p {
+  color: var(--cartesian-text);
+  font-size: 31px;
+  font-weight: 700;
+  line-height: 1.32;
+  letter-spacing: 0;
+}
+
+.cartesian-thanks-stats {
+  position: absolute;
+  left: 0;
+  right: 44px;
+  bottom: 46px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 34px;
+}
+
+.cartesian-process-layout {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 58px;
+}
+
+.cartesian-process-layout .cartesian-heading-block {
+  max-width: 1180px;
+  gap: 22px;
+}
+
+.cartesian-process-layout .cartesian-title,
+.cartesian-ai-appendix-layout .cartesian-title {
+  padding-bottom: 6px;
+  font-size: 76px;
+  line-height: 1.08;
+}
+
+.cartesian-process-timeline {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 26px;
+}
+
+.cartesian-process-timeline::before {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: 30px;
+  height: 2px;
+  background: var(--cartesian-line);
+  content: "";
+}
+
+.cartesian-process-timeline article {
+  position: relative;
+  display: grid;
+  align-content: start;
+  min-height: 340px;
+  padding: 76px 26px 28px;
+  border: 1px solid var(--cartesian-line);
+  background: var(--cartesian-paper);
+}
+
+.cartesian-process-timeline article::before {
+  position: absolute;
+  left: 28px;
+  top: 24px;
+  width: 15px;
+  height: 15px;
+  border: 3px solid var(--cartesian-accent);
+  border-radius: 50%;
+  background: var(--cartesian-bg);
+  content: "";
+}
+
+.cartesian-process-timeline h2 {
+  margin-top: 22px;
+  color: var(--cartesian-ink);
+  font-family: var(--cartesian-serif);
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: 0;
+}
+
+.cartesian-process-timeline p {
+  margin-top: 18px;
+  color: var(--cartesian-text);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.42;
+  letter-spacing: 0;
+}
+
+.cartesian-ai-appendix-layout {
+  display: grid;
+  grid-template-columns: 520px 1fr;
+  gap: 64px;
+  align-items: start;
+}
+
+.cartesian-ai-appendix-layout .cartesian-heading-block {
+  gap: 22px;
+}
+
+.cartesian-ai-appendix-layout .cartesian-title {
+  font-size: 68px;
+}
+
+.cartesian-ai-appendix-layout .cartesian-lead {
+  font-size: 24px;
+  line-height: 1.42;
+}
+
+.cartesian-ai-appendix-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.cartesian-ai-appendix-grid article {
+  min-height: 176px;
+  padding: 22px 24px;
+  border: 1px solid var(--cartesian-line);
+  background: var(--cartesian-paper);
+}
+
+.cartesian-ai-appendix-grid strong {
+  display: block;
+  margin-top: 18px;
+  color: var(--cartesian-ink);
+  font-family: var(--cartesian-serif);
+  font-size: 29px;
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: 0;
+}
+
+.cartesian-ai-appendix-grid p {
+  margin-top: 13px;
+  color: var(--cartesian-text);
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.38;
+  letter-spacing: 0;
 }
 
 .cartesian-closing-layout {
@@ -3226,14 +4072,28 @@ body {
 }
 
 .cartesian-closing-list > div {
-  min-height: 138px;
-  padding: 26px 28px;
+  min-height: 230px;
+  padding: 34px 34px;
   border: 1px solid var(--cartesian-line);
   background: var(--cartesian-paper);
 }
 
+.cartesian-closing-list h2 {
+  margin-top: 24px;
+  color: var(--cartesian-ink);
+  font-family: var(--cartesian-serif);
+  font-size: 33px;
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: 0;
+}
+
 .cartesian-closing-list p {
-  margin-top: 22px;
+  margin-top: 18px;
+  color: #26352F;
+  font-size: 22px;
+  font-weight: 650;
+  line-height: 1.42;
 }
 
 .cartesian-slide {
@@ -3374,6 +4234,29 @@ body {
 .cartesian-score-card small,
 .cartesian-article-row em {
   color: var(--cartesian-muted);
+}
+
+.cartesian-topbar,
+.cartesian-footer {
+  font-size: 15px !important;
+  line-height: 1 !important;
+}
+
+.cartesian-formula-box strong {
+  font-size: 34px !important;
+  font-weight: 600 !important;
+}
+
+.cartesian-ip-row em {
+  color: #064E3B !important;
+  font-size: 22px !important;
+}
+
+.cartesian-closing-list > div p {
+  color: #26352F;
+  font-size: 22px;
+  font-weight: 650;
+  line-height: 1.42;
 }
 
 @keyframes cartesianAutoScroll {
