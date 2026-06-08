@@ -1,42 +1,114 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="48 48 1104 664" role="img" aria-label="AI 질의 응답 구조도">
-  <rect width="1200" height="760" fill="#071829"/>
-  <rect x="58" y="58" width="1084" height="644" rx="30" fill="#0b1d31" stroke="#ffffff" stroke-opacity=".14"/>
-  <text x="92" y="118" font-family="Inter, Arial, sans-serif" font-size="18" fill="#ffad9b">AI QUERY ARCHITECTURE</text>
-  <text x="92" y="166" font-family="Inter, Arial, sans-serif" font-size="38" fill="#ffffff">질문을 안전한 데이터 조회로 변환</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="785" viewBox="0 0 1200 785" role="img" aria-label="자취맵 AI Agent 구조도">
+  <defs>
+    <pattern id="grid" width="72" height="72" patternUnits="userSpaceOnUse">
+      <path d="M72 0H0V72" fill="none" stroke="#A8DCC6" stroke-width="1"/>
+    </pattern>
+    <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+      <path d="M2 2 10 6 2 10" fill="none" stroke="#047857" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style>
+      .bg { fill: #F2FBF6; }
+      .grid { fill: url(#grid); opacity: .72; }
+      .panel { fill: rgba(255,255,255,.72); stroke: #A8DCC6; stroke-width: 1; }
+      .panel-soft { fill: rgba(221,246,233,.52); stroke: #A8DCC6; stroke-width: 1; }
+      .panel-hot { fill: #DDF6E9; stroke: #047857; stroke-width: 1.4; }
+      .ink { fill: #18211E; font-family: Pretendard, Arial, sans-serif; }
+      .serif { fill: #18211E; font-family: Georgia, "Times New Roman", serif; font-weight: 700; }
+      .muted { fill: #42514C; font-family: Pretendard, Arial, sans-serif; }
+      .accent { fill: #047857; font-family: Pretendard, Arial, sans-serif; font-weight: 800; }
+      .caption { fill: #71847B; font-family: Pretendard, Arial, sans-serif; font-weight: 700; }
+      .code { fill: #0D9488; font-family: Georgia, "Times New Roman", serif; font-weight: 800; }
+      .line { stroke: #047857; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+      .thin { stroke: #A8DCC6; stroke-width: 1; }
+    </style>
+  </defs>
 
-  <g font-family="Inter, Arial, sans-serif">
-    <rect x="92" y="258" width="190" height="118" rx="18" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".18"/>
-    <text x="122" y="300" font-size="20" fill="#ffffff">사용자 질문</text>
-    <text x="122" y="334" font-size="15" fill="#ffffff" opacity=".64">자연어 입력</text>
+  <rect class="bg" width="1200" height="785"/>
+  <rect class="grid" x="28" y="28" width="1144" height="729"/>
+  <rect x="28" y="28" width="1144" height="729" fill="none" stroke="#A8DCC6"/>
 
-    <rect x="354" y="258" width="190" height="118" rx="18" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".18"/>
-    <text x="384" y="300" font-size="20" fill="#ffffff">의도 분류</text>
-    <text x="384" y="334" font-size="15" fill="#ffffff" opacity=".64">추천 / 조회 / 비교</text>
+  <text class="accent" x="60" y="72" font-size="16">AI AGENT FLOW</text>
+  <text class="serif" x="60" y="122" font-size="42">질문을 안전한 공공데이터 답변으로 변환합니다</text>
+  <text class="muted" x="60" y="160" font-size="20">자연어 질문을 분류하고, 읽기 전용 SQL 조회와 검증 단계를 거쳐 답변과 시각화로 반환합니다.</text>
 
-    <rect x="616" y="258" width="190" height="118" rx="18" fill="#ff7759"/>
-    <text x="646" y="300" font-size="20" fill="#17171c">읽기 전용 SQL</text>
-    <text x="646" y="334" font-size="15" fill="#17171c" opacity=".72">schema context 기반</text>
-
-    <rect x="878" y="258" width="190" height="118" rx="18" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".18"/>
-    <text x="908" y="300" font-size="20" fill="#ffffff">검증 후 실행</text>
-    <text x="908" y="334" font-size="15" fill="#ffffff" opacity=".64">위험 쿼리 차단</text>
+  <g transform="translate(60 220)">
+    <rect class="panel" x="0" y="0" width="180" height="178"/>
+    <text class="code" x="22" y="36" font-size="30">01</text>
+    <text class="serif" x="22" y="78" font-size="26">사용자 질문</text>
+    <text class="accent" x="22" y="108" font-size="13">AI 패널</text>
+    <text class="muted" x="22" y="137" font-size="16">동네 추천,</text>
+    <text class="muted" x="22" y="160" font-size="16">시설·월세 질문</text>
   </g>
 
-  <g stroke="#ffad9b" stroke-width="2.5" fill="none">
-    <path d="M298 317h40"/>
-    <path d="M330 306l14 11-14 11"/>
-    <path d="M560 317h40"/>
-    <path d="M592 306l14 11-14 11"/>
-    <path d="M822 317h40"/>
-    <path d="M854 306l14 11-14 11"/>
+  <path class="line" d="M248 309H283"/>
+
+  <g transform="translate(285 220)">
+    <rect class="panel" x="0" y="0" width="180" height="178"/>
+    <text class="code" x="22" y="36" font-size="30">02</text>
+    <text class="serif" x="22" y="78" font-size="26">질문 분류</text>
+    <text class="accent" x="22" y="108" font-size="13">route · query type</text>
+    <text class="muted" x="22" y="137" font-size="16">추천 / 정보 /</text>
+    <text class="muted" x="22" y="160" font-size="16">직접 답변 판단</text>
   </g>
 
-  <rect x="178" y="474" width="844" height="126" rx="22" fill="#ffffff" fill-opacity=".06" stroke="#ffffff" stroke-opacity=".14"/>
-  <text x="220" y="520" font-family="Inter, Arial, sans-serif" font-size="18" fill="#ffad9b">RESPONSE</text>
-  <text x="220" y="560" font-family="Inter, Arial, sans-serif" font-size="28" fill="#ffffff">추천 근거, 표, 막대/선 차트로 답변 반환</text>
-  <rect x="790" y="516" width="170" height="46" rx="12" fill="#ffffff" fill-opacity=".10"/>
-  <rect x="812" y="544" width="20" height="18" rx="4" fill="#ff7759"/>
-  <rect x="842" y="532" width="20" height="30" rx="4" fill="#ffad9b"/>
-  <rect x="872" y="524" width="20" height="38" rx="4" fill="#ffffff" fill-opacity=".72"/>
-  <rect x="902" y="538" width="20" height="24" rx="4" fill="#5d9c75"/>
+  <path class="line" d="M473 309H508"/>
+
+  <g transform="translate(510 220)">
+    <rect class="panel-hot" x="0" y="0" width="180" height="178"/>
+    <text class="code" x="22" y="36" font-size="30">03</text>
+    <text class="serif" x="22" y="78" font-size="26">SQL 생성</text>
+    <text class="accent" x="22" y="108" font-size="13">Text-to-SQL</text>
+    <text class="muted" x="22" y="137" font-size="16">스키마·조인 힌트로</text>
+    <text class="muted" x="22" y="160" font-size="16">조회 계획 생성</text>
+  </g>
+
+  <path class="line" d="M698 309H733"/>
+
+  <g transform="translate(735 220)">
+    <rect class="panel" x="0" y="0" width="180" height="178"/>
+    <text class="code" x="22" y="36" font-size="30">04</text>
+    <text class="serif" x="22" y="78" font-size="26">안전 검증</text>
+    <text class="accent" x="22" y="108" font-size="13">SQL guard</text>
+    <text class="muted" x="22" y="137" font-size="16">SELECT만 허용,</text>
+    <text class="muted" x="22" y="160" font-size="16">위험 쿼리 차단</text>
+  </g>
+
+  <path class="line" d="M923 309H958"/>
+
+  <g transform="translate(960 220)">
+    <rect class="panel" x="0" y="0" width="180" height="178"/>
+    <text class="code" x="22" y="36" font-size="30">05</text>
+    <text class="serif" x="22" y="78" font-size="26">답변 반환</text>
+    <text class="accent" x="22" y="108" font-size="13">answer package</text>
+    <text class="muted" x="22" y="137" font-size="16">추천 근거,</text>
+    <text class="muted" x="22" y="160" font-size="16">표·차트 제공</text>
+  </g>
+
+  <g transform="translate(60 452)">
+    <rect class="panel-soft" x="0" y="0" width="520" height="162"/>
+    <text class="accent" x="24" y="34" font-size="16">CONTEXT</text>
+    <text class="serif" x="24" y="72" font-size="30">정확한 조회를 위한 맥락</text>
+    <line class="thin" x1="24" y1="92" x2="496" y2="92"/>
+    <text class="muted" x="24" y="124" font-size="17">schema context · table metadata · store codes</text>
+    <text class="muted" x="24" y="150" font-size="17">최근 대화 히스토리로 이전 추천 동네 맥락 유지</text>
+  </g>
+
+  <g transform="translate(620 452)">
+    <rect class="panel-soft" x="0" y="0" width="520" height="162"/>
+    <text class="accent" x="24" y="34" font-size="16">SAFETY BOUNDARY</text>
+    <text class="serif" x="24" y="72" font-size="30">쓰기 권한과 LLM 출력을 분리</text>
+    <line class="thin" x1="24" y1="92" x2="496" y2="92"/>
+    <text class="muted" x="24" y="124" font-size="17">AI_AGENT_DATABASE_URL로 read-only DB 계정 강제</text>
+    <text class="muted" x="24" y="150" font-size="17">다중 문장, UPDATE/DELETE, SELECT * 등 차단</text>
+  </g>
+
+  <g transform="translate(60 655)">
+    <rect class="panel" x="0" y="0" width="1080" height="74"/>
+    <text class="accent" x="24" y="44" font-size="16">OUTPUT</text>
+    <text class="serif" x="125" y="46" font-size="28">자연어 답변</text>
+    <text class="caption" x="310" y="46" font-size="17">추천 동네</text>
+    <text class="caption" x="455" y="46" font-size="17">표/막대/선 차트</text>
+    <text class="caption" x="655" y="46" font-size="17">후보 비교</text>
+    <text class="caption" x="800" y="46" font-size="17">실제 매물·체크리스트 연결</text>
+  </g>
 </svg>
