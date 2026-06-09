@@ -79,6 +79,13 @@ interface Slide {
 }
 
 const SERVICE_URL = 'https://slgi-life.duckdns.org/';
+const PRESENTATION_VIDEOS = {
+  fullService: '/presentation-videos/full-service-demo.mp4',
+  dashboardContract: '/presentation-videos/dashboard-contract-flow.mp4',
+  recommendation: '/presentation-videos/recommendation-demo.mp4',
+  mapExploration: '/presentation-videos/map-exploration-demo.mp4',
+  aiChat: '/presentation-videos/ai-chat-demo.mp4',
+} as const;
 
 const slides: Slide[] = [
   {
@@ -598,6 +605,28 @@ export default function CartesianPresentation() {
     window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
   }, [index]);
 
+  useEffect(() => {
+    const videos = Array.from(document.querySelectorAll<HTMLVideoElement>('.cartesian-slide video'));
+
+    videos.forEach((video) => {
+      const isActive = video.closest('.cartesian-slide')?.classList.contains('active');
+      video.muted = true;
+
+      try {
+        video.currentTime = 0;
+      } catch {
+        // Some browsers can reject seeking before metadata is ready.
+      }
+
+      if (!isActive) {
+        video.pause();
+        return;
+      }
+
+      void video.play().catch(() => undefined);
+    });
+  }, [index]);
+
   const progress = useMemo(() => ((index + 1) / slides.length) * 100, [index]);
 
   return (
@@ -884,6 +913,7 @@ function FormulaSlide({ slide }: { slide: Slide }) {
         className="cartesian-formula-video"
         label="조건 추천 시연"
         detail="보증금 · 월세 · 시설 · 통학시간 입력 후 후보 동네 정렬"
+        src={PRESENTATION_VIDEOS.recommendation}
       />
       <RecommendationFlowVisual />
     </div>
@@ -951,6 +981,7 @@ function ScreenSlide({ slide }: { slide: Slide }) {
           className="cartesian-map-video"
           label="지도 탐색 시연"
           detail="히트맵 전환 · 행정동/법정동 비교 · 생활시설 필터"
+          src={PRESENTATION_VIDEOS.mapExploration}
         />
       ) : (
         <ConceptPanel rows={slide.rows ?? []} />
@@ -980,6 +1011,7 @@ function DashboardSlide({ slide }: { slide: Slide }) {
         className="cartesian-dashboard-video"
         label="대시보드 · 계약 흐름 시연"
         detail="시세/지표 확인 → 실제 매물 보기 → 계약 전 체크리스트"
+        src={PRESENTATION_VIDEOS.dashboardContract}
       />
     </div>
   );
@@ -1031,6 +1063,7 @@ function DemoSlide({ slide }: { slide: Slide }) {
         className="cartesian-demo-video"
         label="전체 서비스 시연"
         detail="홈 진입 → 지도 필터 → 후보 담기 → 대시보드 이동"
+        src={PRESENTATION_VIDEOS.fullService}
       />
       <div className="cartesian-timeline">
         {(slide.rows ?? []).map((row) => (
@@ -1067,6 +1100,7 @@ function AiChatSlide({ slide }: { slide: Slide }) {
         className="cartesian-ai-video"
         label="AI 챗봇 시연"
         detail="자연어 질문 → 데이터 기반 답변 → 표/그래프/지도 응답"
+        src={PRESENTATION_VIDEOS.aiChat}
       />
       <div className="cartesian-ai-feature-grid">
         {(slide.rows ?? []).map((row) => (
@@ -1533,17 +1567,28 @@ function DifferenceMatrix({ rows }: { rows: SlideRow[] }) {
 function VideoPlaceholder({
   label,
   detail,
+  src,
   className = '',
 }: {
   label: string;
   detail?: string;
+  src?: string;
   className?: string;
 }) {
   return (
-    <figure className={`cartesian-video-placeholder ${className}`} aria-label="시연 영상 삽입 영역">
-      <span>영상 삽입 영역</span>
-      <strong>{label}</strong>
-      {detail ? <p>{detail}</p> : null}
+    <figure
+      className={`cartesian-video-placeholder ${src ? 'has-video' : ''} ${className}`}
+      aria-label="시연 영상 삽입 영역"
+    >
+      {src ? (
+        <video controls muted preload="auto" playsInline src={src} />
+      ) : (
+        <>
+          <span>영상 삽입 영역</span>
+          <strong>{label}</strong>
+          {detail ? <p>{detail}</p> : null}
+        </>
+      )}
     </figure>
   );
 }
@@ -1847,6 +1892,7 @@ body {
 }
 
 .cartesian-video-placeholder {
+  position: relative;
   display: grid;
   align-content: center;
   gap: 18px;
@@ -1855,6 +1901,22 @@ body {
   padding: 34px 38px;
   border: 2px dashed rgba(4, 120, 87, 0.58);
   background: rgba(255, 255, 255, 0.48);
+}
+
+.cartesian-video-placeholder.has-video {
+  display: block;
+  overflow: hidden;
+  padding: 0;
+  border-style: solid;
+  background: #061F1A;
+}
+
+.cartesian-video-placeholder.has-video video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #061F1A;
 }
 
 .cartesian-video-placeholder span {
